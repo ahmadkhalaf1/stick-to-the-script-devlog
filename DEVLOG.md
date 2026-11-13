@@ -872,6 +872,11 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![Two blows landing: rays burst out where the fist arrives](Docs/devlog/56-blows-that-land.jpg)
 
+### 19:29 · The developer on the blows: "Feels like a hit"
+
+- **Developer said:** asked to play the build packaged at 19:25 with the sound on and say whether a punch now feels like a hit: "Feels like a hit".
+- **Result:** the burst, the longer freeze and the layered sound stay. The developer's play was that build's first run. Nothing was said about the sound on its own, so the mix as a whole (the director's voice, the music against the blows) is still unjudged.
+
 ---
 
 ## Asset and tool register

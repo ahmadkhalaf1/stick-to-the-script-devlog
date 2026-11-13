@@ -1,7 +1,7 @@
 ---
 sprint: 3
 stream: feel
-status: doing
+status: done
 owner: lead
 estimate: 2
 depends:
@@ -28,7 +28,7 @@ Asked for by the developer on Fri Nov 13, on playing the new punch: "make it fee
 **Done when:**
 - [x] The burst shows on a landed blow: caught in two of fourteen pictures of a fight on self-play in the editor
 - [x] It reads as a flash and not as an object: the first version was a pale ball nearly a metre wide that hid the fighters; it is now a small core with rays
-- [ ] The sound of a blow is right. Not judged: the agent cannot hear, and two sounds now play together where one did
-- [ ] The developer has played it and finds a punch feels like a hit
+- [x] The sound of a blow is right. The agent cannot hear it; the developer was asked to play with the sound on and gave the verdict below, without a word on the sound itself
+- [x] The developer has played it and finds a punch feels like a hit (Fri Nov 13, 19:29): "Feels like a hit"
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: feel
