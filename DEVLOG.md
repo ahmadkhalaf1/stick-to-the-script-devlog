@@ -831,6 +831,12 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Developer said:** asked "where to test"; the agent started the packaged game on the developer's PC and said where it is. After playing: "keys good".
 - **Result:** the keys stay as they are. The developer has now also played the motion-captured moves, in the same build, and has said nothing about them or their longer reach yet.
 
+### 17:50 · The developer on the longer reach: "No, it's fine"
+
+- **Developer said:** "i dont understand what u mean with their longer reach". The agent had used the word three times without saying what it meant.
+- **Agent did:** explained it in plain terms: a kick used to hit someone up to about a metre away and now hits at about a metre and a half, because the motion-captured kick steps in and stretches further than the pose did. Said what to try: win the warehouse by kicking from as far as it connects, and see whether the opponents still get to you.
+- **Result:** asked whether the scene can be won that way without being touched: "No, it's fine". The reach stays.
+
 ---
 
 ## Asset and tool register

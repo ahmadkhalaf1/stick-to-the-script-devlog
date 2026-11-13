@@ -31,7 +31,7 @@ Asked for by the developer on Fri Nov 13, as the next thing that makes the game 
 - [x] The film shows the same motion, since it replays joints: seen in the warehouse's film
 - [x] A move whose clip did not convert keeps its computed pose: a missing clip is not in the fighter's table, and a clip thrown with an arm that is broken steps aside for the pose. Read in the code, not tried by taking a clip away
 - [x] Mixamo is in the asset register, the credits card and the store page's list (`Docs/StorePage.md`; the text on the draft page itself is brought up to date with the final build)
-- [x] The developer has played it (Fri Nov 13, in the packaged build, while trying the keys). No verdict yet on how the moves look or on their longer reach
+- [x] The developer has played it (Fri Nov 13, in the packaged build, while trying the keys). On the longer reach (17:50): asked whether the warehouse can be won by kicking from a distance without being touched, "No, it's fine". No word yet on how the moves look
 
 **How it is meant to work:**
 - The stunt dummy is drawn from the bones of the hidden mannequin (`BuildJoints`), so a clip played on that skeleton shows by itself. Today a technique is a pose laid over the joints (`StartPosed`, `PoseTechnique`); with a clip it becomes `Play(clip)` with the contact found the way `FindContactSeconds` already finds it for the punches.
