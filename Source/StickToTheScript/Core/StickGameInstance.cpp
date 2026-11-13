@@ -1,11 +1,16 @@
 #include "StickToTheScript/Core/StickGameInstance.h"
 
+#include "AudioMixerBlueprintLibrary.h"
+#include "Containers/Ticker.h"
 #include "HAL/FileManager.h"
 #include "JsonObjectConverter.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/FileHelper.h"
+#include "Misc/CommandLine.h"
 #include "Misc/Paths.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogSoundRecording, Log, All);
 
 namespace
 {
@@ -38,6 +43,35 @@ void UStickGameInstance::Init()
 	GConfig->GetInt(ProgressSection, TEXT("Banked"), Banked, GGameUserSettingsIni);
 	GConfig->GetInt(ProgressSection, TEXT("OwnedLooks"), OwnedLooks, GGameUserSettingsIni);
 	GConfig->GetInt(ProgressSection, TEXT("BoughtWeapon"), BoughtWeapon, GGameUserSettingsIni);
+}
+
+// Started with -RecordSound=<seconds>, the game writes everything it plays to Saved/Recording/GameSound.wav.
+// A video of the game needs its sound, and on a PC with no way to record what it plays this is where it comes from.
+void UStickGameInstance::OnStart()
+{
+	Super::OnStart();
+
+	float Seconds = 0.f;
+	if (!FParse::Value(FCommandLine::Get(), TEXT("RecordSound="), Seconds) || Seconds <= 0.f)
+	{
+		return;
+	}
+
+	UAudioMixerBlueprintLibrary::StartRecordingOutput(this, Seconds);
+	UE_LOG(LogSoundRecording, Log, TEXT("Sound recording started, for %.0f seconds"), Seconds);
+	// By the clock on the wall: the game slows its own clock for every blow.
+	const double StopAt = FPlatformTime::Seconds() + Seconds;
+	FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateWeakLambda(this, [this, StopAt](float)
+	{
+		if (FPlatformTime::Seconds() < StopAt)
+		{
+			return true;
+		}
+		UAudioMixerBlueprintLibrary::StopRecordingOutput(this, EAudioRecordingExportType::WavFile, TEXT("GameSound"),
+			FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("Recording")));
+		UE_LOG(LogSoundRecording, Log, TEXT("Sound recording stopped and written"));
+		return false;
+	}));
 }
 
 void UStickGameInstance::SaveProgress() const

@@ -27,7 +27,7 @@ Asked for by the developer on Fri Nov 13: "in 2026 , and AI and claude , the gam
 - [x] All of it is in the packaged game
 - [ ] The developer has heard it
 - [ ] Loudness of music against blows against voice, set by ear
-- [ ] Frame rate measured again on an idle PC
+- [x] Frame rate measured again on an idle PC: median 98 in the warehouse, 107 in the bar and 103 on the rooftop, and that while the window was being recorded. The recorded sound costs nothing; the low readings before were the other program
 
 **How it works:**
 - `node Tools/build_sounds.mjs` lists what is missing and what it costs; `--go` asks fal.ai for it (needs `FAL_KEY` and ffmpeg); `--hear` has the spoken lines written down again by a speech-to-text model.

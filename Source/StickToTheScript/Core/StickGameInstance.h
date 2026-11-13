@@ -26,6 +26,7 @@ public:
 	void StartOver();
 
 	virtual void Init() override;
+	virtual void OnStart() override;
 
 	// Adds a wrapped scene's pay to what is kept between sessions, and unlocks the scene after it.
 	void Bank(int32 Dollars);

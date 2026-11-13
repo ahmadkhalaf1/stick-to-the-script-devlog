@@ -723,6 +723,22 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the script's first two tries found the chooser but not its controls. It was asking for a text box and a button by their kind, and in this chooser both report themselves as plain panes. They are now found by their window class and driven with the two window messages every such control answers.
 - **Not verified:** the download, by fetching the zip back from the page and starting it. The page is a draft, so only the developer can.
 
+### 14:52–15:27 · The gameplay video, recorded by the game itself
+
+- **Developer said:** "Yes, record it". The developer had first chosen to record the video by hand, then asked the agent to "handle it all". Asked to close the other program that was using the PC, and to leave the PC alone for the recording: "Closed, record now".
+- **The problem:** this PC has no device that records what it plays, only a microphone. A screen recording made by the agent would have been silent.
+- **Agent did:**
+  - The game can now write its own sound to a file: started with `-RecordSound=300` it records everything it plays for that many seconds.
+  - `Tools/record_run.ps1` starts the packaged game on self-play, keeps its window on top, and records the window's picture with ffmpeg while the game records its sound. The player's saved progress is put back afterwards. It refuses to start when the processor is already busy.
+  - `Tools/cut_video.mjs` reads the game's log to know when everything happened and picks the moments itself: the title, the wardrobe, the best blows of each fight (a kick off the bar counts for more than a punch, a knockout adds to whatever landed it), the wrap, the choice of cut, part of each film, and the ending.
+- **Putting picture and sound in step, by measurement:**
+  - The picture: the film's black bars appear the moment the log says the film starts. The first film is 21.70 seconds in the log and 21.67 in the picture.
+  - The sound: every take starts with a clap out of silence, and the log says when the clap was asked for. The sound file turned out to run ahead of the log: by 404 milliseconds in the first scene, then 588, 683 and 761. It loses time whenever a level loads. Within a scene it holds: the film's first note, forty seconds after the clap, gives the same figure to within 40.
+- **Went wrong:** the first cut used the sound file as if it kept the log's time, so every blow in it sounded up to three quarters of a second before it landed. The frames looked right and the agent cannot hear, so nothing showed it. It was found only because the agent measured where the clap was instead of trusting where it should be. A check the agent then wrote, "the loudest moment near a blow should be the blow", did not work, because a whoosh and a shout come before a blow and are as loud; it was taken out again.
+- **Result:** `Saved/Release/StickToTheScript_gameplay.mp4`: 56 seconds, 1920 by 1080 at 60 frames a second, 54 MB, eighteen pieces. It is not in the repository.
+- **And an answer to an open question:** in this run the game held a median of 98 frames a second in the warehouse, 107 in the bar and 103 on the rooftop while its window was being recorded. So the recorded sound costs nothing, and the 42 measured two hours earlier was the other program.
+- **Not verified:** nobody has watched it with its sound on. The upload and the link.
+
 ---
 
 ## Asset and tool register

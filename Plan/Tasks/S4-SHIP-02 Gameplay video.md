@@ -16,6 +16,8 @@ depends:
 - `Docs/`
 
 **Done when:**
+- [x] Recorded and cut, on Fri Nov 13: 56 seconds, 1920 by 1080 at 60 frames a second, in `Saved/Release/StickToTheScript_gameplay.mp4`. The game played itself; `Tools\record_run.ps1` recorded it and `Tools/cut_video.mjs` cut it. It is made again when the game changes
+- [ ] Watched with its sound by the developer
 - [ ] Uploaded
 - [ ] Link saved for the submission form
 
