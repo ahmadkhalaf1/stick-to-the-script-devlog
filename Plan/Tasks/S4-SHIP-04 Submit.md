@@ -16,7 +16,7 @@ depends:
 - `itch.io`
 
 **Done when:**
-- [ ] Page public, zip uploaded, submitted to the jam
+- [ ] Page public, zip uploaded, submitted to the jam (the page is a draft since Fri Nov 13, https://the-fighter-ps.itch.io/stick-to-the-script; nothing is public and nothing is submitted)
 - [ ] Every required field filled: team, members, game name, video link, assets, tools, pre-jam declaration
 - [ ] The entry appears in the jam's submission list
 

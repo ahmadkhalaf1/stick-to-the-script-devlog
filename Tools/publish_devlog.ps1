@@ -47,10 +47,12 @@ if ($found) {
 }
 
 Set-Location $copy
-git add -A
+git -c core.autocrlf=false add -A
 if (-not (git status --porcelain)) { 'Nothing has changed since the last publication.'; exit 0 }
 $state = git -C $root rev-parse --short HEAD
 git -c "user.name=$handle" -c "user.email=$address" commit --quiet -m "The project as it stood at $state"
 git push --quiet origin HEAD:main
 if ($LASTEXITCODE -ne 0) { throw 'The push failed. Nothing was published.' }
-"Published $((git ls-files).Count) files to https://github.com/$handle/$Repository"
+$count = (git ls-files).Count
+Set-Location $root
+"Published $count files to https://github.com/$handle/$Repository"

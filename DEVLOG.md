@@ -702,6 +702,19 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the dev log is public at https://github.com/ahmadkhalaf1/stick-to-the-script-devlog. The store page's checklist has its team name, cover and dev log link.
 - **Not verified:** the zip on a second PC. The store page itself, which does not exist yet: the developer makes it. The video.
 
+### 13:50–14:45 · The store page exists, as a draft
+
+- **Developer said:** asked whether the agent was submitting the game and why it needed itch.io at all. The agent answered: nothing was submitted; the jam runs on itch.io, and the only way in is a game page there with the zip on it, which is then submitted to the jam. Then: "ok do what u have to do at ym browser".
+- **Agent did:** in the developer's browser, created the game's page on itch.io as a draft and filled it in from `Docs/StorePage.md`: title, short description, the full description with the controls as a table, genre (fighting), five tags, no payments. It answered the site's question about generative AI with yes for graphics, sounds, text and code, and wrote two sentences on how it was used, with the link to this log.
+- **What the agent left to the developer, and why:**
+  - A check that the visitor is a person, and the sign-in. The agent does not pass the first and does not type passwords.
+  - The cover, the screenshots and the zip. The page opens a file chooser for each, which the agent cannot see, and the agent's own way of uploading takes 10 MB while the zip is 379.
+  - Making the page public and submitting it to the jam. Both wait for the developer's word.
+- **Went wrong:** itch.io was down for about a quarter of an hour in the middle of this (error 522 on its home page and on the jam's page, checked from outside the browser as well). Which is the argument for uploading a day early.
+- **Left out on purpose:** the gamepad column of the controls. No gamepad has been tried, and the page should not promise what nobody has checked.
+- **Result:** the draft is at https://the-fighter-ps.itch.io/stick-to-the-script. Only the developer can open it.
+- **Not verified:** how the page looks with its pictures, since it has none yet.
+
 ---
 
 ## Asset and tool register

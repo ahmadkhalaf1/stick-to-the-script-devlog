@@ -60,12 +60,16 @@ No art or animation was bought or downloaded beyond the engine's own mannequin a
 
 ## Before the page goes public
 
+The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stick-to-the-script (only the developer can see it). Its text, genre, tags and AI disclosure are filled in from this file.
+
+- [ ] Cover, screenshots and the zip uploaded to the draft. These three are the developer's: the page opens a file chooser for each, which the agent cannot operate, and the agent's own upload is limited to 10 MB
+
 - [x] Team name: Page Twelve. The zip is `PageTwelve_StickToTheScript.zip`, made by `Tools\release.ps1 -Team PageTwelve`
 - [ ] Screenshots taken from the packaged game. Seven are in `Docs/store`, captured from the game's own window at 1920 by 1080 during a self-played run on Fri Nov 13, after the sets got their surfaces. The strip along the top, where a tool on the developer's PC draws its frame counter, is cut off. The developer has not chosen among them
 - [x] A cover image, 630 by 500: `Docs/store/cover.png`
 - [ ] The link to the 30 to 60 second gameplay video. The developer records a few minutes of play, the agent cuts it, the developer uploads it
 - [x] A public link for the dev log: https://github.com/ahmadkhalaf1/stick-to-the-script-devlog. It is a copy of this repository without the binary assets and without the history, refreshed by `Tools\publish_devlog.ps1`
-- [ ] The gamepad column: no gamepad has been tried. Try one, or take the column out
+- [x] The gamepad column: no gamepad has been tried, so the page on itch.io lists keyboard and mouse only
 - [ ] The developer has read this text and agrees with it
 
 ## For the jam's form
