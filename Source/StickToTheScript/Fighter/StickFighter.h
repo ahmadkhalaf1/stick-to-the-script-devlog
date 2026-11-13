@@ -185,7 +185,10 @@ private:
 	void HandleTakeStarted(int32 TakeNumber);
 
 	void Play(UAnimSequenceBase* Animation, bool bLoop, float Rate = 1.f);
-	float FindContactSeconds(UAnimSequenceBase* Strike);
+	// Of the four limbs that can strike, only BoneCount from FirstBone on are looked at: the hands come first, then the feet.
+	float FindContactSeconds(UAnimSequenceBase* Strike, int32 FirstBone = 0, int32 BoneCount = 4);
+	// Standing ready: the fighting stance for someone who fights freely, the plain idle for anyone else.
+	void PlayRest();
 	// The next punch that is thrown with an arm that is not broken, or none.
 	UAnimSequenceBase* NextPunch();
 	void LandStrike();
@@ -240,6 +243,20 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UAnimSequenceBase> BackAnimation;
+
+	// Motion-captured clips for the moves that are otherwise poses worked out in code. A move with no clip keeps its pose.
+	UPROPERTY()
+	TMap<EMove, TObjectPtr<UAnimSequenceBase>> TechniqueClips;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> StanceClip;
+
+	// How a blow that leaves the fighter standing is taken: to the head, and to the body.
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> HitClips[2];
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> Playing;
 
 	// Drawn for one frame behind a hand or foot that moves very fast, like a smear frame in hand-drawn animation.
 	UPROPERTY()
@@ -352,6 +369,8 @@ private:
 	FVector MovedPerSecond = FVector::ZeroVector;
 	FVector LastTickLocation = FVector::ZeroVector;
 	bool bKicking = false;
+	// The technique on its way is a clip, so no pose is laid over the joints for it.
+	bool bPosedByClip = false;
 	float KickElapsed = 0.f;
 	float KickContactAt = 0.f;
 	float PosedRecoverSeconds = 0.45f;

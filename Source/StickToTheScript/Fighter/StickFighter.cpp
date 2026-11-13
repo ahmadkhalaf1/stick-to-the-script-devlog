@@ -73,6 +73,9 @@ namespace
 	const float BlockedRecoil = 0.35f;
 	const float KnockoutSpeed = 200.f;
 	const float AnimationEndTolerance = 0.02f;
+	// A motion-captured move is never played faster than this, and this much of its way back is shown.
+	const float MaxClipRate = 2.f;
+	const float ClipShareShownComingBack = 0.8f;
 
 	const float LooseArmDamping = 1.2f;
 	const float LooseArmMaxSpeed = 1500.f;
@@ -651,6 +654,32 @@ AStickFighter::AStickFighter()
 	FallAnimation = Fall.Object;
 	BackAnimation = WalkBack.Object;
 
+#define FIGHT_CLIP(Name) static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> Name(TEXT("/Game/Characters/Fight/A_" #Name))
+	FIGHT_CLIP(MmaKick);
+	FIGHT_CLIP(Uppercut);
+	FIGHT_CLIP(LegSweep);
+	FIGHT_CLIP(RoundhouseKick);
+	FIGHT_CLIP(HookPunch);
+	FIGHT_CLIP(HeadHit);
+	FIGHT_CLIP(StomachHit);
+	FIGHT_CLIP(FightingIdle_Anim);
+#undef FIGHT_CLIP
+	auto Learn = [this](EMove Move, UAnimSequenceBase* Clip)
+	{
+		if (Clip)
+		{
+			TechniqueClips.Add(Move, Clip);
+		}
+	};
+	Learn(EMove::Kick, MmaKick.Object);
+	Learn(EMove::Uppercut, Uppercut.Object);
+	Learn(EMove::Sweep, LegSweep.Object);
+	Learn(EMove::Roundhouse, RoundhouseKick.Object);
+	Learn(EMove::Chop, HookPunch.Object);
+	HitClips[0] = HeadHit.Object;
+	HitClips[1] = StomachHit.Object;
+	StanceClip = FightingIdle_Anim.Object;
+
 	auto MakePart = [this](const FString& Name, UStaticMesh* Mesh)
 	{
 		UStaticMeshComponent* Part = CreateDefaultSubobject<UStaticMeshComponent>(*Name);
@@ -807,6 +836,10 @@ void AStickFighter::Tick(float DeltaSeconds)
 	}
 
 	StunSecondsLeft = FMath::Max(StunSecondsLeft - DeltaSeconds, 0.f);
+	if (StunSecondsLeft <= 0.f && State == EFighterState::Idle && Playing && (Playing == HitClips[0] || Playing == HitClips[1]))
+	{
+		ReturnToIdle();
+	}
 	LandSquashSecondsLeft = FMath::Max(LandSquashSecondsLeft - DeltaSeconds, 0.f);
 	if (State == EFighterState::Busy && !bStrikeOnItsWay)
 	{
@@ -966,8 +999,19 @@ void AStickFighter::ReturnToIdle()
 	CaptureBlendFrom();
 	bStrikeOnItsWay = false;
 	bKicking = false;
-	Play(IdleAnimation, true);
+	PlayRest();
 	State = EFighterState::Idle;
+}
+
+void AStickFighter::PlayRest()
+{
+	const bool bStance = bFree && StanceClip;
+	Play(bStance ? StanceClip : IdleAnimation, true);
+	if (bStance)
+	{
+		// Each fighter rides its stance from its own moment, so a row of them does not bounce as one.
+		Body->SetPosition(StanceClip->GetPlayLength() * (GetUniqueID() % 7) / 7.f, false);
+	}
 }
 
 void AStickFighter::FaceTowards(const FVector& Target)
@@ -1090,11 +1134,12 @@ void AStickFighter::Play(UAnimSequenceBase* Animation, bool bLoop, float Rate)
 	Body->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
 	Body->SetPosition(0.f, false);
 	Body->SetPlayRate(Rate);
+	Playing = Animation;
 	BusyAnimationSeconds = Animation->GetPlayLength();
 }
 
 // Contact is the moment a hand or foot reaches furthest forward, found by stepping through the animation.
-float AStickFighter::FindContactSeconds(UAnimSequenceBase* Strike)
+float AStickFighter::FindContactSeconds(UAnimSequenceBase* Strike, int32 FirstBone, int32 BoneCount)
 {
 	if (const FContact* Known = Contacts.Find(Strike))
 	{
@@ -1113,7 +1158,7 @@ float AStickFighter::FindContactSeconds(UAnimSequenceBase* Strike)
 		Body->SetPosition(Seconds, false);
 		Body->TickAnimation(0.f, false);
 		Body->RefreshBoneTransforms();
-		for (const FName& Bone : StrikingBones)
+		for (const FName& Bone : MakeArrayView(StrikingBones + FirstBone, BoneCount))
 		{
 			const double Reach = (Body->GetBoneLocation(Bone) - GetActorLocation()) | Forward;
 			if (Reach > FurthestReach)
@@ -1133,11 +1178,13 @@ float AStickFighter::FindContactSeconds(UAnimSequenceBase* Strike)
 void AStickFighter::LandStrike()
 {
 	bStrikeOnItsWay = false;
-	Body->SetPlayRate(1.f);
 
 	SecondsSinceContact = 0.f;
 	const FTechnique* Posed = bKicking ? FindTechnique(StrikeMove) : nullptr;
-	const FVector StrikePoint = Posed ? BuildJoints(true)[Posed->bWithALeg ? RightFoot : HandOfSide[PosedSide]] : Body->GetBoneLocation(StrikeBone);
+	const bool bClip = Posed && bPosedByClip;
+	// A clip takes its time coming back. It is hurried, so that most of the way back fits in the time the move has to recover.
+	Body->SetPlayRate(bClip ? FMath::Clamp((BusyAnimationSeconds - Body->GetPosition()) * ClipShareShownComingBack / PosedRecoverSeconds, 1.f, MaxClipRate) : 1.f);
+	const FVector StrikePoint = Posed && !bClip ? BuildJoints(true)[Posed->bWithALeg ? RightFoot : HandOfSide[PosedSide]] : Body->GetBoneLocation(StrikeBone);
 	// A move played only to be looked at has nobody to land on.
 	if (bFreeStrike)
 	{
@@ -1286,7 +1333,7 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 	}
 
 	// A fighter who is standing still keeps its hands up, instead of letting them hang as the idle animation does.
-	if (StanceAlpha > 0.f)
+	if (StanceAlpha > 0.f && Playing != StanceClip)
 	{
 		// A fighter waiting for an opening is never quite still: it rides its knees, each fighter at its own moment.
 		const double Bob = 0.5 + 0.5 * FMath::Sin(GetWorld()->GetTimeSeconds() * StanceBobPerSecond + GetUniqueID() % 7);
@@ -1328,7 +1375,7 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		PoseArms(Joints, GetActorForwardVector(), Done < 0.6 ? 1. : (1. - Done) / 0.4, FMath::Lerp(4., 55., Swing), 14., FMath::Lerp(36., -25., Swing));
 	}
 
-	if (bKicking)
+	if (bKicking && !bPosedByClip)
 	{
 		// 0 to 1 while the strike is on its way, 1 to 2 while it is taken back.
 		const float Phase = KickElapsed < KickContactAt ? KickElapsed / KickContactAt : 1.f + FMath::Min((KickElapsed - KickContactAt) / PosedRecoverSeconds, 1.f);
@@ -1868,7 +1915,16 @@ void AStickFighter::TakeBlow(float Damage, const FVector& StrikePoint, const FVe
 
 	StunSecondsLeft = bSentFlying ? HeavyStunSeconds : StunSeconds;
 	PoseSecondsLeft = 0.f;
-	if (State == EFighterState::Busy)
+	UAnimSequenceBase* Reaction = HitClips[StrikePoint.Z > Body->GetBoneLocation(JointBones[ChestJoint]).Z ? 0 : 1];
+	// In the air the fall is the picture. On its feet the fighter takes the blow where it landed.
+	if (Reaction && bFree && JumpHeight <= 0.f)
+	{
+		CaptureBlendFrom();
+		bKicking = false;
+		Play(Reaction, false);
+		State = EFighterState::Idle;
+	}
+	else if (State == EFighterState::Busy)
 	{
 		ReturnToIdle();
 	}
@@ -2049,7 +2105,20 @@ FVector AStickFighter::WantedForward() const
 void AStickFighter::StartPosed(EMove Technique, float SecondsUntilContact)
 {
 	CaptureBlendFrom();
-	Play(IdleAnimation, true);
+	const FTechnique* Rules = FindTechnique(Technique);
+	UAnimSequenceBase* Clip = TechniqueClips.FindRef(Technique);
+	float ClipContactSeconds = 0.f;
+	if (Clip)
+	{
+		ClipContactSeconds = FindContactSeconds(Clip, Rules->bWithALeg ? 2 : 0, 2);
+		// A clip is thrown with the arm it was recorded with. When that one hangs loose, the pose worked out in code uses the other.
+		const int32 Arm = ArmOfStrikeBone(StrikeBone);
+		if (Arm != INDEX_NONE && LooseArms[Arm].bBroken)
+		{
+			Clip = nullptr;
+		}
+	}
+	bPosedByClip = Clip != nullptr;
 	State = EFighterState::Busy;
 	// The move starts from the held pose and carries it on itself, so the held pose lets go at once.
 	PoseAlpha = 0.f;
@@ -2059,7 +2128,17 @@ void AStickFighter::StartPosed(EMove Technique, float SecondsUntilContact)
 	bKicking = true;
 	KickElapsed = 0.f;
 	KickContactAt = FMath::Max(SecondsUntilContact, 0.08f);
-	PosedRecoverSeconds = FindTechnique(Technique)->RecoverSeconds;
+	PosedRecoverSeconds = Rules->RecoverSeconds;
+	if (Clip)
+	{
+		// Only the last of the wind-up is shown: a strike that has to arrive soon would otherwise play at many times its speed.
+		// Its reach is the clip's own, found together with its contact.
+		const float Shown = FMath::Min(ClipContactSeconds, KickContactAt * MaxClipRate);
+		Play(Clip, false, Shown / KickContactAt);
+		Body->SetPosition(ClipContactSeconds - Shown, false);
+		return;
+	}
+	PlayRest();
 
 	const FVector Hip = Body->GetBoneLocation(JointBones[RightHip]);
 	const FVector Knee = Body->GetBoneLocation(JointBones[RightKnee]);

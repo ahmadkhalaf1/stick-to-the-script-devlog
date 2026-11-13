@@ -782,6 +782,34 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the clips are on the PC. Nothing in the game uses them yet. What remains is in the task note: fit Mixamo's skeleton to the mannequin's, which is the risky part, and give each move its clip.
 - **Not verified:** that these clips convert at all.
 
+### 16:48–16:52 · The eleven clips fit the mannequin's skeleton
+
+- **Developer said:** offered the choice of starting the risky part tomorrow with a fresh week of usage or now: "Start now".
+- **Agent did:** `Tools/build_animations.py`, run without the editor's window. It imports the eleven FBX files (the first whole, to get Mixamo's skeleton; the rest as animation on it), has the engine make a rig for each of the two skeletons, maps one onto the other, and converts every clip to the mannequin.
+- **Result:** eleven of eleven converted, in `Content/Characters/Fight`, 16 MB. The engine recognised both skeletons by itself: spine, neck, head, arms, legs and fingers were matched without a line of mapping. The feared step took three runs and twenty minutes.
+- **Went wrong:**
+  - Run one: the last call had a parameter in the wrong place for this engine version, after everything before it had worked.
+  - Run two: the script deleted one old rig before making it again. The retargeter still pointed at it, the delete left a stub, and the new rig could not be made. It now clears everything an earlier run left in one go, before it starts.
+- **Not verified:** how any clip looks on a figure. A conversion can succeed and still put an arm through a chest. Nothing in the game uses the clips yet.
+
+### 16:55–17:15 · The clips were empty; converted again, and the kicks are real
+
+- **Developer said:** nothing new; this carries on from "Real fight animations" and "Start now".
+- **Agent did:**
+  - Before wiring anything, measured the eleven converted clips without the editor's window: where the hips, hands and feet are, thirty times a second.
+  - Found them empty, fixed the script, converted again, and measured again.
+  - Wired eight clips into the fighter: the kick, the uppercut, the sweep, the roundhouse, a hook punch for the chop, a fighting stance in place of the hands-up pose, and two ways of taking a blow, to the head and to the body. A move keeps its own timing and rules; the clip is fitted to them, and the moment of contact is found in each clip the way it always was for the punches.
+  - Played the warehouse on self-play three times in the editor, once through to its film, then packaged.
+- **Result:** the kick is a kick: a standing leg, the other one out flat, a foot on a chest. The hook lands and bends its man backwards. The opponents stand like boxers instead of holding two fists up. In the log, five kicks stopped 12 to 34 cm from the body they hit. The film shows the same motion with nothing changed in it. The packaged Windows build has the clips too: it played itself for a minute and a half, wrapped the warehouse and showed its film at 110 frames a second, with nothing missing in its log.
+- **Went wrong:**
+  - **The entry before this one is wrong.** It says eleven of eleven clips converted. They were converted into nothing: all eleven held the mannequin's standing pose from the first frame to the last. The script reported success and the files were 16 MB. That entry did say "not verified: how any clip looks", and the first look found it: every clip gave the same numbers, to the centimetre.
+  - The cause: a retargeter made from a script starts with no steps in it, so it copies nothing. Made in the editor's window, it gets them without asking. One line adds them. The script now measures how far a hand or a foot travels in every clip it makes and fails if nothing moves (the idle moves 15 cm, the kick 191).
+  - The plan written at 16:55 said to hold the figure in place by taking the hips' drift out. The measurement said not to: every clip returns to where it began, and the drift is the step into the strike. The plan note says what was done instead.
+- **Changed without being asked:** the moves reach further than the poses did (the kick 133 cm for about 88), because the picture has to match the rule. That is a change to how the fight plays.
+- **Not verified:** the sweep was caught only in its crouch and the uppercut behind another fighter, so neither has really been seen. A blow taken to the body was not caught in a picture. Nobody has played it by hand, so whether the longer reach makes the fight easier or harder is not known. Taking a clip away to see the old pose come back was not tried.
+
+![A kick and a roundhouse from motion capture, and the fighting stance](Docs/devlog/52-motion-capture.jpg)
+
 ---
 
 ## Asset and tool register
@@ -809,4 +837,4 @@ Kept current for the submission form.
 | Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Walls, floors, crates, containers |
 | Lettering on the sets | The engine's own font (Roboto) | The neon sign in the bar, the bay number in the warehouse |
 | Scene scripts | Made by the team: text files in `Content/Scripts` | The fights |
-| Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; not in the game yet | To replace the poses computed in code |
+| Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; eight of them in the game since that evening | The kicks, the uppercut, the sweep, the hook, the stance and the blows taken |

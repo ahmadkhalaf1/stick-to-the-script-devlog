@@ -19,3 +19,7 @@ Build/**/FileOpenOrder/
 
 # Python bytecode from the stage scripts.
 __pycache__/
+
+# The clips as they came from Mixamo, with its figure, and the rigs that fit them to the mannequin. Tools/build_animations.py
+# makes all of it again from the FBX files; the game uses only the converted clips next to this folder.
+Content/Characters/Fight/Mixamo/
