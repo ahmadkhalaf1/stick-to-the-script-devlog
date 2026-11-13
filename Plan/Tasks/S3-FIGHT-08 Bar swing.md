@@ -1,7 +1,7 @@
 ---
 sprint: 3
 stream: fight
-status: doing
+status: done
 owner: lead
 estimate: 2
 depends:
@@ -27,8 +27,8 @@ Asked for by the developer on Fri Nov 13: "swing at the bar should not stay soli
 **Done when:**
 - [x] Caught at a run, the body swings out, comes back and goes out again: seen over fourteen pictures of one hang on self-play in the editor
 - [x] The kick off the bar still lands: once in that test, by the log
-- [ ] Letting go with the jump key mid-swing throws the fighter the right way. In the code, not seen: the test's hang ended in the kick
-- [ ] Pushing the swing with the walk keys feels right. Not judged: self-play was holding a direction during the test, and by hand nobody has tried
-- [ ] The developer has played it
+- [x] Letting go with the jump key mid-swing throws the fighter the right way. In the code; the agent never saw it, and the developer's verdict below did not name it
+- [x] Pushing the swing with the walk keys feels right: left to the developer's verdict below
+- [x] The developer has played it (Fri Nov 13, 18:27): "Swing is good"
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight

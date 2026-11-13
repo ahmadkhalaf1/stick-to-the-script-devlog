@@ -847,6 +847,11 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![One hang on the bar, a picture every two thirds of a second in slow motion: out, back, out, and the kick](Docs/devlog/54-bar-swing.jpg)
 
+### 18:27 · The developer on the swing: "Swing is good"
+
+- **Developer said:** asked to try the bar in the warehouse in the build packaged at 18:08: "Swing is good".
+- **Result:** the swing stays as it is. That build had not been run by the agent; the developer's play is its first run.
+
 ---
 
 ## Asset and tool register
