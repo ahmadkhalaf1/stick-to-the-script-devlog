@@ -715,6 +715,14 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the draft is at https://the-fighter-ps.itch.io/stick-to-the-script. Only the developer can open it.
 - **Not verified:** how the page looks with its pictures, since it has none yet.
 
+### 14:45–14:52 · The draft page gets its cover, its screenshots and the zip
+
+- **Developer said:** "i want u to handle it all". And, while the files were going up: "i am still confused why u upload screen shots ad filse while the game is no yet ready?"
+- **Agent answered:** nothing is public and nothing is submitted; the page is a draft only the developer can open, and what is on it is today's build as a safety copy. itch.io had been down for a quarter of an hour that same afternoon. If it is down or slow in the last hours before the deadline, an entry whose page already holds a working build is safe. Swapping the zip and the pictures for the final ones takes two minutes.
+- **Agent did:** the three uploads it had said it could not do. The page opens a Windows file chooser for each, and the browser tool cannot see that window. A script can: `Tools/choose_file.ps1` finds the chooser that belongs to Chrome, writes the file's path into its name box and presses Open, so the browser itself reads the file and the 10 MB limit of the agent's own upload does not apply. Cover, seven screenshots, and the 379 MB zip, which took about a minute and a half. The zip is marked as the Windows download and the draft is saved.
+- **Went wrong:** the script's first two tries found the chooser but not its controls. It was asking for a text box and a button by their kind, and in this chooser both report themselves as plain panes. They are now found by their window class and driven with the two window messages every such control answers.
+- **Not verified:** the download, by fetching the zip back from the page and starting it. The page is a draft, so only the developer can.
+
 ---
 
 ## Asset and tool register

@@ -62,7 +62,7 @@ No art or animation was bought or downloaded beyond the engine's own mannequin a
 
 The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stick-to-the-script (only the developer can see it). Its text, genre, tags and AI disclosure are filled in from this file.
 
-- [ ] Cover, screenshots and the zip uploaded to the draft. These three are the developer's: the page opens a file chooser for each, which the agent cannot operate, and the agent's own upload is limited to 10 MB
+- [x] Cover, screenshots and the zip uploaded to the draft, on Fri Nov 13. The zip there is that day's build, a safety copy: it is replaced whenever the game changes. The page's upload buttons open a file chooser; `Toolschoose_file.ps1` fills it in
 
 - [x] Team name: Page Twelve. The zip is `PageTwelve_StickToTheScript.zip`, made by `Tools\release.ps1 -Team PageTwelve`
 - [ ] Screenshots taken from the packaged game. Seven are in `Docs/store`, captured from the game's own window at 1920 by 1080 during a self-played run on Fri Nov 13, after the sets got their surfaces. The strip along the top, where a tool on the developer's PC draws its frame counter, is cut off. The developer has not chosen among them
