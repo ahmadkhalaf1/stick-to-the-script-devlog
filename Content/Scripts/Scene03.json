@@ -1,0 +1,40 @@
+{
+  "Name": "Scene 3: The rooftop",
+  "Synopsis": "The hero gets to the roof too late. The boss flies off with the kid\nand the hero watches the helicopter go.",
+  "Epilogue": "In the script, the kid is never found.\nIn your cut, the kid goes home.",
+  "DirectorLines": [
+    "You are too LATE! That is the whole scene!",
+    "Watch the helicopter go! Sadly! Just watch it!",
+    "That helicopter costs four thousand an hour!",
+    "He has a gun! Respect the gun!",
+    "Not off the roof! That one is on loan!",
+    "This is a sad ending! Stop winning it!",
+    "Who gave him my ending? I wrote the ending!",
+    "...print it. And do not tell him it is better."
+  ],
+  "Stage": "/Game/Scenes/Stage03",
+  "Fee": 1400,
+  "CutCost": 100,
+  "PlayerStart": { "X": 0, "Y": 0 },
+  "ArenaMin": { "X": -350, "Y": -170 },
+  "ArenaMax": { "X": 1900, "Y": 170 },
+  "Captives": [
+    { "X": 2120, "Y": 0 }
+  ],
+  "Bars": [ {"X":520,"Height":250,"bOnAPost":true}, {"X":1420,"Height":250,"bOnAPost":true} ],
+  "Props": [
+    { "Kind": "Cone", "Location": { "X": 560, "Y": 140 }, "Height": 0 },
+    { "Kind": "Melon", "Location": { "X": 1050, "Y": 140 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 160, "Y": 110 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 820, "Y": -130 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 1350, "Y": 130 }, "Height": 0 }
+  ],
+  "Opponents": [
+    { "Kind": "Thug", "Enter": { "X": 420, "Y": -60 }, "Spot": { "X": 420, "Y": -60 }, "WakeDistance": 520, "Color": { "R": 0.02, "G": 0.02, "B": 0.02, "A": 1 } },
+    { "Kind": "Gunman", "Enter": { "X": 1000, "Y": 60 }, "Spot": { "X": 1000, "Y": 60 }, "WakeDistance": 800, "Color": { "R": 0.02, "G": 0.25, "B": 0.3, "A": 1 } },
+    { "Kind": "Rusher", "Enter": { "X": 760, "Y": 90 }, "Spot": { "X": 760, "Y": 90 }, "WakeDistance": 520, "Color": { "R": 0.02, "G": 0.05, "B": 0.3, "A": 1 } },
+    { "Kind": "Kicker", "Enter": { "X": 1180, "Y": -90 }, "Spot": { "X": 1180, "Y": -90 }, "WakeDistance": 520, "Color": { "R": 0.03, "G": 0.2, "B": 0.05, "A": 1 } },
+    { "Kind": "Gunman", "Enter": { "X": 1650, "Y": -70 }, "Spot": { "X": 1650, "Y": -70 }, "WakeDistance": 800, "Color": { "R": 0.02, "G": 0.25, "B": 0.3, "A": 1 } },
+    { "Kind": "Heavy", "Enter": { "X": 1800, "Y": 0 }, "Spot": { "X": 1800, "Y": 0 }, "WakeDistance": 520, "Color": { "R": 0.35, "G": 0.02, "B": 0.02, "A": 1 } }
+  ]
+}

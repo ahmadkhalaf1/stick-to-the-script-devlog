@@ -1,0 +1,97 @@
+# Stick to the Script — 2026 Epic AI MegaJam entry (Unreal Engine 5.8)
+
+These rules bind every person and every AI agent working in this repository. Read them before changing anything.
+
+Jam page: https://itch.io/jam/2026-epic-ai-megajam — Official Rules: https://epicgames.box.com/s/a7xcgl07fqoieeb99sjtd3juhj4agc4z
+Theme: **Director's Cut** ("your vision, your specific edits, your final cut").
+
+## The game
+
+**Stick to the Script** (`StickToTheScript.uproject`, C++ module `StickToTheScript`). A playable movie: you are a stunt performer hired for a scene, and the script says you lose. You ignore it. Each scene is a free fight watched from the side (a body cam is a second angle): you walk, punch, kick, duck, guard, jump and throw things, with no prompts. Going down is "Cut!" and a retake; putting every opponent down is a wrap, and the take replays as an edited stick-figure action scene (the Director's Cut), cut the way the player picks: an action cut, a slow-motion cut or one long take. Stick figures are drawn from the bone positions of the engine mannequin skeleton (`Content/Characters/Mannequins`).
+
+## Start here
+
+1. The repository root is an Obsidian vault. Read `Plan/Home.md`; `Plan/Board.base` lists every task with its owner and status.
+2. Work only on a task whose `owner` is you (or the developer you are working for). The lead assigns owners; to take an unassigned task, ask the lead.
+3. Stay inside the task's "You own" paths, and build against `Plan/Contracts.md`.
+4. When every "Done when" box is ticked, run the pre-merge check below, merge, and set the task's `status: done`.
+
+## Never break the base
+
+- `main` must always compile, open in the editor and play Stage 1. If you break it, fixing it comes before anything else.
+- One branch per task, named `<stream>/<task-id>-<slug>`, for example `cam/S1-CAM-02-take-recorder`. Pull `main` into your branch before merging. Merge at least once per sprint.
+- **Pre-merge check, every time:** close the editor, run `Tools/check.ps1` (it must print `PASS`), open the editor, play Stage 1 once.
+- Binary assets (`.uasset`, `.umap`) cannot be merged. Edit only assets inside your stream's folders. One person per level file. Save only the assets you changed; never use "Save All".
+- Moving, renaming or deleting an asset that someone else may reference is done only by the lead, at an integration checkpoint.
+- Some files have a single owner. Ask instead of editing them:
+  - core owner: `Source/StickToTheScript/Core/TakeTypes.h`
+  - lead: `StickToTheScript.uproject`, `Config/*.ini`, `*.Build.cs`, `*.Target.cs`, `.gitattributes`, `.gitignore`, `.mcp.json`, `CLAUDE.md`
+- Never commit `Binaries/`, `Intermediate/`, `Saved/` or `DerivedDataCache/`. Never force-push or rewrite `main`.
+- `Tools/check.ps1` also switches on a push guard (`Tools/hooks/pre-push`) that refuses a force-push to `main` or its deletion. GitHub does not enforce this for us, so never bypass the guard with `--no-verify`.
+- Agents: one task at a time, on its own branch, merged before the next one starts. If a fix needs a file outside your task's paths, stop and ask the developer.
+
+## Stream ownership
+
+| Stream | Owns |
+|---|---|
+| core | `Source/StickToTheScript/Core/`, `Content/Input/`, `Content/Scripts/` |
+| fight | `Source/StickToTheScript/Fighter/`, `Content/Characters/` |
+| cam | `Source/StickToTheScript/Cam/`, `Content/Camera/` |
+| stage | `Content/Scenes/`, `Content/Props/`, `Content/Materials/` |
+| feel | `Source/StickToTheScript/UI/`, `Content/UI/`, `Content/Audio/` |
+| ship | `Tools/`, `Docs/`, `DEVLOG.md` |
+
+## Privacy
+
+Keep personal and employer information out of the repository: no real names, personal or work email addresses, or company names in code, configs, assets, the plan or the dev log. Use handles. Submission details (names, Epic-account emails) are collected outside the repository. Check `git config user.email` before your first commit, because it is published with the history.
+
+## Dev log (Glass Box prize)
+
+`DEVLOG.md` is a prize entry, not a notes file. After every milestone, append a timestamped entry (local time from the system clock, never guessed): what the developer directed, what the agent did, the result, and what went wrong. Add a row to its asset and tool register for anything new that is not made by the team. Only record what actually happened. The file merges by union, so appended entries from different people never conflict; do not rewrite other people's entries.
+
+## Hard constraints (missing one disqualifies or wastes the entry)
+
+- **Deadline: Sun Nov 15 2026, 5:59 PM PST** = Mon Nov 16 01:59 UTC (02:59 in UTC+1). Late entries are disqualified. Plan to upload a working build a day early and replace it.
+- Unreal Engine only for this team (a team cannot also enter UEFN). Max 5 humans, unlimited AI agents.
+- Nothing built before Nov 12 may go in undeclared: pre-jam prompts, scripts and assets must be declared in the submission.
+- Submit a **packaged** build (unpackaged projects are rejected): Windows 10/11 (or macOS/Android/iOS), Development configuration per the jam page.
+- Zip named `TeamName_GameName.zip`, **under 1 GB** (larger only via butler). Uploaded to our own itch.io page, then submitted to the jam.
+- Third-party assets (Fab etc.) are allowed only with a valid licence and must be listed in the submission. No one else's IP.
+- Gameplay must go beyond Epic's starter templates.
+
+## Submission checklist
+
+- Team name; each member's name and Epic-account email
+- Game name
+- Link to a 30–60 second gameplay video
+- List of third-party assets and of AI/other tools used (needed for partner prizes)
+- Declaration of anything made before Nov 12
+- Dev log link (optional; required for the Glass Box prize)
+
+## Judging (each scored 1–5)
+
+Ambition and innovation, theme, fun factor, gameplay, visuals, level design and progression, audio.
+
+## Engine and tooling
+
+- Unreal Engine 5.8.3, launcher build. The UE 5.9 MegaJam Preview is only needed for web builds.
+- Package: `Tools/package.ps1` (editor closed). It makes a Windows Development build in `Saved/Package` and fails if an editor-only plugin got in.
+- The dev log as one web page, pictures included: `node Tools/devlog_page.mjs`. It lands in `Saved/Release/devlog.html`.
+- To look at the packaged game from a session, capture its window with the Windows `PrintWindow` call; the editor's screenshot tools only see the editor.
+- The dev log and the sources are public at https://github.com/ahmadkhalaf1/stick-to-the-script-devlog: a copy without binary assets and without history. `Tools/publish_devlog.ps1` refreshes it from what is committed, and refuses if it finds an address, a user path or a key in the copy. Its front page is `Docs/PublicReadme.md`.
+- Release zip: `Tools/release.ps1 -Team PageTwelve`, after packaging. It leaves out the game's `Saved` folder, so nobody's progress ships, and fails over 1 GB.
+- Stages are generated: `Tools/build_stage01.py`, `Tools/build_stage02.py` and `Tools/build_stage03.py`, with shared helpers in `Tools/stage_kit.py`. The command is at the top of each file. Change the script, not the level.
+- Surfaces are generated too: `node Tools/build_textures.mjs` paints the textures, then `Tools/build_materials.py` brings them in and makes `M_Surface`, `M_Figure`, `M_Light` and `M_Sign`. Run both before the stage scripts. A material that exists is left alone: to change one, delete its `.uasset` first, because clearing a material from a script crashes the editor.
+- Recorded sound is generated too. `node Tools/build_sounds.mjs` lists what is missing and what it would cost; `--go` asks fal.ai for it (needs `FAL_KEY` and ffmpeg); `--hear` checks the spoken lines by speech-to-text. `Tools/build_audio.py` brings the WAV files into `Content/Audio`; its header says how they are named. A sound with no recording is made in code.
+- What the director shouts is in each scene's file, under `"DirectorLines"`. To change a line, edit it there, delete its `Saved/Audio/V_Scene<n>_<line>.wav`, and run the two sound scripts.
+- Props are generated too: `Tools/build_props.py` makes every mesh in `Content/Props` and their one material. It needs `-EnablePlugins=GeometryScripting` on the command line; the command is at the top of the file. A new prop is a mesh there and a row in `Looks` in `Fighter/ThrownProp.cpp`.
+- Scenes are text files, `Content/Scripts/Scene*.json`. A new fight is a new file; it needs no compile, and `Tools/check.ps1` tests every one.
+- A new header must not share its file name with any engine or plugin header: Unreal refuses to build (`TakeRecorder.h` was taken).
+- A helper in an anonymous namespace needs a name no other source file in the module uses. Source files are compiled merged together, so two files that each define `Gravity` clash. `Tools/check.ps1` builds that way; a compile from the editor or an IDE may not, and will hide it.
+- Compile: `Tools/check.ps1`. The editor must be closed; a new `UCLASS` or `UPROPERTY` needs the restart anyway.
+- Launch the editor with `-ModelContextProtocolStartServer` so agents can drive it. The MCP and toolset plugins are enabled for the editor target only and must never ship.
+- `.mcp.json` points agents at the editor's MCP server, `http://127.0.0.1:8000/mcp`. It only connects while the editor is open. If the connection shows as failed after the editor starts, only the developer can re-dial it; the server still answers JSON-RPC over plain HTTP at that URL (`list_toolsets`, `describe_toolset`, `call_tool`).
+- The MCP server runs tool calls one at a time on the game thread: never issue overlapping `unreal-mcp` calls.
+- `.uasset` / `.umap` files are binary: change them through the editor or MCP, never with text edits.
+- `CaptureViewport` requires an `annotations` argument; pass `gridSpacing: 0` and `maxLabelDistance: 0` for a clean image.
+- The editor does not tick actors while its window is in the background unless throttling is off; `Config/DefaultEditorSettings.ini` turns it off for this project.

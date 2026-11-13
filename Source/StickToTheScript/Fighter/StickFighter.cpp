@@ -1,0 +1,2206 @@
+#include "StickToTheScript/Fighter/StickFighter.h"
+
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimSequenceBase.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
+#include "StickToTheScript/Core/TakeEvents.h"
+#include "StickToTheScript/Fighter/SwingBar.h"
+#include "StickToTheScript/Fighter/ThrownProp.h"
+#include "UObject/ConstructorHelpers.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogStickFighter, Log, All);
+
+namespace
+{
+	using namespace StickJoint;
+
+	const FName JointBones[JointCount] = {
+		"pelvis", "spine_03", "neck_01", "head",
+		"upperarm_l", "lowerarm_l", "hand_l",
+		"upperarm_r", "lowerarm_r", "hand_r",
+		"thigh_l", "calf_l", "foot_l",
+		"thigh_r", "calf_r", "foot_r",
+	};
+
+	const int32 LimbJoints[][2] = {
+		{PelvisJoint, ChestJoint}, {ChestJoint, NeckJoint}, {NeckJoint, SkullJoint},
+		{NeckJoint, LeftShoulder}, {LeftShoulder, LeftElbow}, {LeftElbow, LeftHand},
+		{NeckJoint, RightShoulder}, {RightShoulder, RightElbow}, {RightElbow, RightHand},
+		{PelvisJoint, LeftHip}, {LeftHip, LeftKnee}, {LeftKnee, LeftFoot},
+		{PelvisJoint, RightHip}, {RightHip, RightKnee}, {RightKnee, RightFoot},
+	};
+
+	const int32 ElbowOfSide[2] = { LeftElbow, RightElbow };
+	const int32 HandOfSide[2] = { LeftHand, RightHand };
+	// Where each forearm sits in LimbJoints.
+	const int32 ForearmLimbOfSide[2] = { 5, 8 };
+
+	const float BreakKink = 13.f;
+	const float BoneLength = 11.f;
+	const FLinearColor BloodiedColor(0.45f, 0.01f, 0.01f);
+	const FLinearColor BoneColor(0.92f, 0.9f, 0.82f);
+
+	void PlaceLimb(UStaticMeshComponent* Limb, const FVector& From, const FVector& To, float Thickness)
+	{
+		Limb->SetWorldLocationAndRotation((From + To) * 0.5f, FRotationMatrix::MakeFromZ(To - From).Rotator());
+		Limb->SetWorldScale3D(FVector(Thickness, Thickness, FVector::Dist(From, To)) / 100.f);
+	}
+
+	const FName StrikingBones[] = { "hand_l", "hand_r", "foot_l", "foot_r" };
+
+	// Which arm a strike is thrown with: 0 the left, 1 the right, none for a foot. The mannequin's bones end in _l and _r.
+	int32 ArmOfStrikeBone(const FName& Bone)
+	{
+		const FString Name = Bone.ToString();
+		return !Name.StartsWith(TEXT("hand")) ? INDEX_NONE : Name.EndsWith(TEXT("_l")) ? 0 : 1;
+	}
+
+	// A heavy blow breaks an arm only on a fighter it leaves this badly hurt. Before, every kick broke one.
+	const float ArmBreaksBelowHealthShare = 0.35f;
+
+	const float RecoilSeconds = 0.4f;
+	const float RecoilDistance = 28.f;
+	// How far from the struck joint a hit is still felt strongly.
+	const float RecoilReach = 40.f;
+	const float HeavyRecoil = 1.6f;
+	const float BlockedRecoil = 0.35f;
+	const float KnockoutSpeed = 200.f;
+	const float AnimationEndTolerance = 0.02f;
+
+	const float LooseArmDamping = 1.2f;
+	const float LooseArmMaxSpeed = 1500.f;
+
+	const float TurnSpeed = 14.f;
+	const float BlendSeconds = 0.14f;
+	// A jog covers about this much ground a second at its natural speed.
+	const float RunAnimationSpeed = 400.f;
+	const float ArrivedDistance = 10.f;
+	// A hand or foot faster than this, in centimetres a second, gets a smear.
+	const double SmearSpeed = 1300.;
+
+	const float PoseHoldSeconds = 0.7f;
+	const float PoseBlendPerSecond = 9.f;
+	const double DuckDrop = 45.;
+	const double DuckLeanDegrees = 30.;
+
+	// A free strike lands when its fist or foot gets this close to the middle of a body.
+	const double BodyRadius = 18.;
+	// A fighter steps up to this far into its strike, to arrive with the fist or foot just touching.
+	const double LungeDistance = 75.;
+	const double TouchGap = 5.;
+	const float KickRecoverSeconds = 0.45f;
+	const double KickLeanDegrees = 16.;
+	const double KickLegStretch = 0.97;
+	// The fist of an uppercut and the edge of a chopping hand land this far ahead of the fighter.
+	const double UppercutReach = 42.;
+	const double ChopReach = 52.;
+	// A bar is caught by a fighter this close under it, whose raised hands are within the slack of it.
+	const double BarGrabWidth = 42.;
+	const double BarGrabSlack = 14.;
+	const float MaxHangSeconds = 2.4f;
+	// The kick off a bar: how long the swing takes, who it reaches, and how far the fighter flies after letting go.
+	const float SwingKickContactSeconds = 0.34f;
+	const double SwingKickReach = 205.;
+	const double SwingKickWidth = 62.;
+	const float SwingKickDamageScale = 2.2f;
+	const float SwingKickFlySpeed = 1400.f;
+	const float SwingKickLiftSpeed = 160.f;
+	// A waiting fighter rides its knees a little, and a landing bends them.
+	const double StanceBobDepth = 0.05;
+	const double StanceBobPerSecond = 5.5;
+	const float LandSquashSeconds = 0.16f;
+	const double LandSquashDepth = 0.4;
+
+	// The trunk is drawn thicker than the limbs, and the shoulders and hips a little thicker, so the figure has a body.
+	const float TrunkWidth = 1.6f;
+	const float GirdleWidth = 1.25f;
+	const float JointBallWidth = 1.05f;
+	const float HandAndFootWidth = 1.5f;
+	const int32 FirstBallJoint = LeftShoulder;
+	const float StanceBlendPerSecond = 6.f;
+
+	// A legendary prop in the hands: one blow knocks out, reaches further, and throws the body.
+	const double LegendaryReach = 45.;
+	const float LegendaryLaunchSpeed = 950.f;
+
+	// A backwards walk covers about this much ground a second at its natural speed.
+	const float WalkBackAnimationSpeed = 170.f;
+	// A struck figure shows as its own skeleton for a moment, like an X-ray: thin pale bones, a skull, ribs.
+	// A little brighter than white, so the picture's glow catches it.
+	const float FlashSeconds = 0.13f;
+	const FLinearColor FlashColor(1.8f, 1.75f, 1.55f);
+	const float BoneWidth = 0.32f;
+	const float BoneJointWidth = 0.6f;
+
+	struct FLookColor
+	{
+		const TCHAR* Name;
+		FLinearColor Color;
+	};
+	// Bright, and none of them an opponent's colour or the captive's.
+	const FLookColor LookColors[] = {
+		{ TEXT("Chalk"), FLinearColor(0.8f, 0.8f, 0.8f) },
+		{ TEXT("Sky"), FLinearColor(0.25f, 0.6f, 1.f) },
+		{ TEXT("Lime"), FLinearColor(0.45f, 0.9f, 0.15f) },
+		{ TEXT("Orange"), FLinearColor(1.f, 0.45f, 0.05f) },
+		{ TEXT("Pink"), FLinearColor(1.f, 0.3f, 0.6f) },
+		{ TEXT("Lilac"), FLinearColor(0.65f, 0.45f, 1.f) },
+		{ TEXT("Mint"), FLinearColor(0.3f, 0.95f, 0.75f) },
+		{ TEXT("Bone"), FLinearColor(0.9f, 0.85f, 0.65f) },
+		// Sold in the shop. The shop names this entry by its place in the list.
+		{ TEXT("Royal purple"), FLinearColor(0.42f, 0.1f, 0.85f) },
+	};
+
+	struct FLookBuild
+	{
+		const TCHAR* Name;
+		float Thickness;
+		float HeadRadius;
+	};
+	const FLookBuild LookBuilds[] = {
+		{ TEXT("Slim"), 5.5f, 10.f },
+		{ TEXT("Regular"), 7.f, 11.f },
+		{ TEXT("Heavy"), 9.5f, 12.5f },
+	};
+
+	// One shape of a hat. Ahead and Above place it from the middle of the head, and with Size they are in head radii,
+	// so a hat fits whatever the build.
+	struct FHatPiece
+	{
+		bool bUsed;
+		bool bCube;
+		double Ahead;
+		double Above;
+		FVector Size;
+	};
+	// The last two are sold in the shop, which names them by their place in this list.
+	const TCHAR* HatNames[] = { TEXT("None"), TEXT("Cap"), TEXT("Top hat"), TEXT("Headband"), TEXT("Mohawk"), TEXT("Halo"), TEXT("Crown") };
+	const FHatPiece Hats[][2] = {
+		{ {}, {} },
+		{ { true, false, 0., 0.75, FVector(2.1, 2.1, 0.7) }, { true, true, 1.1, 0.5, FVector(1.2, 1.6, 0.12) } },
+		{ { true, false, 0., 1.6, FVector(1.5, 1.5, 1.4) }, { true, false, 0., 0.9, FVector(2.6, 2.6, 0.12) } },
+		{ { true, false, 0., 0.25, FVector(2.12, 2.12, 0.32) }, { true, true, -1.4, 0.25, FVector(0.9, 0.25, 0.25) } },
+		{ { true, true, 0., 1., FVector(1.9, 0.22, 0.75) }, {} },
+		{ { true, false, 0., 1.8, FVector(2.1, 2.1, 0.07) }, {} },
+		{ { true, false, 0., 1., FVector(1.9, 1.9, 0.6) }, { true, false, 0., 0.7, FVector(2.25, 2.25, 0.14) } },
+	};
+	const FLinearColor HatColors[] = {
+		FLinearColor::Black,
+		FLinearColor(0.55f, 0.03f, 0.03f),
+		FLinearColor(0.03f, 0.03f, 0.04f),
+		FLinearColor(0.6f, 0.03f, 0.03f),
+		FLinearColor(0.75f, 0.3f, 0.02f),
+		FLinearColor(2.6f, 2.2f, 0.7f),
+		FLinearColor(1.6f, 1.05f, 0.12f),
+	};
+	// A free strike lands on anyone within about 70 degrees of straight ahead.
+	const double StrikeConeCosine = 0.34;
+	const float AirStrikeDamageScale = 1.4f;
+	const float StunSeconds = 0.35f;
+	const float HeavyStunSeconds = 0.6f;
+	const float KnockSpeed = 270.f;
+	const float HeavyKnockSpeed = 720.f;
+	const float BlockedKnockSpeed = 140.f;
+	const float KnockDamping = 9.f;
+	const float JumpLaunchSpeed = 620.f;
+	const float JumpGravity = 1800.f;
+	// A fighter higher than this is out of reach of a strike thrown from the floor.
+	const float OutOfReachHeight = 60.f;
+	const double BodyGap = 45.;
+	// How soon after a strike lands the next move may cut its follow-through short.
+	const float CancelSeconds = 0.12f;
+	const float GuardHoldSeconds = 0.12f;
+	// A kick is strong, so its follow-through cannot be cut short as early as a punch's.
+	const float KickCancelSeconds = 0.45f;
+	// The third quick blow in a row sends its victim flying. That ends the string and gives everyone room.
+	const int32 BlowsInAFinisher = 3;
+	const float BlowChainSeconds = 1.f;
+
+	const double GrabReach = 130.;
+	// Hurled downwards from over the head: slow enough to be seen, and it comes down within about four metres.
+	const float ThrowSpeed = 1000.f;
+	const float ThrowDrop = -250.f;
+	// A throw bends up to about 35 degrees to find someone within this distance.
+	const double ThrowAimDistance = 450.;
+	const double ThrowAimCosine = 0.82;
+	const float ThrowGestureSeconds = 0.3f;
+	// A strike thrown from too close steps back by up to this much, so the fist does not go through the body.
+	const double StepBackDistance = 40.;
+
+	// Where an elbow or knee sits, given both ends of the limb, its two lengths and the way it bends.
+	FVector MiddleJoint(const FVector& Root, const FVector& End, double UpperLength, double LowerLength, const FVector& BendDirection)
+	{
+		const FVector Axis = (End - Root).GetSafeNormal();
+		const double Distance = FMath::Clamp(FVector::Dist(Root, End), 1., UpperLength + LowerLength);
+		const double Along = (FMath::Square(UpperLength) - FMath::Square(LowerLength) + FMath::Square(Distance)) / (2. * Distance);
+		const double Out = FMath::Sqrt(FMath::Max(FMath::Square(UpperLength) - FMath::Square(Along), 0.));
+		const FVector Bend = (BendDirection - Axis * (BendDirection | Axis)).GetSafeNormal();
+		return Root + Axis * Along + Bend * Out;
+	}
+
+	// Tips everything above the legs about the pelvis, forward for a positive angle, and lowers it by Drop.
+	void LeanBody(TArray<FVector>& Joints, const FVector& Forward, double Radians, double Drop)
+	{
+		const FVector Pelvis = Joints[PelvisJoint];
+		for (const int32 Index : { PelvisJoint, ChestJoint, NeckJoint, SkullJoint, LeftShoulder, LeftElbow, LeftHand, RightShoulder, RightElbow, RightHand, LeftHip, RightHip })
+		{
+			const FVector Offset = Joints[Index] - Pelvis;
+			const double Ahead = Offset | Forward;
+			const double Above = Offset.Z;
+			const FVector Sideways = Offset - Forward * Ahead - FVector::UpVector * Above;
+			Joints[Index] = Pelvis + Sideways
+				+ Forward * (Ahead * FMath::Cos(Radians) + Above * FMath::Sin(Radians))
+				+ FVector::UpVector * (Above * FMath::Cos(Radians) - Ahead * FMath::Sin(Radians) - Drop);
+		}
+	}
+
+	// The engine ships no defensive animations, so block and duck are posed on the joints over whatever is playing.
+	void PoseDuck(TArray<FVector>& Joints, const FVector& Forward, double Alpha)
+	{
+		const double LeftThigh = FVector::Dist(Joints[LeftHip], Joints[LeftKnee]);
+		const double LeftCalf = FVector::Dist(Joints[LeftKnee], Joints[LeftFoot]);
+		const double RightThigh = FVector::Dist(Joints[RightHip], Joints[RightKnee]);
+		const double RightCalf = FVector::Dist(Joints[RightKnee], Joints[RightFoot]);
+
+		LeanBody(Joints, Forward, FMath::DegreesToRadians(DuckLeanDegrees * Alpha), DuckDrop * Alpha);
+
+		Joints[LeftKnee] = MiddleJoint(Joints[LeftHip], Joints[LeftFoot], LeftThigh, LeftCalf, Forward);
+		Joints[RightKnee] = MiddleJoint(Joints[RightHip], Joints[RightFoot], RightThigh, RightCalf, Forward);
+	}
+
+	// Both hands go to a point given from the head: ahead of it for a guard, above it to carry something.
+	void PoseArms(TArray<FVector>& Joints, const FVector& Forward, double Alpha, double Ahead, double Out, double Up)
+	{
+		const FVector Right = FVector::UpVector ^ Forward;
+		const int32 Arms[2][3] = { { LeftShoulder, LeftElbow, LeftHand }, { RightShoulder, RightElbow, RightHand } };
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			const int32 Shoulder = Arms[Side][0];
+			const int32 Elbow = Arms[Side][1];
+			const int32 Hand = Arms[Side][2];
+			const FVector Outward = Right * (Side == 0 ? -1. : 1.);
+			const double UpperLength = FVector::Dist(Joints[Shoulder], Joints[Elbow]);
+			const double LowerLength = FVector::Dist(Joints[Elbow], Joints[Hand]);
+
+			const FVector Guard = Joints[SkullJoint] + Forward * Ahead + Outward * Out + FVector(0., 0., Up);
+			Joints[Hand] = FMath::Lerp(Joints[Hand], Guard, Alpha);
+			Joints[Elbow] = MiddleJoint(Joints[Shoulder], Joints[Hand], UpperLength, LowerLength, Outward * 0.5 - FVector::UpVector);
+		}
+	}
+
+	// What follows poses strikes in code. The engine's mannequin has three attack animations and nothing else to fight with.
+
+	const int32 ArmJoints[2][3] = { { LeftShoulder, LeftElbow, LeftHand }, { RightShoulder, RightElbow, RightHand } };
+	const int32 LegJoints[2][3] = { { LeftHip, LeftKnee, LeftFoot }, { RightHip, RightKnee, RightFoot } };
+
+	// The lengths of the four limbs as the animation left them. A pose moves shoulders and hips first, and a limb
+	// measured after that has changed length.
+	struct FLimbs
+	{
+		explicit FLimbs(const TArray<FVector>& Joints)
+		{
+			for (int32 Side = 0; Side < 2; ++Side)
+			{
+				ArmUpper[Side] = FVector::Dist(Joints[ArmJoints[Side][0]], Joints[ArmJoints[Side][1]]);
+				ArmLower[Side] = FVector::Dist(Joints[ArmJoints[Side][1]], Joints[ArmJoints[Side][2]]);
+				Thigh[Side] = FVector::Dist(Joints[LegJoints[Side][0]], Joints[LegJoints[Side][1]]);
+				Calf[Side] = FVector::Dist(Joints[LegJoints[Side][1]], Joints[LegJoints[Side][2]]);
+			}
+		}
+
+		double Leg(int32 Side) const { return Thigh[Side] + Calf[Side]; }
+
+		double ArmUpper[2];
+		double ArmLower[2];
+		double Thigh[2];
+		double Calf[2];
+	};
+
+	// Puts a hand or a foot where it is wanted and bends the limb to get there. A target out of reach is brought in.
+	void ReachTo(TArray<FVector>& Joints, const int32* Limb, double UpperLength, double LowerLength, const FVector& Target, const FVector& Bend)
+	{
+		const FVector Root = Joints[Limb[0]];
+		Joints[Limb[2]] = Root + (Target - Root).GetClampedToMaxSize((UpperLength + LowerLength) * 0.99);
+		Joints[Limb[1]] = MiddleJoint(Root, Joints[Limb[2]], UpperLength, LowerLength, Bend);
+	}
+
+	void ReachWithArm(TArray<FVector>& Joints, const FLimbs& Limbs, int32 Side, const FVector& Target, const FVector& Bend)
+	{
+		ReachTo(Joints, ArmJoints[Side], Limbs.ArmUpper[Side], Limbs.ArmLower[Side], Target, Bend);
+	}
+
+	void ReachWithLeg(TArray<FVector>& Joints, const FLimbs& Limbs, int32 Side, const FVector& Target, const FVector& Bend)
+	{
+		ReachTo(Joints, LegJoints[Side], Limbs.Thigh[Side], Limbs.Calf[Side], Target, Bend);
+	}
+
+	// A strike's phase runs 0 to 1 while it is on its way and 1 to 2 while it is taken back.
+	// This is 0 as it starts, 1 as it lands and 0 again when it is over.
+	double OutAndBack(float Phase)
+	{
+		return FMath::SmoothStep(0., 1., static_cast<double>(Phase <= 1.f ? Phase : 2.f - Phase));
+	}
+
+	// Turns the whole figure about the upright line through its pelvis.
+	void SpinBody(TArray<FVector>& Joints, double Degrees)
+	{
+		const FVector Pivot = Joints[PelvisJoint];
+		for (FVector& Joint : Joints)
+		{
+			Joint = Pivot + (Joint - Pivot).RotateAngleAxis(Degrees, FVector::UpVector);
+		}
+	}
+
+	// The knee comes up first and the foot snaps out from it, with the body leaning back to balance.
+	// Thrown straight from the hip, as it first was, the kick read as a push.
+	void PoseKick(TArray<FVector>& Joints, const FVector& Forward, float Phase)
+	{
+		const FLimbs Limbs(Joints);
+		const double Out = OutAndBack(Phase);
+		const FVector Planted = Joints[LeftFoot];
+		const FVector Standing = Joints[RightFoot];
+
+		LeanBody(Joints, Forward, -FMath::DegreesToRadians(KickLeanDegrees * Out), 0.);
+		ReachWithLeg(Joints, Limbs, 0, Planted, Forward);
+
+		const double Leg = Limbs.Leg(1);
+		const FVector Chambered = Joints[RightHip] + Forward * (Leg * 0.3) - FVector::UpVector * (Leg * 0.2);
+		const FVector Extended = Joints[RightHip] + Forward * (Leg * KickLegStretch) + FVector(0., 0., 10.);
+		const FVector Foot = Out < 0.5 ? FMath::Lerp(Standing, Chambered, Out * 2.) : FMath::Lerp(Chambered, Extended, Out * 2. - 1.);
+		ReachWithLeg(Joints, Limbs, 1, Foot, Forward + FVector::UpVector);
+	}
+
+	// Driven up out of a crouch: the fist travels from the hip to above the head, close to the body all the way.
+	void PoseUppercut(TArray<FVector>& Joints, const FVector& Forward, float Phase, int32 Side)
+	{
+		const FLimbs Limbs(Joints);
+		const FVector Outward = (FVector::UpVector ^ Forward) * (Side == 0 ? -1. : 1.);
+		const double Rise = FMath::SmoothStep(0., 1., FMath::Min(static_cast<double>(Phase), 1.));
+		const double Back = FMath::SmoothStep(0., 1., FMath::Clamp(static_cast<double>(Phase) - 1., 0., 1.));
+		const FVector FistAtRest = Joints[ArmJoints[Side][2]];
+		const FVector OtherAtRest = Joints[ArmJoints[1 - Side][2]];
+		const FVector LeftPlanted = Joints[LeftFoot];
+		const FVector RightPlanted = Joints[RightFoot];
+
+		PoseDuck(Joints, Forward, 1. - Rise);
+		LeanBody(Joints, Forward, -FMath::DegreesToRadians(8. * Rise * (1. - Back)), 0.);
+		ReachWithLeg(Joints, Limbs, 0, LeftPlanted, Forward);
+		ReachWithLeg(Joints, Limbs, 1, RightPlanted, Forward);
+
+		const FVector Low = Joints[PelvisJoint] + Forward * 14. + Outward * 16. - FVector(0., 0., 6.);
+		const FVector High = Joints[SkullJoint] + Forward * 46. + Outward * 4. + FVector(0., 0., 22.);
+		// The fist swings out ahead of the straight line between the two, as an arm on a shoulder does.
+		const FVector Fist = FMath::Lerp(Low, High, Rise) + Forward * (10. * FMath::Sin(UE_PI * Rise));
+		ReachWithArm(Joints, Limbs, Side, FMath::Lerp(Fist, FistAtRest, Back), Outward * 0.5 - FVector::UpVector);
+
+		const FVector Chin = Joints[SkullJoint] + Forward * 16. - Outward * 9. - FVector(0., 0., 16.);
+		ReachWithArm(Joints, Limbs, 1 - Side, FMath::Lerp(Chin, OtherAtRest, Back), -Outward * 0.5 - FVector::UpVector);
+	}
+
+	// Down on one leg with a hand to the floor, and the other leg goes round like a scythe: from behind on the right,
+	// straight ahead as it lands, and on past to the left.
+	void PoseSweep(TArray<FVector>& Joints, const FVector& Forward, float Phase)
+	{
+		const FLimbs Limbs(Joints);
+		const FVector Right = FVector::UpVector ^ Forward;
+		const double Floor = FMath::Min(Joints[LeftFoot].Z, Joints[RightFoot].Z);
+		const FVector Planted = Joints[LeftFoot];
+		const FVector Standing = Joints[RightFoot];
+		const FVector HandAtRest = Joints[LeftHand];
+		const double Down = 1. - FMath::SmoothStep(0., 1., FMath::Clamp((static_cast<double>(Phase) - 1.5) / 0.5, 0., 1.));
+		const double Stretched = FMath::SmoothStep(0., 1., FMath::Clamp(static_cast<double>(Phase) / 0.3, 0., 1.)) * Down;
+
+		PoseDuck(Joints, Forward, Down);
+		LeanBody(Joints, Forward, FMath::DegreesToRadians(8. * Down), 14. * Down);
+		ReachWithLeg(Joints, Limbs, 0, Planted, Forward);
+
+		const double Degrees = Phase < 1.f
+			? FMath::Lerp(150., 0., static_cast<double>(Phase))
+			: FMath::Lerp(0., -100., FMath::Min((static_cast<double>(Phase) - 1.) / 0.5, 1.));
+		const FVector Hip = Joints[RightHip];
+		const double Leg = Limbs.Leg(1) * 0.97;
+		const double Along = FMath::Sqrt(FMath::Max(FMath::Square(Leg) - FMath::Square(Hip.Z - Floor - 6.), FMath::Square(Leg * 0.5)));
+		const FVector Swept = FVector(Hip.X, Hip.Y, Floor + 6.) + Forward.RotateAngleAxis(Degrees, FVector::UpVector) * Along;
+		ReachWithLeg(Joints, Limbs, 1, FMath::Lerp(Standing, Swept, Stretched), FVector::UpVector);
+
+		const FVector OnTheFloor = FVector(Joints[PelvisJoint].X, Joints[PelvisJoint].Y, Floor + 4.) - Right * 30. + Forward * 18.;
+		ReachWithArm(Joints, Limbs, 0, FMath::Lerp(HandAtRest, OnTheFloor, Down), -Right - FVector::UpVector * 0.3);
+	}
+
+	// One whole turn on the standing leg. The kicking leg comes out over the second half of the turn, level with a
+	// head, and arrives as the turn ends. The turn starts and ends facing the same way, so nothing jumps.
+	void PoseRoundhouse(TArray<FVector>& Joints, const FVector& Forward, float Phase)
+	{
+		const FLimbs Limbs(Joints);
+		const double Wind = FMath::Min(static_cast<double>(Phase), 1.);
+		const double After = FMath::Clamp(static_cast<double>(Phase) - 1., 0., 1.);
+		const double Out = Phase <= 1.f ? FMath::SmoothStep(0., 1., (Wind - 0.45) / 0.55) : 1. - FMath::SmoothStep(0., 1., After);
+		const FVector Planted = Joints[LeftFoot];
+		const FVector Standing = Joints[RightFoot];
+
+		LeanBody(Joints, Forward, -FMath::DegreesToRadians(24. * Out), 0.);
+		ReachWithLeg(Joints, Limbs, 0, Planted, Forward);
+
+		const double Leg = Limbs.Leg(1);
+		const FVector Chambered = Joints[RightHip] + Forward * (Leg * 0.25) + FVector(0., 0., Leg * 0.05);
+		const FVector High = Joints[RightHip] + Forward * (Leg * 0.9) + FVector(0., 0., Leg * 0.4);
+		const FVector Foot = Out < 0.4 ? FMath::Lerp(Standing, Chambered, Out / 0.4) : FMath::Lerp(Chambered, High, (Out - 0.4) / 0.6);
+		ReachWithLeg(Joints, Limbs, 1, Foot, Forward + FVector::UpVector);
+
+		// It speeds up into the blow and swings a little past it.
+		SpinBody(Joints, 360. * FMath::Square(Wind) + 35. * FMath::Sin(UE_PI * After));
+	}
+
+	// The hand goes up over the head and comes down edge-first, with the body's weight behind it.
+	// The other fist is pulled back to the hip, as it is taught.
+	void PoseChop(TArray<FVector>& Joints, const FVector& Forward, float Phase, int32 Side)
+	{
+		const FLimbs Limbs(Joints);
+		const FVector Outward = (FVector::UpVector ^ Forward) * (Side == 0 ? -1. : 1.);
+		const double Wind = FMath::Min(static_cast<double>(Phase), 1.);
+		const double Raise = FMath::SmoothStep(0., 1., Wind / 0.6);
+		const double Fall = FMath::SmoothStep(0., 1., (Wind - 0.6) / 0.4);
+		const double Back = FMath::SmoothStep(0., 1., FMath::Clamp(static_cast<double>(Phase) - 1., 0., 1.));
+		const FVector LeftPlanted = Joints[LeftFoot];
+		const FVector RightPlanted = Joints[RightFoot];
+
+		LeanBody(Joints, Forward, FMath::DegreesToRadians(-8. * Raise * (1. - Fall) + 14. * Fall * (1. - Back)), 0.);
+		ReachWithLeg(Joints, Limbs, 0, LeftPlanted, Forward);
+		ReachWithLeg(Joints, Limbs, 1, RightPlanted, Forward);
+
+		const FVector Guard = Joints[SkullJoint] + Forward * 30. + Outward * 10. + FVector(0., 0., 6.);
+		const FVector Over = Joints[SkullJoint] + Forward * 2. + Outward * 12. + FVector(0., 0., 40.);
+		const FVector Struck = Joints[SkullJoint] + Forward * 50. + Outward * 2. - FVector(0., 0., 16.);
+		const FVector Edge = FMath::Lerp(FMath::Lerp(Guard, Over, Raise), Struck, Fall);
+		ReachWithArm(Joints, Limbs, Side, FMath::Lerp(Edge, Guard, Back), Outward * 0.7 - FVector::UpVector * 0.3 - Forward * 0.2);
+
+		const FVector OtherGuard = Joints[SkullJoint] + Forward * 30. - Outward * 10. + FVector(0., 0., 6.);
+		const FVector AtTheHip = Joints[PelvisJoint] - Outward * 16. + FVector(0., 0., 14.) - Forward * 4.;
+		ReachWithArm(Joints, Limbs, 1 - Side, FMath::Lerp(OtherGuard, AtTheHip, Raise * (1. - Back)), -Outward * 0.6 - Forward * 0.8);
+	}
+
+	// What sets one strike posed in code apart from another.
+	struct FTechnique
+	{
+		EMove Move;
+		// How long it takes to arrive when the caller does not say. The player's plain kick is told to hurry.
+		float WindUpSeconds;
+		float RecoverSeconds;
+		// Of the fighter's kick damage for a leg, of its punch damage for a hand.
+		float DamageScale;
+		bool bWithALeg;
+		// Everyone inside this much of straight ahead is hit: 1 would be nobody, -1 is all round.
+		double ConeCosine;
+		// A high strike passes over a ducked head.
+		bool bHigh;
+		bool bThroughGuard;
+		// Throws whoever it hits into the air at this speed.
+		float PopSpeed;
+		// Leaves whoever it hits helpless for this long. 0 is the usual stagger.
+		float StunSeconds;
+	};
+	const FTechnique Techniques[] = {
+		{ EMove::Kick, 0.26f, KickRecoverSeconds, 1.f, true, StrikeConeCosine, false, false, 0.f, 0.f },
+		{ EMove::Uppercut, 0.2f, 0.5f, 1.8f, false, StrikeConeCosine, false, false, 560.f, 0.95f },
+		{ EMove::Sweep, 0.24f, 0.5f, 0.7f, true, -1., false, false, 300.f, 1.1f },
+		{ EMove::Roundhouse, 0.36f, 0.5f, 1.6f, true, 0., true, true, 0.f, 0.f },
+		{ EMove::Chop, 0.28f, 0.42f, 1.3f, false, StrikeConeCosine, false, true, 0.f, 1.2f },
+	};
+
+	const FTechnique* FindTechnique(EMove Move)
+	{
+		for (const FTechnique& Technique : Techniques)
+		{
+			if (Technique.Move == Move)
+			{
+				return &Technique;
+			}
+		}
+		return nullptr;
+	}
+
+	void PoseTechnique(TArray<FVector>& Joints, const FVector& Forward, EMove Move, float Phase, int32 Side)
+	{
+		switch (Move)
+		{
+		case EMove::Uppercut:
+			PoseUppercut(Joints, Forward, Phase, Side);
+			break;
+		case EMove::Sweep:
+			PoseSweep(Joints, Forward, Phase);
+			break;
+		case EMove::Roundhouse:
+			PoseRoundhouse(Joints, Forward, Phase);
+			break;
+		case EMove::Chop:
+			PoseChop(Joints, Forward, Phase, Side);
+			break;
+		default:
+			PoseKick(Joints, Forward, Phase);
+			break;
+		}
+	}
+
+	// Hung by both hands from a bar: the shoulders an arm's length under the grip, and the whole body turned about the
+	// bar by Swing degrees, feet forward for a positive angle. LegsOut throws both legs ahead of the body for the kick.
+	void PoseHang(TArray<FVector>& Joints, const FVector& Forward, const FVector& Grip, double Swing, double LegsOut)
+	{
+		const FLimbs Limbs(Joints);
+		const FVector Right = FVector::UpVector ^ Forward;
+		const double Arm = Limbs.ArmUpper[1] + Limbs.ArmLower[1];
+		const FVector Shift = Grip - FVector(0., 0., Arm * 0.96) - (Joints[LeftShoulder] + Joints[RightShoulder]) * 0.5;
+		for (FVector& Joint : Joints)
+		{
+			Joint = Grip + (Joint + Shift - Grip).RotateAngleAxis(-Swing, Right);
+		}
+
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			ReachWithArm(Joints, Limbs, Side, Grip + Right * (Side == 0 ? -9. : 9.), -Forward);
+		}
+
+		// The legs hang a little bent, knees forward. For the kick they go out straight, well ahead of the body.
+		const FVector Down = (Joints[PelvisJoint] - Joints[ChestJoint]).GetSafeNormal();
+		const FVector Along = Down.RotateAngleAxis(-FMath::Lerp(14., 58., LegsOut), Right);
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			const FVector Hip = Joints[LegJoints[Side][0]];
+			ReachWithLeg(Joints, Limbs, Side, Hip + Along * (Limbs.Leg(Side) * FMath::Lerp(0.84, 0.97, LegsOut)), Forward + FVector::UpVector * 0.3);
+		}
+	}
+}
+
+AStickFighter::AStickFighter()
+{
+	PrimaryActorTick.bCanEverTick = true;
+
+	RootComponent = CreateDefaultSubobject<USceneComponent>("Root");
+
+	Body = CreateDefaultSubobject<USkeletalMeshComponent>("Body");
+	Body->SetupAttachment(RootComponent);
+	Body->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+	Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Body->SetVisibility(false);
+	// The mannequin is never drawn, but its bones drive the stick limbs, so it must keep animating while hidden.
+	Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	AddTickPrerequisiteComponent(Body);
+
+#define MANNEQUIN_ANIMATION(Name, Path) static ConstructorHelpers::FObjectFinder<UAnimSequenceBase> Name(TEXT("/Game/Characters/Mannequins/Anims/" Path))
+	MANNEQUIN_ANIMATION(Idle, "Unarmed/MM_Idle");
+	MANNEQUIN_ANIMATION(Punch1, "Unarmed/Attack/MM_Attack_01");
+	MANNEQUIN_ANIMATION(Punch2, "Unarmed/Attack/MM_Attack_02");
+	MANNEQUIN_ANIMATION(Punch3, "Unarmed/Attack/MM_Attack_03");
+	MANNEQUIN_ANIMATION(Charged, "Unarmed/Attack/MM_ChargedAttack");
+	MANNEQUIN_ANIMATION(Jog, "Unarmed/Jog/MF_Unarmed_Jog_Fwd");
+	MANNEQUIN_ANIMATION(Fall, "Unarmed/Jump/MM_Fall_Loop");
+	MANNEQUIN_ANIMATION(WalkBack, "Unarmed/Walk/MF_Unarmed_Walk_Bwd");
+#undef MANNEQUIN_ANIMATION
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> Mannequin(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Game/Materials/M_Figure"));
+
+	Body->SetSkeletalMeshAsset(Mannequin.Object);
+	IdleAnimation = Idle.Object;
+	PunchAnimations = { Punch1.Object, Punch2.Object, Punch3.Object };
+	// shortcut: the engine ships no kick, so the charged punch stands in, S2-FIGHT-01 replaces it.
+	KickAnimation = Charged.Object;
+	RunAnimation = Jog.Object;
+	FallAnimation = Fall.Object;
+	BackAnimation = WalkBack.Object;
+
+	auto MakePart = [this](const FString& Name, UStaticMesh* Mesh)
+	{
+		UStaticMeshComponent* Part = CreateDefaultSubobject<UStaticMeshComponent>(*Name);
+		Part->SetupAttachment(RootComponent);
+		Part->SetUsingAbsoluteLocation(true);
+		Part->SetUsingAbsoluteRotation(true);
+		Part->SetUsingAbsoluteScale(true);
+		Part->SetStaticMesh(Mesh);
+		Part->SetMaterial(0, Material.Object);
+		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		return Part;
+	};
+
+	for (int32 i = 0; i < UE_ARRAY_COUNT(LimbJoints); ++i)
+	{
+		Limbs.Add(MakePart(FString::Printf(TEXT("Limb%d"), i), Cylinder.Object));
+	}
+	Head = MakePart(TEXT("Head"), Sphere.Object);
+	Smear = MakePart(TEXT("Smear"), Cylinder.Object);
+	Smear->SetVisibility(false);
+	Gun = MakePart(TEXT("Gun"), Cube.Object);
+	Gun->SetVisibility(false);
+
+	CylinderMesh = Cylinder.Object;
+	CubeMesh = Cube.Object;
+	for (int32 Piece = 0; Piece < 2; ++Piece)
+	{
+		HatParts.Add(MakePart(FString::Printf(TEXT("Hat%d"), Piece), Cylinder.Object));
+		HatParts[Piece]->SetVisibility(false);
+		Eyes.Add(MakePart(FString::Printf(TEXT("Eye%d"), Piece), Sphere.Object));
+	}
+	for (int32 Joint = FirstBallJoint; Joint < JointCount; ++Joint)
+	{
+		JointBalls.Add(MakePart(FString::Printf(TEXT("Ball%d"), Joint), Sphere.Object));
+	}
+	for (int32 Rib = 0; Rib < 3; ++Rib)
+	{
+		Ribs.Add(MakePart(FString::Printf(TEXT("Rib%d"), Rib), Cylinder.Object));
+		Ribs[Rib]->SetVisibility(false);
+	}
+
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		ForearmStumps.Add(MakePart(FString::Printf(TEXT("ForearmStump%d"), Side), Cylinder.Object));
+		ForearmStumps[Side]->SetVisibility(false);
+		BreakParts.Add(MakePart(FString::Printf(TEXT("Bone%d"), Side), Cylinder.Object));
+		BreakParts.Add(MakePart(FString::Printf(TEXT("Wound%d"), Side), Sphere.Object));
+		BreakParts[Side * 2]->SetVisibility(false);
+		BreakParts[Side * 2 + 1]->SetVisibility(false);
+	}
+}
+
+void AStickFighter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	SetColor(Color);
+	ReturnToIdle();
+#if WITH_EDITOR
+	Body->SetUpdateAnimationInEditor(true);
+#endif
+
+	Body->TickAnimation(0.f, false);
+	Body->RefreshBoneTransforms();
+	PoseStick(GetJointPositions(), GetBrokenArms());
+}
+
+void AStickFighter::BeginPlay()
+{
+	Super::BeginPlay();
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnTakeStarted.AddDynamic(this, &AStickFighter::HandleTakeStarted);
+}
+
+void AStickFighter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (FlashSecondsLeft > 0.f)
+	{
+		FlashSecondsLeft -= DeltaSeconds;
+		if (FlashSecondsLeft <= 0.f)
+		{
+			TintBody(Color);
+		}
+	}
+
+	if (bPuppet)
+	{
+		// A knocked-out body flies before it lands, and that is not a fault.
+		if (!bPuppetDown)
+		{
+			WatchForFloating(PuppetPose.Joints, DeltaSeconds, TEXT("in the film"));
+		}
+		PoseStick(PuppetPose.Joints, PuppetPose.BrokenArms);
+		return;
+	}
+
+	if (State != EFighterState::Busy)
+	{
+		bKicking = false;
+	}
+	if (bKicking)
+	{
+		// A kick is posed in code, so it keeps its own time instead of following an animation.
+		KickElapsed += DeltaSeconds;
+		if (bStrikeOnItsWay && KickElapsed >= KickContactAt)
+		{
+			LandStrike();
+		}
+		if (State == EFighterState::Busy && KickElapsed >= KickContactAt + PosedRecoverSeconds)
+		{
+			ReturnToIdle();
+		}
+	}
+	else
+	{
+		const bool bAnimationEnded = Body->GetPosition() >= BusyAnimationSeconds - AnimationEndTolerance;
+		if (bStrikeOnItsWay && Body->GetPosition() >= ContactSeconds)
+		{
+			LandStrike();
+		}
+		if (State == EFighterState::Busy && bAnimationEnded)
+		{
+			ReturnToIdle();
+		}
+	}
+	RecoilProgress = FMath::Min(RecoilProgress + DeltaSeconds / RecoilSeconds, 1.f);
+
+	BlendSecondsLeft = FMath::Max(BlendSecondsLeft - DeltaSeconds, 0.f);
+
+	if (bMoving && State != EFighterState::Down)
+	{
+		MoveElapsed += DeltaSeconds;
+		const float Progress = FMath::Clamp(MoveElapsed / MoveSeconds, 0.f, 1.f);
+		SetActorLocation(FMath::Lerp(MoveFrom, MoveTarget, FMath::SmoothStep(0.f, 1.f, Progress)));
+		if (Progress >= 1.f)
+		{
+			bMoving = false;
+			if (State == EFighterState::Moving)
+			{
+				ReturnToIdle();
+			}
+			FaceTowards(FaceAfterMove);
+		}
+	}
+
+	StunSecondsLeft = FMath::Max(StunSecondsLeft - DeltaSeconds, 0.f);
+	LandSquashSecondsLeft = FMath::Max(LandSquashSecondsLeft - DeltaSeconds, 0.f);
+	if (State == EFighterState::Busy && !bStrikeOnItsWay)
+	{
+		SecondsSinceContact += DeltaSeconds;
+	}
+	if (bFree && State != EFighterState::Down)
+	{
+		AdvanceFreeMovement(DeltaSeconds);
+	}
+
+	if (bTurning && State != EFighterState::Down && State != EFighterState::Busy)
+	{
+		const FRotator Wanted(0.f, FacingYaw, 0.f);
+		const FRotator Turned = FMath::RInterpTo(GetActorRotation(), Wanted, DeltaSeconds, TurnSpeed);
+		SetActorRotation(Turned);
+		bTurning = !Turned.Equals(Wanted, 0.5f);
+	}
+
+	PoseSecondsLeft -= DeltaSeconds;
+	PoseAlpha = FMath::FInterpConstantTo(PoseAlpha, PoseSecondsLeft > 0.f ? 1.f : 0.f, DeltaSeconds, PoseBlendPerSecond);
+	const bool bStandsReady = bFree && State == EFighterState::Idle && StunSecondsLeft <= 0.f && !Carried.IsValid();
+	StanceAlpha = FMath::FInterpConstantTo(StanceAlpha, bStandsReady ? 1.f : 0.f, DeltaSeconds, StanceBlendPerSecond);
+	CarryAlpha = FMath::FInterpConstantTo(CarryAlpha, Carried.IsValid() ? 1.f : 0.f, DeltaSeconds, PoseBlendPerSecond);
+	ThrowSecondsLeft = FMath::Max(ThrowSecondsLeft - DeltaSeconds, 0.f);
+
+	if (bDemoAllMoves && State != EFighterState::Busy)
+	{
+		DemoRestSeconds += DeltaSeconds;
+		if (DemoRestSeconds > (State == EFighterState::Down ? 2.5f : 0.8f))
+		{
+			DemoRestSeconds = 0.f;
+			DemoNextMove();
+		}
+	}
+
+	if (DeltaSeconds > UE_KINDA_SMALL_NUMBER)
+	{
+		MovedPerSecond = (GetActorLocation() - LastTickLocation) / DeltaSeconds;
+		LastTickLocation = GetActorLocation();
+	}
+
+	SwingBrokenArms(DeltaSeconds);
+	const TArray<FVector> Joints = GetJointPositions();
+	if (State != EFighterState::Down && JumpHeight <= 0.f)
+	{
+		WatchForFloating(Joints, DeltaSeconds, TEXT("in play"));
+	}
+	PoseStick(Joints, GetBrokenArms());
+}
+
+void AStickFighter::PlayMove(EMove Move)
+{
+	if (State == EFighterState::Down)
+	{
+		return;
+	}
+
+	if (Move == EMove::Punch || Move == EMove::Kick)
+	{
+		Attack(Move);
+	}
+	else if (Move == EMove::Block || Move == EMove::Duck)
+	{
+		HeldPose = Move;
+		PoseSecondsLeft = PoseHoldSeconds;
+	}
+}
+
+bool AStickFighter::Attack(EMove Move, float SecondsUntilContact)
+{
+	if (State == EFighterState::Down)
+	{
+		return false;
+	}
+
+	CaptureBlendFrom();
+	UAnimSequenceBase* Strike = Move == EMove::Kick ? KickAnimation.Get() : NextPunch();
+	if (!Strike)
+	{
+		return false;
+	}
+	ContactSeconds = FindContactSeconds(Strike);
+	StrikeMove = Move;
+	bFreeStrike = false;
+	bKicking = false;
+	bStrikeOnItsWay = true;
+
+	const float Rate = SecondsUntilContact > 0.f ? FMath::Max(ContactSeconds / SecondsUntilContact, 0.1f) : 1.f;
+	Play(Strike, false, Rate);
+	State = EFighterState::Busy;
+	return true;
+}
+
+UAnimSequenceBase* AStickFighter::NextPunch()
+{
+	for (int32 Tries = 0; Tries < PunchAnimations.Num(); ++Tries)
+	{
+		UAnimSequenceBase* Punch = PunchAnimations[PunchCount++ % PunchAnimations.Num()].Get();
+		FindContactSeconds(Punch);
+		const int32 Arm = ArmOfStrikeBone(StrikeBone);
+		if (Arm == INDEX_NONE || !LooseArms[Arm].bBroken)
+		{
+			UE_CLOG((GetBrokenArms() & 3) != 0, LogStickFighter, Verbose, TEXT("%s strikes with %s, broken arms %d"), *GetName(), *StrikeBone.ToString(), GetBrokenArms() & 3);
+			return Punch;
+		}
+	}
+	return nullptr;
+}
+
+void AStickFighter::TakeHit(const FVector& StrikePoint, const FVector& StrikeDirection, bool bKnockout, bool bHeavy)
+{
+	if (State == EFighterState::Down)
+	{
+		return;
+	}
+
+	bStrikeOnItsWay = false;
+	TintBody(FlashColor);
+	FlashSecondsLeft = FlashSeconds;
+	StartRecoil(StrikePoint, StrikeDirection, bHeavy ? HeavyRecoil : 1.f);
+
+	if (bKnockout)
+	{
+		// The engine's death animations end on their feet and expect a ragdoll to finish the fall, so the fall is a ragdoll from the start.
+		Body->SetCollisionProfileName(TEXT("Ragdoll"));
+		Body->SetSimulatePhysics(true);
+		Body->SetAllPhysicsLinearVelocity((RecoilDirection + FVector(0.f, 0.f, 0.4f)) * KnockoutSpeed * (bHeavy ? 1.3f : 1.f));
+		State = EFighterState::Down;
+	}
+	// The demo shows the break on every heavy hit, whatever the health.
+	else if (bHeavy && (bDemoAllMoves || Health <= MaxHealth * ArmBreaksBelowHealthShare))
+	{
+		const TArray<FVector> Joints = BuildJoints(true);
+		const int32 Side = FVector::DistSquared(Joints[LeftElbow], LastImpactPoint) < FVector::DistSquared(Joints[RightElbow], LastImpactPoint) ? 0 : 1;
+		FLooseArm& Arm = LooseArms[Side];
+		if (!Arm.bBroken)
+		{
+			Arm.bBroken = true;
+			UE_LOG(LogStickFighter, Verbose, TEXT("%s: the %s arm breaks at %.0f of %.0f health"), *GetName(), Side == 0 ? TEXT("left") : TEXT("right"), Health, MaxHealth);
+			Arm.Hand = Joints[HandOfSide[Side]];
+			Arm.Velocity = RecoilDirection * 350.f + FVector(0.f, 0.f, 150.f);
+		}
+	}
+}
+
+void AStickFighter::ReturnToIdle()
+{
+	if (State == EFighterState::Down)
+	{
+		Body->SetSimulatePhysics(false);
+		Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Body->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		// The snap does nothing when the body never detached, which would leave it where the ragdoll came to rest.
+		Body->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator(0.f, -90.f, 0.f));
+	}
+
+	CaptureBlendFrom();
+	bStrikeOnItsWay = false;
+	bKicking = false;
+	Play(IdleAnimation, true);
+	State = EFighterState::Idle;
+}
+
+void AStickFighter::FaceTowards(const FVector& Target)
+{
+	FacingYaw = (Target - GetActorLocation()).GetSafeNormal2D().Rotation().Yaw;
+	bTurning = true;
+}
+
+void AStickFighter::MoveTo(const FVector& Target, float Seconds, const FVector& FaceAfter)
+{
+	FaceAfterMove = FaceAfter;
+	const float Distance = FVector::Dist2D(GetActorLocation(), Target);
+	if (State == EFighterState::Down || Distance < ArrivedDistance || Seconds <= 0.f)
+	{
+		FaceTowards(FaceAfter);
+		return;
+	}
+
+	MoveFrom = GetActorLocation();
+	MoveTarget = FVector(Target.X, Target.Y, MoveFrom.Z);
+	MoveSeconds = Seconds;
+	MoveElapsed = 0.f;
+	bMoving = true;
+	FaceTowards(MoveTarget);
+
+	CaptureBlendFrom();
+	bStrikeOnItsWay = false;
+	// The legs keep pace with the ground covered, so a short dash and a long run both look right.
+	Play(RunAnimation, true, FMath::Clamp(Distance / Seconds / RunAnimationSpeed, 0.8f, 2.2f));
+	State = EFighterState::Moving;
+}
+
+void AStickFighter::SetHome(const FVector& Location, const FRotator& Rotation)
+{
+	bHasHome = true;
+	HomeLocation = Location;
+	HomeRotation = Rotation;
+}
+
+void AStickFighter::CaptureBlendFrom()
+{
+	const TArray<FVector> Joints = BuildJoints(true);
+	const FTransform ToWorld = GetActorTransform();
+
+	BlendFromLocal.Reset(Joints.Num());
+	for (const FVector& Joint : Joints)
+	{
+		BlendFromLocal.Add(ToWorld.InverseTransformPosition(Joint));
+	}
+	BlendSecondsLeft = BlendSeconds;
+}
+
+void AStickFighter::SetColor(const FLinearColor& NewColor)
+{
+	Color = NewColor;
+	for (UStaticMeshComponent* Part : Limbs)
+	{
+		Part->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+	}
+	Head->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+	Smear->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+	Gun->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", FLinearColor(0.01f, 0.01f, 0.01f));
+	for (UStaticMeshComponent* Ball : JointBalls)
+	{
+		Ball->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+	}
+	for (UStaticMeshComponent* Rib : Ribs)
+	{
+		Rib->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", FlashColor);
+	}
+	for (int32 Index = 0; Index < BreakParts.Num(); ++Index)
+	{
+		BreakParts[Index]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Index % 2 == 0 ? BoneColor : BloodiedColor);
+	}
+	for (UStaticMeshComponent* Eye : Eyes)
+	{
+		// Dark on a light figure and light on a dark one, so they always show.
+		Eye->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color.GetLuminance() > 0.25f ? FLinearColor(0.01f, 0.01f, 0.01f) : FLinearColor(0.9f, 0.9f, 0.9f));
+	}
+	TintedBrokenArms = 0;
+}
+
+void AStickFighter::HandleTakeStarted(int32 TakeNumber)
+{
+	LooseArms[0].bBroken = false;
+	LooseArms[1].bBroken = false;
+	Health = MaxHealth;
+	StunSecondsLeft = 0.f;
+	KnockVelocity = FVector::ZeroVector;
+	JumpHeight = 0.f;
+	JumpSpeed = 0.f;
+	WalkInput = FVector2D::ZeroVector;
+	bWalking = false;
+	bWalkingBackwards = false;
+	Carried = nullptr;
+	Hanging = nullptr;
+	SwingKickSeconds = -1.f;
+	bMayGrabABar = false;
+	CarryAlpha = 0.f;
+	ThrowSecondsLeft = 0.f;
+	BlowsInARow = 0;
+	bMoving = false;
+	bTurning = false;
+	ReturnToIdle();
+
+	if (bHasHome)
+	{
+		SetActorLocationAndRotation(HomeLocation, HomeRotation);
+		// Going back to one is a cut, not a move: nothing fades or smears across it.
+		BlendSecondsLeft = 0.f;
+		LastDrawnJoints.Reset();
+	}
+}
+
+void AStickFighter::Play(UAnimSequenceBase* Animation, bool bLoop, float Rate)
+{
+	Body->PlayAnimation(Animation, bLoop);
+	// The attacks carry root motion. Ignoring it keeps every fighter on its mark.
+	Body->GetAnimInstance()->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
+	Body->SetPosition(0.f, false);
+	Body->SetPlayRate(Rate);
+	BusyAnimationSeconds = Animation->GetPlayLength();
+}
+
+// Contact is the moment a hand or foot reaches furthest forward, found by stepping through the animation.
+float AStickFighter::FindContactSeconds(UAnimSequenceBase* Strike)
+{
+	if (const FContact* Known = Contacts.Find(Strike))
+	{
+		StrikeBone = Known->Bone;
+		StrikeReach = Known->Reach;
+		return Known->Seconds;
+	}
+
+	const FVector Forward = GetActorForwardVector();
+	float BestSeconds = 0.f;
+	double FurthestReach = -UE_BIG_NUMBER;
+
+	Body->SetAnimation(Strike);
+	for (float Seconds = 0.f; Seconds < Strike->GetPlayLength(); Seconds += 1.f / 30.f)
+	{
+		Body->SetPosition(Seconds, false);
+		Body->TickAnimation(0.f, false);
+		Body->RefreshBoneTransforms();
+		for (const FName& Bone : StrikingBones)
+		{
+			const double Reach = (Body->GetBoneLocation(Bone) - GetActorLocation()) | Forward;
+			if (Reach > FurthestReach)
+			{
+				FurthestReach = Reach;
+				BestSeconds = Seconds;
+				StrikeBone = Bone;
+			}
+		}
+	}
+	UE_LOG(LogStickFighter, Verbose, TEXT("%s: contact at %.2f s, reaching %.0f cm with %s"), *Strike->GetName(), BestSeconds, FurthestReach, *StrikeBone.ToString());
+	StrikeReach = FurthestReach;
+	Contacts.Add(Strike, { BestSeconds, StrikeBone, FurthestReach });
+	return BestSeconds;
+}
+
+void AStickFighter::LandStrike()
+{
+	bStrikeOnItsWay = false;
+	Body->SetPlayRate(1.f);
+
+	SecondsSinceContact = 0.f;
+	const FTechnique* Posed = bKicking ? FindTechnique(StrikeMove) : nullptr;
+	const FVector StrikePoint = Posed ? BuildJoints(true)[Posed->bWithALeg ? RightFoot : HandOfSide[PosedSide]] : Body->GetBoneLocation(StrikeBone);
+	// A move played only to be looked at has nobody to land on.
+	if (bFreeStrike)
+	{
+		LandFreeStrike(StrikePoint);
+	}
+}
+
+void AStickFighter::StartRecoil(const FVector& StrikePoint, const FVector& StrikeDirection, float Strength)
+{
+	const TArray<FVector> Joints = BuildJoints(true);
+
+	int32 Struck = 0;
+	for (int32 Index = 1; Index < JointCount; ++Index)
+	{
+		if (FVector::DistSquared(Joints[Index], StrikePoint) < FVector::DistSquared(Joints[Struck], StrikePoint))
+		{
+			Struck = Index;
+		}
+	}
+
+	LastImpactPoint = Joints[Struck];
+	RecoilDirection = StrikeDirection.GetSafeNormal2D();
+	RecoilStrength = Strength;
+	RecoilProgress = 0.f;
+
+	const double PelvisHeight = Joints[PelvisJoint].Z;
+	const double Height = FMath::Max(Joints[SkullJoint].Z - PelvisHeight, 1.);
+	for (int32 Index = 0; Index < JointCount; ++Index)
+	{
+		const float Near = static_cast<float>(FMath::Exp(-FMath::Square(FVector::Dist(Joints[Index], Joints[Struck]) / RecoilReach)));
+		const float Lift = static_cast<float>(FMath::Clamp((Joints[Index].Z - PelvisHeight) / Height, 0., 1.));
+		// The whole upper body gives a little, the struck part gives a lot, and the legs stay planted.
+		RecoilWeights[Index] = Index >= LeftHip ? 0.25f * Near : 0.45f * Lift + Near;
+	}
+}
+
+// A broken forearm is a pendulum hung from the elbow: gravity pulls the hand down and the elbow's own motion swings it.
+void AStickFighter::SwingBrokenArms(float DeltaSeconds)
+{
+	if (State == EFighterState::Down || DeltaSeconds < UE_KINDA_SMALL_NUMBER || (!LooseArms[0].bBroken && !LooseArms[1].bBroken))
+	{
+		return;
+	}
+
+	const TArray<FVector> Joints = BuildJoints(false);
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		FLooseArm& Arm = LooseArms[Side];
+		if (!Arm.bBroken)
+		{
+			continue;
+		}
+
+		const FVector Elbow = Joints[ElbowOfSide[Side]];
+		const double Length = FVector::Dist(Elbow, Joints[HandOfSide[Side]]);
+
+		Arm.Velocity += FVector(0., 0., -980.) * DeltaSeconds;
+		Arm.Velocity *= FMath::Exp(-LooseArmDamping * DeltaSeconds);
+		const FVector Swung = Elbow + (Arm.Hand + Arm.Velocity * DeltaSeconds - Elbow).GetSafeNormal() * Length;
+		Arm.Velocity = ((Swung - Arm.Hand) / DeltaSeconds).GetClampedToMaxSize(LooseArmMaxSpeed);
+		Arm.Hand = Swung;
+	}
+}
+
+void AStickFighter::DemoNextMove()
+{
+	if (State == EFighterState::Down)
+	{
+		HandleTakeStarted(0);
+		return;
+	}
+
+	const FVector InFront = GetActorLocation() + GetActorForwardVector() * 60.f + FVector(0.f, 0.f, 140.f);
+	const FVector TowardsMe = -GetActorForwardVector();
+	switch (DemoStep++ % 9)
+	{
+	case 0:
+	case 1:
+	case 2:
+		PlayMove(EMove::Punch);
+		break;
+	case 3:
+		PlayMove(EMove::Kick);
+		break;
+	case 4:
+		PlayMove(EMove::Duck);
+		break;
+	case 5:
+		PlayMove(EMove::Block);
+		break;
+	case 6:
+		TakeHit(InFront, TowardsMe, false, false);
+		break;
+	case 7:
+		TakeHit(InFront, TowardsMe, false, true);
+		break;
+	default:
+		TakeHit(InFront, TowardsMe, true, false);
+		break;
+	}
+}
+
+TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
+{
+	if (bPuppet)
+	{
+		return PuppetPose.Joints;
+	}
+
+	TArray<FVector> Joints;
+	Joints.Reserve(JointCount);
+	for (const FName& Bone : JointBones)
+	{
+		Joints.Add(Body->GetBoneLocation(Bone));
+	}
+
+	// Knocked out, the ragdoll alone decides where every joint is.
+	if (State == EFighterState::Down)
+	{
+		return Joints;
+	}
+
+	if (const ASwingBar* Bar = Hanging.Get())
+	{
+		const FVector Grip(Bar->GetActorLocation().X, GetActorLocation().Y, Bar->GetActorLocation().Z);
+		// It sways while it hangs. The kick swings back first, then through and up.
+		double Swing = 7. * FMath::Sin(HangSeconds * 5.);
+		double LegsOut = 0.;
+		if (SwingKickSeconds >= 0.f)
+		{
+			const double Done = FMath::Clamp(static_cast<double>(SwingKickSeconds / SwingKickContactSeconds), 0., 1.);
+			Swing = Done < 0.35 ? FMath::Lerp(Swing, -26., FMath::SmoothStep(0., 1., Done / 0.35)) : FMath::Lerp(-26., 64., FMath::Square((Done - 0.35) / 0.65));
+			LegsOut = FMath::SmoothStep(0., 1., (Done - 0.3) / 0.6);
+		}
+		PoseHang(Joints, GetActorForwardVector(), Grip, Swing, LegsOut);
+	}
+
+	if (BlendSecondsLeft > 0.f && BlendFromLocal.Num() == Joints.Num())
+	{
+		const float Alpha = FMath::SmoothStep(0.f, 1.f, 1.f - BlendSecondsLeft / BlendSeconds);
+		const FTransform ToWorld = GetActorTransform();
+		for (int32 Index = 0; Index < JointCount; ++Index)
+		{
+			Joints[Index] = FMath::Lerp(ToWorld.TransformPosition(BlendFromLocal[Index]), Joints[Index], Alpha);
+		}
+	}
+
+	// A fighter who is standing still keeps its hands up, instead of letting them hang as the idle animation does.
+	if (StanceAlpha > 0.f)
+	{
+		// A fighter waiting for an opening is never quite still: it rides its knees, each fighter at its own moment.
+		const double Bob = 0.5 + 0.5 * FMath::Sin(GetWorld()->GetTimeSeconds() * StanceBobPerSecond + GetUniqueID() % 7);
+		PoseDuck(Joints, GetActorForwardVector(), StanceBobDepth * StanceAlpha * Bob);
+		PoseArms(Joints, GetActorForwardVector(), 0.8 * StanceAlpha, 24., 11., -8.);
+	}
+
+	if (LandSquashSecondsLeft > 0.f)
+	{
+		// Coming down from a jump, the knees take the weight for a moment.
+		PoseDuck(Joints, GetActorForwardVector(), LandSquashDepth * FMath::Sin(UE_PI * LandSquashSecondsLeft / LandSquashSeconds));
+	}
+
+	if (PoseAlpha > 0.f)
+	{
+		if (HeldPose == EMove::Duck)
+		{
+			PoseDuck(Joints, GetActorForwardVector(), PoseAlpha);
+		}
+		else
+		{
+			PoseArms(Joints, GetActorForwardVector(), PoseAlpha, 30., 10., 6.);
+		}
+	}
+
+	// Not during a strike: a carried prop then follows the fists, which is what makes a swing of it.
+	if (CarryAlpha > 0.f && State != EFighterState::Busy)
+	{
+		// A crate is carried overhead. A weapon is held ready in front of the chest.
+		const bool bWeapon = Carried.IsValid() && Carried->IsSwung();
+		PoseArms(Joints, GetActorForwardVector(), CarryAlpha, bWeapon ? 24. : 4., bWeapon ? 5. : 14., bWeapon ? -20. : 36.);
+	}
+
+	if (ThrowSecondsLeft > 0.f && State != EFighterState::Busy)
+	{
+		// The arms that held the prop overhead come down and forward to hurl it, then let the pose go.
+		const double Done = 1. - ThrowSecondsLeft / ThrowGestureSeconds;
+		const double Swing = FMath::Min(Done * 2.5, 1.);
+		PoseArms(Joints, GetActorForwardVector(), Done < 0.6 ? 1. : (1. - Done) / 0.4, FMath::Lerp(4., 55., Swing), 14., FMath::Lerp(36., -25., Swing));
+	}
+
+	if (bKicking)
+	{
+		// 0 to 1 while the strike is on its way, 1 to 2 while it is taken back.
+		const float Phase = KickElapsed < KickContactAt ? KickElapsed / KickContactAt : 1.f + FMath::Min((KickElapsed - KickContactAt) / PosedRecoverSeconds, 1.f);
+		PoseTechnique(Joints, GetActorForwardVector(), StrikeMove, Phase, PosedSide);
+	}
+
+	if (bAiming)
+	{
+		const double Upper = FVector::Dist(Joints[RightShoulder], Joints[RightElbow]);
+		const double Lower = FVector::Dist(Joints[RightElbow], Joints[RightHand]);
+		const FVector Towards = (AimPoint - Joints[RightShoulder]).GetSafeNormal();
+		Joints[RightHand] = Joints[RightShoulder] + Towards * ((Upper + Lower) * 0.96);
+		Joints[RightElbow] = MiddleJoint(Joints[RightShoulder], Joints[RightHand], Upper, Lower, -FVector::UpVector);
+	}
+
+	if (RecoilProgress < 1.f)
+	{
+		// The engine's hit reactions are additive and cannot play alone, so the flinch is done here, joint by joint.
+		const FVector Knock = RecoilDirection * RecoilDistance * RecoilStrength * FMath::Sin(UE_PI * FMath::Sqrt(RecoilProgress));
+		for (int32 Index = 0; Index < JointCount; ++Index)
+		{
+			Joints[Index] += Knock * RecoilWeights[Index];
+		}
+	}
+
+	if (bWithBrokenArms)
+	{
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			if (LooseArms[Side].bBroken)
+			{
+				Joints[HandOfSide[Side]] = LooseArms[Side].Hand;
+			}
+		}
+	}
+	return Joints;
+}
+
+uint8 AStickFighter::GetBrokenArms() const
+{
+	if (bPuppet)
+	{
+		return PuppetPose.BrokenArms;
+	}
+	if (State == EFighterState::Down)
+	{
+		return 0;
+	}
+	return (LooseArms[0].bBroken ? 1 : 0) | (LooseArms[1].bBroken ? 2 : 0) | (bArmed ? 4 : 0);
+}
+
+void AStickFighter::SetPuppetPose(const FFighterPose& Pose)
+{
+	bPuppet = true;
+	PuppetPose = Pose;
+}
+
+void AStickFighter::EndPuppet()
+{
+	bPuppet = false;
+	bPuppetDown = false;
+}
+
+void AStickFighter::MarkStruck(const FVector& ImpactPoint, bool bKnockedOut)
+{
+	LastImpactPoint = ImpactPoint;
+	bPuppetDown = bKnockedOut;
+	TintBody(FlashColor);
+	FlashSecondsLeft = FlashSeconds;
+}
+
+void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
+{
+	const bool bBones = FlashSecondsLeft > 0.f;
+	for (int32 i = 0; i < Limbs.Num(); ++i)
+	{
+		const bool bTrunk = (LimbJoints[i][0] == PelvisJoint && LimbJoints[i][1] == ChestJoint) || LimbJoints[i][0] == ChestJoint;
+		const bool bGirdle = LimbJoints[i][1] == LeftShoulder || LimbJoints[i][1] == RightShoulder || LimbJoints[i][1] == LeftHip || LimbJoints[i][1] == RightHip;
+		PlaceLimb(Limbs[i], Joints[LimbJoints[i][0]], Joints[LimbJoints[i][1]], Thickness * (bBones ? BoneWidth : bTrunk ? TrunkWidth : bGirdle ? GirdleWidth : 1.f));
+	}
+	for (int32 Ball = 0; Ball < JointBalls.Num(); ++Ball)
+	{
+		const int32 Joint = FirstBallJoint + Ball;
+		const bool bEnd = Joint == LeftHand || Joint == RightHand || Joint == LeftFoot || Joint == RightFoot;
+		JointBalls[Ball]->SetWorldLocation(Joints[Joint]);
+		JointBalls[Ball]->SetWorldScale3D(FVector(Thickness * (bBones ? BoneJointWidth : bEnd ? HandAndFootWidth : JointBallWidth) / 100.f));
+	}
+
+	const FVector ShoulderLine = (Joints[RightShoulder] - Joints[LeftShoulder]).GetSafeNormal();
+	for (int32 Rib = 0; Rib < Ribs.Num(); ++Rib)
+	{
+		Ribs[Rib]->SetVisibility(bBones);
+		if (bBones)
+		{
+			const FVector At = FMath::Lerp(Joints[ChestJoint], Joints[PelvisJoint], 0.12 + Rib * 0.24);
+			const FVector Half = ShoulderLine * (12. - Rib * 2.);
+			PlaceLimb(Ribs[Rib], At - Half, At + Half, Thickness * BoneWidth);
+		}
+	}
+
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		const bool bBroken = (BrokenArms & (1 << Side)) != 0;
+		const bool bDrawnBroken = (TintedBrokenArms & (1 << Side)) != 0;
+		UStaticMeshComponent* Forearm = Limbs[ForearmLimbOfSide[Side]];
+		UStaticMeshComponent* Stump = ForearmStumps[Side];
+
+		// Set every time, not only on a change: a knocked-out fighter stops reporting its breaks, and what was
+		// showing a moment ago must not be left hanging in the air.
+		Stump->SetVisibility(bBroken);
+		BreakParts[Side * 2]->SetVisibility(bBroken);
+		BreakParts[Side * 2 + 1]->SetVisibility(bBroken);
+
+		if (bBroken != bDrawnBroken)
+		{
+			// The arm keeps its colour: the break is shown by the bone and the wound, not by painting the arm red.
+			const FLinearColor Tint = Color;
+			Forearm->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+			Stump->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+		}
+
+		if (bBroken)
+		{
+			// A broken forearm is drawn in two pieces that meet at an angle.
+			const FVector Elbow = Joints[ElbowOfSide[Side]];
+			const FVector Hand = Joints[HandOfSide[Side]];
+			const FVector Sideways = ((Hand - Elbow) ^ GetActorForwardVector()).GetSafeNormal(UE_SMALL_NUMBER, FVector::RightVector);
+			const FVector Break = (Elbow + Hand) * 0.5f + Sideways * BreakKink;
+			PlaceLimb(Forearm, Elbow, Break, Thickness);
+			PlaceLimb(Stump, Break, Hand, Thickness);
+			PlaceLimb(BreakParts[Side * 2], Break, Break + (Break - Elbow).GetSafeNormal() * BoneLength, Thickness * 0.42f);
+			BreakParts[Side * 2 + 1]->SetWorldLocation(Break);
+			BreakParts[Side * 2 + 1]->SetWorldScale3D(FVector(Thickness * 1.3f / 100.f));
+		}
+	}
+	TintedBrokenArms = BrokenArms;
+
+	const bool bHoldsGun = (BrokenArms & 4) != 0;
+	Gun->SetVisibility(bHoldsGun);
+	if (bHoldsGun)
+	{
+		const FVector Barrel = (Joints[RightHand] - Joints[RightElbow]).GetSafeNormal();
+		Gun->SetWorldLocationAndRotation(Joints[RightHand] + Barrel * 9., Barrel.Rotation());
+		Gun->SetWorldScale3D(FVector(0.2, 0.05, 0.11));
+	}
+
+	// The smear joins where the fastest hand or foot was last frame to where it is now.
+	const float Now = GetWorld()->GetTimeSeconds();
+	const float FrameSeconds = Now - LastDrawnSeconds;
+	int32 Fastest = INDEX_NONE;
+	if (LastDrawnJoints.Num() == Joints.Num() && FrameSeconds > UE_KINDA_SMALL_NUMBER && FrameSeconds < 0.1f)
+	{
+		double FastestSpeed = SmearSpeed;
+		for (const int32 Index : { LeftHand, RightHand, LeftFoot, RightFoot })
+		{
+			const double Speed = FVector::Dist(Joints[Index], LastDrawnJoints[Index]) / FrameSeconds;
+			if (Speed > FastestSpeed)
+			{
+				FastestSpeed = Speed;
+				Fastest = Index;
+			}
+		}
+	}
+	Smear->SetVisibility(Fastest != INDEX_NONE);
+	if (Fastest != INDEX_NONE)
+	{
+		PlaceLimb(Smear, LastDrawnJoints[Fastest], Joints[Fastest], Thickness * 1.2f);
+	}
+	LastDrawnJoints = Joints;
+	LastDrawnSeconds = Now;
+
+	const FVector Up = (Joints[SkullJoint] - Joints[NeckJoint]).GetSafeNormal();
+	Head->SetWorldLocation(Joints[SkullJoint] + Up * HeadRadius);
+	Head->SetWorldScale3D(FVector(HeadRadius / 50.f));
+
+	// Which way the head faces comes from the shoulders, not from the actor, so a puppet in the film faces right too.
+	const FVector Ahead = ((Joints[RightShoulder] - Joints[LeftShoulder]) ^ Up).GetSafeNormal();
+	const FVector Middle = Joints[SkullJoint] + Up * HeadRadius;
+	const FVector Across = Up ^ Ahead;
+	for (int32 Eye = 0; Eye < Eyes.Num(); ++Eye)
+	{
+		Eyes[Eye]->SetWorldLocation(Middle + (Ahead * 0.86 + Across * (Eye == 0 ? -0.36 : 0.36) + Up * 0.1) * HeadRadius);
+		// In the skeleton flash the eyes are the skull's sockets.
+		Eyes[Eye]->SetWorldScale3D(FVector(HeadRadius * (bBones ? 0.62 : 0.32) / 100.));
+	}
+
+	if (Hat != 0)
+	{
+		const FRotator Tilt = FRotationMatrix::MakeFromZX(Up, Ahead).Rotator();
+		for (int32 Piece = 0; Piece < 2; ++Piece)
+		{
+			const FHatPiece& Shape = Hats[Hat][Piece];
+			if (Shape.bUsed)
+			{
+				HatParts[Piece]->SetWorldLocationAndRotation(Middle + (Ahead * Shape.Ahead + Up * Shape.Above) * HeadRadius, Tilt);
+				HatParts[Piece]->SetWorldScale3D(Shape.Size * (HeadRadius / 100.));
+			}
+		}
+	}
+}
+
+void AStickFighter::SetArena(const FVector2D& Min, const FVector2D& Max)
+{
+	bFree = true;
+	ArenaMin = Min;
+	ArenaMax = Max;
+	FloorHeight = GetActorLocation().Z;
+	Health = MaxHealth;
+}
+
+FVector2D AStickFighter::ClampToArena(const FVector2D& Point) const
+{
+	return bFree ? FVector2D(FMath::Clamp(Point.X, ArenaMin.X, ArenaMax.X), FMath::Clamp(Point.Y, ArenaMin.Y, ArenaMax.Y)) : Point;
+}
+
+void AStickFighter::Jump()
+{
+	if (Hanging.IsValid())
+	{
+		LetGoOfBar(FVector::ZeroVector, 0.f);
+		return;
+	}
+
+	const bool bOnItsFeet = State == EFighterState::Idle || State == EFighterState::Moving;
+	if (!bFree || !bOnItsFeet || bMoving || JumpHeight > 0.f || StunSecondsLeft > 0.f)
+	{
+		return;
+	}
+
+	JumpSpeed = JumpLaunchSpeed;
+	bMayGrabABar = true;
+	JumpHeight = UE_KINDA_SMALL_NUMBER;
+	bWalking = false;
+	CaptureBlendFrom();
+	Play(FallAnimation, true);
+	State = EFighterState::Moving;
+}
+
+void AStickFighter::Guard(EMove Pose)
+{
+	if (Hanging.IsValid())
+	{
+		return;
+	}
+
+	if (State == EFighterState::Idle || (State == EFighterState::Moving && !bMoving))
+	{
+		HeldPose = Pose;
+		PoseSecondsLeft = StunSecondsLeft > 0.f ? 0.f : GuardHoldSeconds;
+	}
+}
+
+bool AStickFighter::CanAct() const
+{
+	if (bPuppet || bMoving || StunSecondsLeft > 0.f)
+	{
+		return false;
+	}
+	if (State == EFighterState::Idle || State == EFighterState::Moving)
+	{
+		return true;
+	}
+	return State == EFighterState::Busy && !bStrikeOnItsWay && SecondsSinceContact >= (StrikeMove == EMove::Punch ? CancelSeconds : KickCancelSeconds);
+}
+
+bool AStickFighter::Strike(EMove Move, float SecondsUntilContact)
+{
+	if (Move != EMove::Punch && Move != EMove::Kick)
+	{
+		return false;
+	}
+	// On its feet and empty-handed, what the fighter is holding turns the plain strike into another.
+	if (JumpHeight <= 0.f && !Carried.IsValid())
+	{
+		if (IsDucking())
+		{
+			return StrikeWith(Move == EMove::Punch ? EMove::Uppercut : EMove::Sweep, 0.f);
+		}
+		if (IsGuarding())
+		{
+			return StrikeWith(Move == EMove::Punch ? EMove::Chop : EMove::Roundhouse, 0.f);
+		}
+	}
+	return StrikeWith(Move, SecondsUntilContact);
+}
+
+bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
+{
+	// From a bar there is one strike, whatever was asked for.
+	if (Hanging.IsValid())
+	{
+		return StartSwingKick();
+	}
+
+	const FTechnique* Posed = FindTechnique(Move);
+	if (!CanAct() || (Move != EMove::Punch && !Posed))
+	{
+		return false;
+	}
+	// With something in its hands, a strike is a throw.
+	// A legendary prop is kept in the hands and swung. E still throws it.
+	if (Carried.IsValid() && !Carried->IsSwung())
+	{
+		return GrabOrThrow();
+	}
+
+	// An arm that hangs loose throws no uppercut and no chop. The other arm does, and with neither it is a plain strike.
+	if (Posed && !Posed->bWithALeg)
+	{
+		PosedSide = LooseArms[1].bBroken ? 0 : 1;
+		if (LooseArms[PosedSide].bBroken)
+		{
+			Move = EMove::Punch;
+			Posed = nullptr;
+		}
+	}
+
+	PoseSecondsLeft = 0.f;
+	SnapToWantedFacing();
+	// With no sound arm to punch with, a punch comes out as a kick.
+	if (Move == EMove::Punch && !Attack(Move, SecondsUntilContact))
+	{
+		UE_LOG(LogStickFighter, Verbose, TEXT("%s has no sound arm to punch with, and kicks"), *GetName());
+		Move = EMove::Kick;
+		Posed = FindTechnique(Move);
+	}
+	if (Posed)
+	{
+		SecondsUntilContact = SecondsUntilContact > 0.f ? SecondsUntilContact : Posed->WindUpSeconds;
+		StartPosed(Move, SecondsUntilContact);
+	}
+	bFreeStrike = true;
+	bStrikeFromAir = JumpHeight > OutOfReachHeight * 0.5f;
+
+	// The fighter steps into its strike, or back from a target that is too close, so the blow arrives on a body:
+	// not in the air in front of one, and not through it.
+	LungeVelocity = FVector::ZeroVector;
+	const FVector Facing = WantedForward();
+	double Nearest = StrikeReach + BodyRadius + LungeDistance;
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		const FVector To = (It->GetActorLocation() - GetActorLocation()) * FVector(1., 1., 0.);
+		const double Distance = To.Size();
+		if (It->Team != Team && !It->IsDown() && Distance < Nearest && (To.GetSafeNormal() | Facing) > StrikeConeCosine)
+		{
+			Nearest = Distance;
+			LungeVelocity = To.GetSafeNormal() * (FMath::Max(Distance - StrikeReach - TouchGap, -StepBackDistance) / FMath::Max(SecondsUntilContact, 0.05f));
+		}
+	}
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, Move);
+	return true;
+}
+
+void AStickFighter::LandFreeStrike(const FVector& StrikePoint)
+{
+	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
+	const FTechnique* Posed = bKicking ? FindTechnique(StrikeMove) : nullptr;
+	const bool bWithALeg = Posed && Posed->bWithALeg;
+	const double ConeCosine = Posed ? Posed->ConeCosine : StrikeConeCosine;
+	const FVector Forward = GetActorForwardVector();
+	const FVector From = GetActorLocation();
+	AThrownProp* Weapon = Carried.Get();
+	const bool bLegendary = Weapon && Weapon->IsLegendary();
+	const bool bWithAWeapon = Weapon && Weapon->IsSwung();
+	// For the log, when the strike lands on nobody: how near it came.
+	double NearestMiss = UE_BIG_NUMBER;
+	bool bReachedSomeone = false;
+
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		AStickFighter* Other = *It;
+		if (Other == this || Other->Team == Team || Other->IsDown())
+		{
+			continue;
+		}
+
+		const FVector To = (Other->GetActorLocation() - From) * FVector(1., 1., 0.);
+		NearestMiss = FMath::Min(NearestMiss, To.Size());
+		if (To.Size() > StrikeReach + BodyRadius + (bWithAWeapon ? LegendaryReach : 0.) || (To.GetSafeNormal() | Forward) < ConeCosine)
+		{
+			continue;
+		}
+		// A punch and a high kick pass over a ducked head, and a fighter in the air is only reached by a strike thrown from the air.
+		const bool bPassesOverADuck = Posed ? Posed->bHigh : true;
+		if ((bPassesOverADuck && Other->IsDucking()) || (Other->JumpHeight > OutOfReachHeight && !bStrikeFromAir))
+		{
+			continue;
+		}
+
+		if (Other->IsGuarding() && (Other->GetActorForwardVector() | Forward) < 0. && !(Posed && Posed->bThroughGuard))
+		{
+			Other->StartRecoil(StrikePoint, Forward, BlockedRecoil);
+			Other->KnockVelocity = Forward * BlockedKnockSpeed;
+			Events->OnBlocked.Broadcast(this, Other);
+		}
+		else
+		{
+			const float Damage = bWithAWeapon ? Weapon->GetSwingDamage() : (bWithALeg ? KickDamage : PunchDamage) * (Posed ? Posed->DamageScale : 1.f) * (bStrikeFromAir ? AirStrikeDamageScale : 1.f);
+
+			// What the rules decided against what the picture shows: how far the fist or foot is from the body it is about to hurt.
+			double Gap = UE_BIG_NUMBER;
+			for (const FVector& Joint : Other->GetJointPositions())
+			{
+				Gap = FMath::Min(Gap, FVector::Dist(Joint, StrikePoint));
+			}
+			UE_LOG(LogStickFighter, Verbose, TEXT("Blow: %s lands %s on %s, bodies %.0f cm apart, reach %.0f, limb stopped %.0f cm from the body"),
+				*GetName(), *UEnum::GetValueAsString(StrikeMove), *Other->GetName(), To.Size(), StrikeReach, Gap);
+			Other->SufferBlow(this, Damage, StrikePoint, Forward, IsHeavyMove(StrikeMove) || bStrikeFromAir || bWithAWeapon, StrikeMove);
+			if (Posed && !Other->IsDown())
+			{
+				// The crew are stuntmen and pull their blows: the player is held helpless for half as long as they are.
+				const float Helpless = Posed->StunSeconds * (Other->Team == 0 ? 0.5f : 1.f);
+				if (Posed->PopSpeed > 0.f)
+				{
+					Other->PopUp(Posed->PopSpeed, Helpless);
+				}
+				Other->StunSecondsLeft = FMath::Max(Other->StunSecondsLeft, Helpless);
+			}
+			if (bLegendary)
+			{
+				Other->Launch(Forward, LegendaryLaunchSpeed);
+			}
+			if (bWithAWeapon && Carried.IsValid() && Weapon->SpendUse())
+			{
+				Carried = nullptr;
+			}
+		}
+
+		bReachedSomeone = true;
+		// A hand has one target. A leg goes through everyone in its way.
+		if (!bWithALeg && !bWithAWeapon)
+		{
+			break;
+		}
+	}
+
+	UE_CLOG(!bReachedSomeone, LogStickFighter, Verbose, TEXT("Miss: %s lands %s on nobody. Nearest opponent %.0f cm away, reach %.0f plus %.0f"),
+		*GetName(), *UEnum::GetValueAsString(StrikeMove), NearestMiss, StrikeReach, BodyRadius);
+}
+
+void AStickFighter::SufferBlow(AStickFighter* Attacker, float Damage, const FVector& Point, const FVector& Direction, bool bHeavy, EMove Move)
+{
+	if (IsDown())
+	{
+		return;
+	}
+
+	TakeBlow(Damage, Point, Direction, bHeavy);
+	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
+	Events->OnHit.Broadcast(Attacker, this, Move);
+	if (IsDown())
+	{
+		Events->OnFighterDown.Broadcast(this, Team == 0);
+	}
+}
+
+void AStickFighter::TakeBlow(float Damage, const FVector& StrikePoint, const FVector& StrikeDirection, bool bHeavy)
+{
+	if (Hanging.IsValid())
+	{
+		LetGoOfBar(FVector::ZeroVector, 0.f);
+	}
+
+	if (AThrownProp* Dropped = Carried.Get())
+	{
+		Carried = nullptr;
+		Dropped->Release(FVector::ZeroVector);
+	}
+
+	Health -= Damage * DamageTakenScale;
+	const bool bKnockout = Health <= 0.f;
+	const bool bShrugsItOff = bArmored && !bHeavy && !bKnockout;
+	const bool bWasStriking = bStrikeOnItsWay;
+
+	TakeHit(StrikePoint, StrikeDirection, bKnockout, bHeavy);
+	if (bKnockout)
+	{
+		return;
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	BlowsInARow = Now - LastBlowSeconds < BlowChainSeconds ? BlowsInARow + 1 : 1;
+	LastBlowSeconds = Now;
+	const bool bSentFlying = bHeavy || BlowsInARow >= BlowsInAFinisher;
+	if (bSentFlying)
+	{
+		BlowsInARow = 0;
+	}
+
+	KnockVelocity = StrikeDirection.GetSafeNormal2D() * (bSentFlying ? HeavyKnockSpeed : KnockSpeed) * (bShrugsItOff ? 0.3f : 1.f);
+	if (bShrugsItOff)
+	{
+		bStrikeOnItsWay = bWasStriking;
+		return;
+	}
+
+	StunSecondsLeft = bSentFlying ? HeavyStunSeconds : StunSeconds;
+	PoseSecondsLeft = 0.f;
+	if (State == EFighterState::Busy)
+	{
+		ReturnToIdle();
+	}
+}
+
+bool AStickFighter::GrabOrThrow()
+{
+	if (Hanging.IsValid())
+	{
+		return false;
+	}
+
+	if (!bFree || !CanAct())
+	{
+		return false;
+	}
+
+	if (AThrownProp* Thrown = Carried.Get())
+	{
+		// A throw goes the way the fighter means to face, and bends a little to find someone to hit.
+		const FVector Facing = WantedForward();
+		FVector Aim = Facing;
+		double Nearest = ThrowAimDistance;
+		for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+		{
+			const FVector To = (It->GetActorLocation() - GetActorLocation()) * FVector(1., 1., 0.);
+			if (It->Team != Team && !It->IsDown() && To.Size() < Nearest && (To.GetSafeNormal() | Facing) > ThrowAimCosine)
+			{
+				Nearest = To.Size();
+				// Thrown at where a moving target will be, not at where it is.
+				Aim = ((To + It->MovedPerSecond * (To.Size() / ThrowSpeed)) * FVector(1., 1., 0.)).GetSafeNormal();
+			}
+		}
+
+		Carried = nullptr;
+		FaceTowards(GetActorLocation() + Aim * 100.);
+		SnapToWantedFacing();
+		Thrown->Release(Aim * ThrowSpeed + FVector(0.f, 0.f, ThrowDrop));
+		ThrowSecondsLeft = ThrowGestureSeconds;
+		GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, EMove::Throw);
+		return true;
+	}
+
+	AThrownProp* Found = nullptr;
+	double Reach = GrabReach;
+	for (TActorIterator<AThrownProp> It(GetWorld()); It; ++It)
+	{
+		const double Distance = FVector::Dist2D(It->GetActorLocation(), GetActorLocation());
+		if (It->IsLoose() && Distance < Reach)
+		{
+			Reach = Distance;
+			Found = *It;
+		}
+	}
+	if (!Found)
+	{
+		return false;
+	}
+
+	Found->PickUp(this);
+	Carried = Found;
+	return true;
+}
+
+FVector AStickFighter::GetCarryPoint() const
+{
+	const TArray<FVector> Joints = BuildJoints(true);
+	return (Joints[LeftHand] + Joints[RightHand]) * 0.5;
+}
+
+void AStickFighter::AdvanceFreeMovement(float DeltaSeconds)
+{
+	if (!Hanging.IsValid() && bMayGrabABar && JumpHeight > 0.f)
+	{
+		TryToGrabABar();
+	}
+	if (Hanging.IsValid())
+	{
+		AdvanceHang(DeltaSeconds);
+		return;
+	}
+
+	const bool bGrounded = JumpHeight <= 0.f;
+
+	// Walking away cuts short the tail of a strike, so a fighter is never stuck watching its own follow-through.
+	if (!WalkInput.IsNearlyZero() && State == EFighterState::Busy && CanAct())
+	{
+		ReturnToIdle();
+	}
+
+	const bool bOnItsFeet = State == EFighterState::Idle || State == EFighterState::Moving;
+	const bool bMayWalk = bOnItsFeet && !bMoving && StunSecondsLeft <= 0.f && PoseAlpha < 0.3f;
+	const double InputLength = WalkInput.Size();
+	const FVector2D Velocity = bMayWalk && InputLength > 0.05 ? WalkInput / FMath::Max(InputLength, 1.) * WalkSpeed : FVector2D::ZeroVector;
+	const bool bWantsToWalk = !Velocity.IsNearlyZero(1.);
+
+	// Someone backing away from what it faces walks backwards, instead of jogging on the spot in reverse.
+	// The two thresholds keep a fighter that is turning from flipping between the two walks.
+	const double Heading = FVector(Velocity, 0.).GetSafeNormal() | GetActorForwardVector();
+	const bool bBackwards = bWantsToWalk && Heading < (bWalkingBackwards ? -0.1 : -0.4);
+
+	if (bGrounded && (bWantsToWalk != bWalking || (bWalking && bBackwards != bWalkingBackwards)))
+	{
+		bWalking = bWantsToWalk;
+		bWalkingBackwards = bBackwards;
+		if (bWalking)
+		{
+			CaptureBlendFrom();
+			const float Speed = static_cast<float>(Velocity.Size());
+			Play(bBackwards ? BackAnimation : RunAnimation, true, FMath::Clamp(Speed / (bBackwards ? WalkBackAnimationSpeed : RunAnimationSpeed), 0.7f, 2.2f));
+			State = EFighterState::Moving;
+		}
+		else if (State == EFighterState::Moving && !bMoving)
+		{
+			ReturnToIdle();
+		}
+	}
+
+	FVector Location = GetActorLocation();
+	// A fighter waiting outside the arena for its entrance is left where it is. Once inside, the walls hold it.
+	const bool bInside = ClampToArena(FVector2D(Location)).Equals(FVector2D(Location), 1.);
+
+	Location += (FVector(Velocity, 0.) + KnockVelocity + (bStrikeOnItsWay ? LungeVelocity : FVector::ZeroVector)) * DeltaSeconds;
+	KnockVelocity *= FMath::Exp(-KnockDamping * DeltaSeconds);
+
+	if (!bGrounded)
+	{
+		JumpSpeed -= JumpGravity * DeltaSeconds;
+		JumpHeight = FMath::Max(JumpHeight + JumpSpeed * DeltaSeconds, 0.f);
+		if (JumpHeight <= 0.f)
+		{
+			JumpSpeed = 0.f;
+			LandSquashSecondsLeft = LandSquashSeconds;
+			bMayGrabABar = false;
+			if (State == EFighterState::Moving && !bMoving)
+			{
+				ReturnToIdle();
+			}
+		}
+	}
+
+	// Two standing fighters never share a spot: each steps half way out of the other's.
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		const AStickFighter* Other = *It;
+		if (Other == this || Other->IsDown())
+		{
+			continue;
+		}
+		const FVector Apart = (Location - Other->GetActorLocation()) * FVector(1., 1., 0.);
+		const double Gap = Apart.Size();
+		if (Gap < BodyGap)
+		{
+			Location += (Gap > 1. ? Apart / Gap : -GetActorForwardVector()) * (BodyGap - Gap) * 0.5;
+		}
+	}
+
+	if (bMoving)
+	{
+		return;
+	}
+	if (bInside)
+	{
+		const FVector2D Held = ClampToArena(FVector2D(Location));
+		Location.X = Held.X;
+		Location.Y = Held.Y;
+	}
+	Location.Z = FloorHeight + JumpHeight;
+	SetActorLocation(Location);
+}
+
+// Where the fighter is turning to, which is where it means its next move to go.
+FVector AStickFighter::WantedForward() const
+{
+	return FRotator(0.f, bTurning ? FacingYaw : static_cast<float>(GetActorRotation().Yaw), 0.f).Vector();
+}
+
+void AStickFighter::StartPosed(EMove Technique, float SecondsUntilContact)
+{
+	CaptureBlendFrom();
+	Play(IdleAnimation, true);
+	State = EFighterState::Busy;
+	// The move starts from the held pose and carries it on itself, so the held pose lets go at once.
+	PoseAlpha = 0.f;
+
+	StrikeMove = Technique;
+	bStrikeOnItsWay = true;
+	bKicking = true;
+	KickElapsed = 0.f;
+	KickContactAt = FMath::Max(SecondsUntilContact, 0.08f);
+	PosedRecoverSeconds = FindTechnique(Technique)->RecoverSeconds;
+
+	const FVector Hip = Body->GetBoneLocation(JointBones[RightHip]);
+	const FVector Knee = Body->GetBoneLocation(JointBones[RightKnee]);
+	const FVector Foot = Body->GetBoneLocation(JointBones[RightFoot]);
+	const double Leg = FVector::Dist(Hip, Knee) + FVector::Dist(Knee, Foot);
+	StrikeReach = Technique == EMove::Uppercut ? UppercutReach
+		: Technique == EMove::Chop ? ChopReach
+		: Technique == EMove::Sweep ? Leg * 0.9
+		: Technique == EMove::Roundhouse ? Leg * 0.9
+		: Leg * KickLegStretch;
+}
+
+// A strike or a throw goes where the fighter means to face, at once. It holds that facing until the move is over.
+void AStickFighter::SnapToWantedFacing()
+{
+	if (bTurning)
+	{
+		SetActorRotation(FRotator(0.f, FacingYaw, 0.f));
+		bTurning = false;
+	}
+}
+
+// A self-check for something the developer saw once: a fighter walking above the floor with no jump to explain it.
+// It says what it knows the moment that happens, so the cause does not have to be guessed from a picture.
+void AStickFighter::WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When)
+{
+	if (!bFree || Joints.Num() != JointCount)
+	{
+		return;
+	}
+
+	const double FeetAbove = FMath::Min(Joints[LeftFoot].Z, Joints[RightFoot].Z) - FloorHeight;
+	FloatingSeconds = FeetAbove > 30. ? FloatingSeconds + DeltaSeconds : FMath::Min(FloatingSeconds, 0.f);
+	if (FloatingSeconds > 0.3f)
+	{
+		UE_LOG(LogStickFighter, Warning, TEXT("Floating %s: %s has both feet %.0f cm above the floor. Actor z %.0f, floor %.0f, pelvis z %.0f, body offset %s, state %d, jump %.0f"),
+			When, *GetName(), FeetAbove, GetActorLocation().Z, FloorHeight, Joints[PelvisJoint].Z, *Body->GetRelativeLocation().ToCompactString(), static_cast<int32>(State), JumpHeight);
+		// Once a second is enough.
+		FloatingSeconds = -1.f;
+	}
+}
+
+void AStickFighter::ApplyLook(const FCharacterLook& Look)
+{
+	const FLookBuild& Build = LookBuilds[FMath::Clamp(Look.Build, 0, LookCount(2) - 1)];
+	Thickness = Build.Thickness;
+	HeadRadius = Build.HeadRadius;
+	SetColor(LookColors[FMath::Clamp(Look.Color, 0, LookCount(0) - 1)].Color);
+
+	Hat = FMath::Clamp(Look.Hat, 0, LookCount(1) - 1);
+	for (int32 Piece = 0; Piece < 2; ++Piece)
+	{
+		const FHatPiece& Shape = Hats[Hat][Piece];
+		HatParts[Piece]->SetVisibility(Shape.bUsed);
+		HatParts[Piece]->SetStaticMesh(Shape.bCube ? CubeMesh : CylinderMesh);
+		HatParts[Piece]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", HatColors[Hat]);
+	}
+}
+
+int32 AStickFighter::LookCount(int32 Row)
+{
+	return static_cast<int32>(Row == 0 ? UE_ARRAY_COUNT(LookColors) : Row == 1 ? UE_ARRAY_COUNT(HatNames) : UE_ARRAY_COUNT(LookBuilds));
+}
+
+FString AStickFighter::LookName(int32 Row, int32 Index)
+{
+	Index = FMath::Clamp(Index, 0, LookCount(Row) - 1);
+	return Row == 0 ? LookColors[Index].Name : Row == 1 ? HatNames[Index] : LookBuilds[Index].Name;
+}
+
+// Colours the limbs, joints and head without changing what colour the fighter is. The hat, eyes and gun keep theirs.
+void AStickFighter::TintBody(const FLinearColor& Tint)
+{
+	for (UStaticMeshComponent* Part : Limbs)
+	{
+		Part->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+	}
+	for (UStaticMeshComponent* Ball : JointBalls)
+	{
+		Ball->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+	}
+	Head->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+	const bool bDarkEyes = !Tint.Equals(Color) || Color.GetLuminance() > 0.25f;
+	for (UStaticMeshComponent* Eye : Eyes)
+	{
+		Eye->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", bDarkEyes ? FLinearColor(0.01f, 0.01f, 0.01f) : FLinearColor(0.9f, 0.9f, 0.9f));
+	}
+	// A broken forearm gets its own tint back the next time the figure is drawn.
+	TintedBrokenArms = 0;
+}
+
+void AStickFighter::Launch(const FVector& Direction, float Speed)
+{
+	if (State == EFighterState::Down)
+	{
+		Body->SetAllPhysicsLinearVelocity((Direction.GetSafeNormal2D() + FVector(0., 0., 0.55)) * Speed);
+	}
+}
+
+void AStickFighter::PopUp(float Speed, float HelplessSeconds)
+{
+	if (State == EFighterState::Down || !bFree)
+	{
+		return;
+	}
+
+	JumpSpeed = Speed;
+	bMayGrabABar = false;
+	JumpHeight = FMath::Max(JumpHeight, UE_KINDA_SMALL_NUMBER);
+	StunSecondsLeft = FMath::Max(StunSecondsLeft, HelplessSeconds);
+	bWalking = false;
+	CaptureBlendFrom();
+	Play(FallAnimation, true);
+	State = EFighterState::Moving;
+}
+
+void AStickFighter::TryToGrabABar()
+{
+	if (StunSecondsLeft > 0.f || Carried.IsValid() || State != EFighterState::Moving || LooseArms[0].bBroken || LooseArms[1].bBroken)
+	{
+		return;
+	}
+
+	const FVector Location = GetActorLocation();
+	for (TActorIterator<ASwingBar> It(GetWorld()); It; ++It)
+	{
+		const FVector Bar = It->GetActorLocation();
+		if (FMath::Abs(Bar.X - Location.X) > BarGrabWidth)
+		{
+			continue;
+		}
+
+		// How high the fighter has to be for its raised hands to close on the bar.
+		const TArray<FVector> Joints = BuildJoints(false);
+		const double Shoulder = FMath::Max(Joints[LeftShoulder].Z, Joints[RightShoulder].Z) - Location.Z;
+		const double Arm = FVector::Dist(Joints[RightShoulder], Joints[RightElbow]) + FVector::Dist(Joints[RightElbow], Joints[RightHand]);
+		const double HangHeight = Bar.Z - FloorHeight - Shoulder - Arm * 0.96;
+		if (HangHeight < 0. || JumpHeight < HangHeight - BarGrabSlack)
+		{
+			continue;
+		}
+
+		CaptureBlendFrom();
+		Hanging = *It;
+		HangSeconds = 0.f;
+		SwingKickSeconds = -1.f;
+		JumpHeight = static_cast<float>(HangHeight);
+		JumpSpeed = 0.f;
+		KnockVelocity = FVector::ZeroVector;
+		bWalking = false;
+		SetActorLocation(FVector(Bar.X, Location.Y, FloorHeight + HangHeight));
+		GetWorld()->GetSubsystem<UTakeEvents>()->OnBarGrabbed.Broadcast(this);
+		return;
+	}
+}
+
+void AStickFighter::AdvanceHang(float DeltaSeconds)
+{
+	HangSeconds += DeltaSeconds;
+	if (SwingKickSeconds >= 0.f)
+	{
+		SwingKickSeconds += DeltaSeconds;
+		if (SwingKickSeconds >= SwingKickContactSeconds)
+		{
+			LandSwingKick();
+		}
+	}
+	// Nobody waits out a fight up there.
+	else if (HangSeconds > MaxHangSeconds)
+	{
+		LetGoOfBar(FVector::ZeroVector, 0.f);
+	}
+}
+
+bool AStickFighter::StartSwingKick()
+{
+	if (SwingKickSeconds >= 0.f)
+	{
+		return false;
+	}
+
+	SnapToWantedFacing();
+	SwingKickSeconds = 0.f;
+	StrikeMove = EMove::SwingKick;
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, EMove::SwingKick);
+	return true;
+}
+
+void AStickFighter::LandSwingKick()
+{
+	const FVector Forward = GetActorForwardVector();
+	const FVector From = GetActorLocation();
+	const double FeetHeight = BuildJoints(true)[RightFoot].Z;
+
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		AStickFighter* Other = *It;
+		// The feet come through at chest height, over anyone who has ducked.
+		if (Other == this || Other->Team == Team || Other->IsDown() || Other->IsDucking())
+		{
+			continue;
+		}
+
+		const FVector To = (Other->GetActorLocation() - From) * FVector(1., 1., 0.);
+		const double Ahead = To | Forward;
+		if (Ahead < 30. || Ahead > SwingKickReach || (To - Forward * Ahead).Size() > SwingKickWidth)
+		{
+			continue;
+		}
+
+		const FVector Where(Other->GetActorLocation().X, Other->GetActorLocation().Y, FeetHeight);
+		Other->SufferBlow(this, KickDamage * SwingKickDamageScale, Where, Forward, true, EMove::SwingKick);
+		Other->Launch(Forward, HeavyKnockSpeed);
+		Other->KnockVelocity = Forward * (HeavyKnockSpeed * 1.4f);
+	}
+
+	LetGoOfBar(Forward * SwingKickFlySpeed, SwingKickLiftSpeed);
+}
+
+void AStickFighter::LetGoOfBar(const FVector& Velocity, float UpSpeed)
+{
+	CaptureBlendFrom();
+	Hanging = nullptr;
+	SwingKickSeconds = -1.f;
+	bMayGrabABar = false;
+	KnockVelocity = Velocity;
+	JumpSpeed = UpSpeed;
+}

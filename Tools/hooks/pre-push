@@ -1,0 +1,21 @@
+#!/bin/sh
+# Stands in for branch protection, which the host only gives private repositories on a paid plan.
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+pushed=$(cat)
+
+printf '%s\n' "$pushed" | while read -r local_ref local_sha remote_ref remote_sha; do
+	[ "$remote_ref" = "refs/heads/main" ] || continue
+	if [ "$local_sha" = "$zero" ]; then
+		echo "Refused: main must never be deleted." >&2
+		exit 1
+	fi
+	if [ "$remote_sha" != "$zero" ] && ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+		echo "Refused: this push would rewrite main. Pull main, merge, then push again." >&2
+		exit 1
+	fi
+done || exit 1
+
+# core.hooksPath replaces .git/hooks, so the Git LFS upload that lives there has to run from here.
+# shortcut: the LFS post-checkout, post-commit and post-merge hooks are not chained; add them if files become lockable.
+command -v git-lfs >/dev/null 2>&1 || { echo "Git LFS is not installed, so assets cannot be pushed." >&2; exit 2; }
+[ -z "$pushed" ] || printf '%s\n' "$pushed" | git lfs pre-push "$@"

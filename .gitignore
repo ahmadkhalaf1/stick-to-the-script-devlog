@@ -1,0 +1,21 @@
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.sln
+*.suo
+*.VC.db
+*.opensdf
+*.sdf
+.claude/settings.local.json
+.obsidian/workspace*.json
+
+# Written by packaging.
+Build/**/FileOpenOrder/
+
+# Some tools run git with core.hooksPath=/dev/null, which on Windows creates this folder.
+/dev/
+
+# Python bytecode from the stage scripts.
+__pycache__/

@@ -1,0 +1,72 @@
+filters:
+  and:
+    - file.inFolder("Plan/Tasks")
+properties:
+  file.name:
+    displayName: Task
+  note.estimate:
+    displayName: Hours
+views:
+  - type: table
+    name: By sprint
+    groupBy:
+      property: sprint
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - owner
+      - stream
+      - estimate
+      - depends
+  - type: table
+    name: By owner
+    filters:
+      and:
+        - status != "done"
+        - status != "dropped"
+    groupBy:
+      property: owner
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - sprint
+      - stream
+      - estimate
+      - depends
+  - type: table
+    name: By stream
+    groupBy:
+      property: stream
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - owner
+      - sprint
+      - estimate
+  - type: table
+    name: By status
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - owner
+      - sprint
+      - stream
+      - estimate
+  - type: table
+    name: Unassigned
+    filters:
+      and:
+        - owner == "unassigned"
+        - status != "done"
+        - status != "dropped"
+    order:
+      - file.name
+      - sprint
+      - stream
+      - estimate
+      - depends

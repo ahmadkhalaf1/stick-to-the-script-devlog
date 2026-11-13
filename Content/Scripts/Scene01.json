@@ -1,0 +1,37 @@
+{
+  "Name": "Scene 1: The warehouse",
+  "Synopsis": "The gang has the witness's kid. The hero walks in to bargain,\ntakes a beating and is thrown out.",
+  "DirectorLines": [
+    "That is NOT in the script!",
+    "You are supposed to LOSE this fight!",
+    "Page twelve! You fall down on page twelve!",
+    "Those are my stuntmen! I need those!",
+    "Not the crates! The crates are rented!",
+    "You came here to BARGAIN! So bargain!",
+    "Who is writing this? Not me!",
+    "...keep rolling. Nobody stop him. Keep rolling."
+  ],
+  "Stage": "/Game/Scenes/Stage01",
+  "Fee": 500,
+  "CutCost": 50,
+  "PlayerStart": { "X": 0, "Y": 0 },
+  "ArenaMin": { "X": -500, "Y": -160 },
+  "ArenaMax": { "X": 2200, "Y": 170 },
+  "Bars": [ {"X":300,"Height":250}, {"X":1300,"Height":250} ],
+  "Props": [
+    { "Kind": "Cone", "Location": { "X": 520, "Y": 140 }, "Height": 0 },
+    { "Kind": "Pan", "Location": { "X": 1000, "Y": 140 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 120, "Y": 40 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 760, "Y": 140 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 1250, "Y": -130 }, "Height": 0 },
+    { "Kind": "Crate", "Location": { "X": 1800, "Y": 140 }, "Height": 0 }
+  ],
+  "Opponents": [
+    { "Kind": "Thug", "Enter": { "X": 550, "Y": -330 }, "Spot": { "X": 550, "Y": -40 }, "WakeDistance": 520, "Color": { "R": 0.02, "G": 0.02, "B": 0.02, "A": 1 } },
+    { "Kind": "Rusher", "Enter": { "X": 1100, "Y": 60 }, "Spot": { "X": 1100, "Y": 60 }, "WakeDistance": 520, "Color": { "R": 0.02, "G": 0.05, "B": 0.3, "A": 1 } },
+    { "Kind": "Kicker", "Enter": { "X": 900, "Y": -330 }, "Spot": { "X": 900, "Y": -40 }, "WakeDistance": 520, "Color": { "R": 0.03, "G": 0.2, "B": 0.05, "A": 1 } },
+    { "Kind": "Thug", "Enter": { "X": 1500, "Y": -60 }, "Spot": { "X": 1500, "Y": -60 }, "WakeDistance": 520, "Color": { "R": 0.3, "G": 0.16, "B": 0.02, "A": 1 } },
+    { "Kind": "Rusher", "Enter": { "X": 1650, "Y": 80 }, "Spot": { "X": 1650, "Y": 80 }, "WakeDistance": 520, "Color": { "R": 0.16, "G": 0.03, "B": 0.25, "A": 1 } },
+    { "Kind": "Heavy", "Enter": { "X": 2000, "Y": 0 }, "Spot": { "X": 2000, "Y": 0 }, "WakeDistance": 520, "Color": { "R": 0.35, "G": 0.02, "B": 0.02, "A": 1 } }
+  ]
+}

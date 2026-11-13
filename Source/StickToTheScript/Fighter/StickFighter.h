@@ -1,0 +1,382 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "StickToTheScript/Core/TakeTypes.h"
+#include "StickFighter.generated.h"
+
+class ASwingBar;
+class AThrownProp;
+class UAnimSequenceBase;
+class UStaticMesh;
+class USkeletalMeshComponent;
+class UStaticMeshComponent;
+
+// The index of each joint in AStickFighter::GetJointPositions.
+namespace StickJoint
+{
+	enum
+	{
+		PelvisJoint, ChestJoint, NeckJoint, SkullJoint,
+		LeftShoulder, LeftElbow, LeftHand,
+		RightShoulder, RightElbow, RightHand,
+		LeftHip, LeftKnee, LeftFoot,
+		RightHip, RightKnee, RightFoot,
+		JointCount
+	};
+}
+
+UCLASS()
+class AStickFighter : public AActor
+{
+	GENERATED_BODY()
+
+public:
+	AStickFighter();
+
+	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
+
+	// Plays a move by itself, to look at it. An attack played this way hits nobody.
+	void PlayMove(EMove Move);
+
+	// Starts the animation of a punch or a kick. SecondsUntilContact stretches the wind-up so the strike arrives when
+	// wanted; 0 plays it at natural speed. It lands on nobody by itself: Strike is what gives a blow someone to hit.
+	// False when nothing was started: the fighter is down, or it is a punch and no arm is sound to throw it.
+	bool Attack(EMove Move, float SecondsUntilContact = 0.f);
+
+	// A heavy hit that does not knock out breaks the nearer arm, which hangs loose until the next take.
+	void TakeHit(const FVector& StrikePoint, const FVector& StrikeDirection, bool bKnockout, bool bHeavy);
+
+	void ReturnToIdle();
+
+	// Turns on the spot to face a point, over a few frames.
+	void FaceTowards(const FVector& Target);
+
+	// Runs to a point in the given time, then turns to face FaceAfter.
+	void MoveTo(const FVector& Target, float Seconds, const FVector& FaceAfter);
+
+	// Where the fighter stands at the start of every take.
+	void SetHome(const FVector& Location, const FRotator& Rotation);
+	void SetColor(const FLinearColor& NewColor);
+
+	// The player's choices: a colour, a hat and a build. Row 0 is colours, 1 hats, 2 builds.
+	void ApplyLook(const FCharacterLook& Look);
+	static int32 LookCount(int32 Row);
+	static FString LookName(int32 Row, int32 Index);
+
+	// The world positions the stick is drawn from, always in the same order. The take recorder stores these.
+	TArray<FVector> GetJointPositions() const { return BuildJoints(true); }
+
+	// Where on this fighter's body the last strike landed. Effects start here.
+	FVector GetLastImpactPoint() const { return LastImpactPoint; }
+
+	bool IsDown() const { return bPuppet ? bPuppetDown : State == EFighterState::Down; }
+
+	// Bit 0 is the left arm, bit 1 the right.
+	uint8 GetBrokenArms() const;
+
+	// While a pose is set the fighter is a puppet: it shows exactly that pose and ignores everything else. The final cut replays a take this way.
+	void SetPuppetPose(const FFighterPose& Pose);
+	void EndPuppet();
+
+	// For a replayed strike, so effects can ask a puppet where it was hit and whether it went down.
+	void MarkStruck(const FVector& ImpactPoint, bool bKnockedOut);
+
+	// Lets the fighter walk, jump and be knocked about, inside this part of the floor.
+	void SetArena(const FVector2D& Min, const FVector2D& Max);
+	bool FightsFreely() const { return bFree; }
+	FVector2D ClampToArena(const FVector2D& Point) const;
+
+	// A direction on the floor, in world space. Its length, up to 1, scales the speed. It holds until changed.
+	void Walk(const FVector2D& Direction) { WalkInput = Direction; }
+	void Jump();
+
+	// Block or Duck, held for as long as this is called every frame.
+	void Guard(EMove Pose);
+
+	// A punch or a kick with no chosen victim: it lands on whoever of the other team is in reach when it arrives.
+	// What the fighter is holding turns it into another move. Ducked, a punch is an uppercut and a kick a sweep.
+	// Behind a raised guard, a punch is a chop and a kick a roundhouse.
+	bool Strike(EMove Move, float SecondsUntilContact);
+
+	// One move asked for by name: Punch, Kick, Uppercut, Sweep, Roundhouse or Chop. 0 seconds means its own time.
+	bool StrikeWith(EMove Move, float SecondsUntilContact);
+
+	// Thrown into the air by a blow, and helpless until a little after landing.
+	void PopUp(float Speed, float HelplessSeconds);
+
+	// Picks up the nearest loose prop in reach, or throws the one it carries. False when there was nothing to do.
+	bool GrabOrThrow();
+	bool IsCarrying() const { return Carried.IsValid(); }
+	FVector GetCarryPoint() const;
+
+	// A blow from anything, a strike or a thrown prop: it hurts, staggers or knocks out, and the take hears about it.
+	void SufferBlow(AStickFighter* Attacker, float Damage, const FVector& Point, const FVector& Direction, bool bHeavy, EMove Move);
+
+	// Throws a knocked-out fighter's body that way, up and along.
+	void Launch(const FVector& Direction, float Speed);
+
+	// True when a new move would be accepted: standing, walking, or in the tail of a strike that has already landed.
+	bool CanAct() const;
+	bool IsStriking() const { return bStrikeOnItsWay || SwingKickSeconds >= 0.f; }
+	bool IsHanging() const { return Hanging.IsValid(); }
+	bool IsStunned() const { return StunSecondsLeft > 0.f; }
+	bool IsAirborne() const { return JumpHeight > 0.f; }
+	bool IsAiming() const { return bAiming; }
+	bool IsTravelling() const { return bMoving; }
+	bool IsGuarding() const { return HeldPose == EMove::Block && PoseAlpha > 0.4f; }
+	bool IsDucking() const { return HeldPose == EMove::Duck && PoseAlpha > 0.5f; }
+	float GetHealthFraction() const { return FMath::Clamp(Health / MaxHealth, 0.f, 1.f); }
+
+	// 0 is the player, 1 the opponents. A strike only lands on the other team.
+	int32 Team = 1;
+	float MaxHealth = 40.f;
+	float WalkSpeed = 300.f;
+	float PunchDamage = 10.f;
+	float KickDamage = 16.f;
+	// The share of a blow's damage this fighter takes. The flow lowers it for the player after several retakes.
+	float DamageTakenScale = 1.f;
+	// Punches hurt an armoured fighter but do not stop what it is doing.
+	bool bArmored = false;
+	// Draws a gun in the right hand.
+	bool bArmed = false;
+
+	UPROPERTY(VisibleAnywhere, Category = "Stick")
+	TObjectPtr<USkeletalMeshComponent> Body;
+
+	UPROPERTY(EditAnywhere, Category = "Stick")
+	FLinearColor Color = FLinearColor::White;
+
+	UPROPERTY(EditAnywhere, Category = "Stick")
+	float Thickness = 7.f;
+
+	UPROPERTY(EditAnywhere, Category = "Stick")
+	float HeadRadius = 11.f;
+
+	// Cycles through every move forever, to check the animations by eye.
+	UPROPERTY(EditAnywhere, Category = "Stick")
+	bool bDemoAllMoves = false;
+
+protected:
+	// While set, the right arm points straight at this place: someone taking aim.
+	bool bAiming = false;
+	FVector AimPoint = FVector::ZeroVector;
+
+private:
+	enum class EFighterState : uint8
+	{
+		Idle,
+		Moving,
+		Busy,
+		Down
+	};
+
+	struct FLooseArm
+	{
+		bool bBroken = false;
+		FVector Hand = FVector::ZeroVector;
+		FVector Velocity = FVector::ZeroVector;
+	};
+
+	UFUNCTION()
+	void HandleTakeStarted(int32 TakeNumber);
+
+	void Play(UAnimSequenceBase* Animation, bool bLoop, float Rate = 1.f);
+	float FindContactSeconds(UAnimSequenceBase* Strike);
+	// The next punch that is thrown with an arm that is not broken, or none.
+	UAnimSequenceBase* NextPunch();
+	void LandStrike();
+	void StartRecoil(const FVector& StrikePoint, const FVector& StrikeDirection, float Strength);
+	void CaptureBlendFrom();
+	void SwingBrokenArms(float DeltaSeconds);
+	void DemoNextMove();
+	TArray<FVector> BuildJoints(bool bWithBrokenArms) const;
+	void PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms);
+	void AdvanceFreeMovement(float DeltaSeconds);
+	void LandFreeStrike(const FVector& StrikePoint);
+	void TakeBlow(float Damage, const FVector& StrikePoint, const FVector& StrikeDirection, bool bHeavy);
+	void StartPosed(EMove Technique, float SecondsUntilContact);
+	void TryToGrabABar();
+	void AdvanceHang(float DeltaSeconds);
+	void LetGoOfBar(const FVector& Velocity, float UpSpeed);
+	bool StartSwingKick();
+	void LandSwingKick();
+	FVector WantedForward() const;
+	void SnapToWantedFacing();
+	void TintBody(const FLinearColor& Tint);
+	void WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When);
+
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Limbs;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMeshComponent> Head;
+
+	// The second piece of a forearm, shown only while that arm is broken.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> ForearmStumps;
+
+	// What shows at a break, two per arm: a pale spike of bone past it, and a wound around it.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> BreakParts;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> IdleAnimation;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UAnimSequenceBase>> PunchAnimations;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> KickAnimation;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> RunAnimation;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> FallAnimation;
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> BackAnimation;
+
+	// Drawn for one frame behind a hand or foot that moves very fast, like a smear frame in hand-drawn animation.
+	UPROPERTY()
+	TObjectPtr<UStaticMeshComponent> Smear;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMeshComponent> Gun;
+
+	// A hat is one or two plain shapes set on the head. It is placed from the joints, so the film shows it too.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> HatParts;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> CylinderMesh;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> CubeMesh;
+
+	int32 Hat = 0;
+
+	// A ball at every joint rounds the limbs off and gives the figure hands and feet. Eyes show which way it faces.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> JointBalls;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Eyes;
+
+	// Shown only for the instant of a hit, when the figure is drawn as its own skeleton.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Ribs;
+
+	// How far the hands are up in a fighter's ready stance.
+	float StanceAlpha = 0.f;
+
+	EFighterState State = EFighterState::Idle;
+	float BusyAnimationSeconds = 0.f;
+	int32 PunchCount = 0;
+
+	EMove HeldPose = EMove::None;
+	float PoseSecondsLeft = 0.f;
+	float PoseAlpha = 0.f;
+
+	bool bStrikeOnItsWay = false;
+	float ContactSeconds = 0.f;
+	FName StrikeBone;
+	EMove StrikeMove = EMove::None;
+
+	FVector LastImpactPoint = FVector::ZeroVector;
+	FVector RecoilDirection = FVector::ZeroVector;
+	float RecoilProgress = 1.f;
+	float RecoilStrength = 1.f;
+	float RecoilWeights[StickJoint::JointCount] = {};
+
+	FLooseArm LooseArms[2];
+	// Which forearms are currently drawn broken, so the tint only changes when the state does.
+	uint8 TintedBrokenArms = 0;
+
+	bool bPuppet = false;
+	bool bPuppetDown = false;
+	FFighterPose PuppetPose;
+
+	bool bTurning = false;
+	float FacingYaw = 0.f;
+
+	bool bHasHome = false;
+	FVector HomeLocation = FVector::ZeroVector;
+	FRotator HomeRotation = FRotator::ZeroRotator;
+
+	bool bMoving = false;
+	FVector MoveFrom = FVector::ZeroVector;
+	FVector MoveTarget = FVector::ZeroVector;
+	FVector FaceAfterMove = FVector::ZeroVector;
+	float MoveSeconds = 0.f;
+	float MoveElapsed = 0.f;
+
+	// The pose being left, relative to the actor, so a new animation fades in instead of snapping.
+	TArray<FVector> BlendFromLocal;
+	float BlendSecondsLeft = 0.f;
+
+	TArray<FVector> LastDrawnJoints;
+	float LastDrawnSeconds = 0.f;
+
+	struct FContact
+	{
+		float Seconds = 0.f;
+		FName Bone;
+		double Reach = 0.;
+	};
+	// When each strike animation makes contact, worked out once.
+	TMap<const UAnimSequenceBase*, FContact> Contacts;
+
+	TWeakObjectPtr<AThrownProp> Carried;
+	float CarryAlpha = 0.f;
+	float ThrowSecondsLeft = 0.f;
+	int32 BlowsInARow = 0;
+	float LastBlowSeconds = 0.f;
+
+	// How far in front of the fighter the strike on its way gets: measured from its animation, or the length of the kicking leg.
+	double StrikeReach = 100.;
+	FVector LungeVelocity = FVector::ZeroVector;
+	// How the fighter moved over the last tick, so a throw can be aimed ahead of it.
+	FVector MovedPerSecond = FVector::ZeroVector;
+	FVector LastTickLocation = FVector::ZeroVector;
+	bool bKicking = false;
+	float KickElapsed = 0.f;
+	float KickContactAt = 0.f;
+	float PosedRecoverSeconds = 0.45f;
+	// The arm an uppercut or a chop is thrown with: 0 the left, 1 the right.
+	int32 PosedSide = 1;
+	float LandSquashSecondsLeft = 0.f;
+
+	TWeakObjectPtr<ASwingBar> Hanging;
+	float HangSeconds = 0.f;
+	// Under 0 while the fighter only hangs. From 0 up, how long its kick off the bar has been going.
+	float SwingKickSeconds = -1.f;
+	// Only a jump the fighter chose can catch a bar. One thrown into the air by a blow does not.
+	bool bMayGrabABar = false;
+
+	float FloatingSeconds = 0.f;
+
+	bool bFree = false;
+	FVector2D ArenaMin = FVector2D::ZeroVector;
+	FVector2D ArenaMax = FVector2D::ZeroVector;
+	double FloorHeight = 0.;
+	FVector2D WalkInput = FVector2D::ZeroVector;
+	bool bWalking = false;
+	bool bWalkingBackwards = false;
+	float FlashSecondsLeft = 0.f;
+	float Health = 40.f;
+	float StunSecondsLeft = 0.f;
+	FVector KnockVelocity = FVector::ZeroVector;
+	float JumpHeight = 0.f;
+	float JumpSpeed = 0.f;
+	bool bFreeStrike = false;
+	bool bStrikeFromAir = false;
+	float SecondsSinceContact = 0.f;
+
+	int32 DemoStep = 0;
+	float DemoRestSeconds = 0.f;
+};
