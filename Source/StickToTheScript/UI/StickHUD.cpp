@@ -36,6 +36,7 @@ namespace
 
 	// The director watches the script being ignored, and says so: the next of the scene's lines after every so many blows.
 	const int32 HitsBetweenShouts = 6;
+	const float KeysStaySeconds = 14.f;
 	const float ShoutSeconds = 2.8f;
 }
 
@@ -162,6 +163,13 @@ void AStickHUD::DrawHUD()
 			{
 				DrawCentered(Shout, 960.f * Unit, 2.f * Unit, FLinearColor::White);
 			}
+			// The keys show as every take is called, and stay a while into a scene's first one, unless the director is talking over them.
+			else if (Slate == ESlate::GetReady || (Slate == ESlate::None && Now < KeysUntilSeconds))
+			{
+				// shortcut: the keys are written here by hand, S2-FEEL-02 should read them from the input bindings.
+				DrawCentered(TEXT("W A S D move     Left click punch     Right click guard     F kick     Ctrl duck     Space jump     E grab, throw     Esc pause"), 950.f * Unit, 1.7f * Unit, FLinearColor::White);
+				DrawCentered(TEXT("Duck and punch: uppercut     Duck and kick: sweep     Guard and punch: chop     Guard and kick: roundhouse     Jump under a red bar, then kick"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+			}
 		}
 	}
 
@@ -176,9 +184,6 @@ void AStickHUD::DrawHUD()
 			{
 				DrawCentered(TEXT("The stunt crew is getting tired. They hit softer now."), 610.f * Unit, 2.f * Unit, HighlightGold);
 			}
-			// shortcut: the keys are written here by hand, S2-FEEL-02 should read them from the input bindings.
-			DrawCentered(TEXT("W A S D move     J punch     K kick     L guard     C duck     Space jump     E grab, throw     P pause"), 950.f * Unit, 1.7f * Unit, FLinearColor::White);
-			DrawCentered(TEXT("Hold C and punch: uppercut     Hold C and kick: sweep     Hold L and punch: chop     Hold L and kick: roundhouse     Jump under a red bar, then kick"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
 		}
 		break;
 
@@ -295,6 +300,7 @@ void AStickHUD::HandleTakeStarted(int32 TakeNumber)
 	ShoutUntilSeconds = 0.f;
 	EarnedUntilSeconds = 0.f;
 	CurrentTake = TakeNumber;
+	KeysUntilSeconds = TakeNumber == 1 ? GetWorld()->GetTimeSeconds() + KeysStaySeconds : 0.f;
 	Slate = ESlate::GetReady;
 }
 

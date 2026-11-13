@@ -810,6 +810,22 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![A kick and a roundhouse from motion capture, and the fighting stance](Docs/devlog/52-motion-capture.jpg)
 
+### 17:24–17:42 · The usual keys
+
+- **Developer said:** after starting the build to see the new animations: "keybinds are hard and not usual". And while the agent was on it: "maybe right mouse should be used to block hits".
+- **Agent did:**
+  - Read the bindings before changing any. The usual keys were already there: left click punched, Shift guarded, Ctrl ducked, Esc paused. The game only ever named the other set, J K L C P, and so had the agent, a few minutes earlier, when telling the developer how to try the moves. A chop was "hold L and press K": two keys under one hand.
+  - Took the developer's suggestion: the right mouse button guards. It had been the kick, so the kick went to F, which had been a spare key for grabbing. Every old key still works.
+  - Rewrote what the game says: the line shown as a take is called, the pause card, the wardrobe, the hints under the menus, and the store page's table. The special moves are now named by what you hold, "guard and punch: chop", not by a key.
+  - Made that line stay for the first 14 seconds of a scene's first take. It used to vanish with "and action!", after about two.
+- **Result:** in a take in the editor, three clicks threw punches and F threw a kick, by the log. The line and the pause card fit and read. The packaged Windows build was made again from this and played itself for half a minute with no errors; the line of keys was not looked at there, only in the editor.
+- **Went wrong:**
+  - The first test reported that clicks and F did nothing. They had: the clicks had confirmed the wardrobe and the scene's card, and the test ended before the fight began. The test's own pictures showed it. Run again inside a take.
+  - That picture also showed the wardrobe still saying "K" for the build. Fixed.
+- **Not verified:** holding the right mouse button to guard. The agent's tools can click a left button and press keys, not hold a right button. It is read by the same code as Shift. Nobody has played with the new keys by hand.
+
+![The keys on screen during the first take, and on the pause card](Docs/devlog/53-usual-keys.jpg)
+
 ---
 
 ## Asset and tool register

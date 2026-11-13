@@ -262,7 +262,7 @@ void AGameFlow::ShowWardrobe()
 
 	const FCharacterLook& Look = Game->Look;
 	GetWorld()->GetSubsystem<UTakeEvents>()->OnWardrobe.Broadcast(FText::FromString(FString::Printf(
-		TEXT("Colour:   <  %s  >      A / D\nHat:   <  %s  >      W / S\nBuild:   <  %s  >      K\n\nThis is how you will look in the film. Punch when you are ready."),
+		TEXT("Colour:   <  %s  >      A / D\nHat:   <  %s  >      W / S\nBuild:   <  %s  >      F\n\nThis is how you will look in the film. Left click when you are ready."),
 		*AStickFighter::LookName(0, Look.Color), *AStickFighter::LookName(1, Look.Hat), *AStickFighter::LookName(2, Look.Build))));
 }
 
@@ -567,11 +567,11 @@ void AGameFlow::ShowMenu()
 	}
 	if (bPaused)
 	{
-		Detail += TEXT("\nHold C and punch: uppercut      Hold C and kick: sweep\nHold L and punch: chop      Hold L and kick: roundhouse\nJump under a red bar to hang from it, then kick\n");
+		Detail += TEXT("\nLeft click: punch      Right click: guard      F: kick      Ctrl: duck      Space: jump      E: grab, throw\nDuck and punch: uppercut      Duck and kick: sweep      Guard and punch: chop      Guard and kick: roundhouse\nJump under a red bar to hang from it, then kick\n");
 	}
-	Detail += bShop ? TEXT("\nW / S: choose      J or the left mouse button: buy")
-		: bPaused || bCutting ? TEXT("\nW / S: choose      J or the left mouse button: go")
-		: TEXT("\nW / S: choose      J or the left mouse button: go      P or Esc: pause");
+	Detail += bShop ? TEXT("\nW / S: choose      Left click: buy")
+		: bPaused || bCutting ? TEXT("\nW / S: choose      Left click: go")
+		: TEXT("\nW / S: choose      Left click: go      Esc: pause");
 	ShowCard(bPaused ? TEXT("PAUSED") : bCutting ? TEXT("DIRECTOR'S CUT") : bShop ? TEXT("THE PROP SHOP") : TEXT("STICK TO THE SCRIPT"), Detail);
 }
 

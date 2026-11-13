@@ -32,14 +32,14 @@ You were hired to lose. The script says the gang beats you in the warehouse, in 
 | | Keyboard and mouse | Gamepad |
 |---|---|---|
 | Move | W A S D or the arrow keys | Left stick |
-| Punch | J or left mouse button | X |
-| Kick | K or right mouse button | Y |
-| Guard (hold) | L or Shift | Left trigger |
-| Duck (hold) | C or Ctrl | Right trigger |
+| Punch | Left mouse button, or J | X |
+| Kick | F, or K | Y |
+| Guard (hold) | Right mouse button, or Shift or L | Left trigger |
+| Duck (hold) | Ctrl, or C | Right trigger |
 | Jump | Space | A |
-| Grab and throw | E or F | B |
+| Grab and throw | E | B |
 | Change the view | V | |
-| Pause | P or Esc | Start |
+| Pause | Esc, or P | Start |
 | Uppercut, sweep | hold duck, then punch or kick | |
 | Chop, roundhouse | hold guard, then punch or kick | |
 | Off the bar | jump under a red bar, then kick | |

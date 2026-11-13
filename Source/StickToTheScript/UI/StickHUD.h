@@ -93,6 +93,8 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<USoundBase>> DirectorVoices;
 	float ShoutUntilSeconds = 0.f;
+	// The keys stay on screen until then: some seconds into a scene's first take.
+	float KeysUntilSeconds = 0.f;
 	TArray<FString> WardrobeLines;
 	FString EarnedLine;
 	bool bEarnedSomething = false;

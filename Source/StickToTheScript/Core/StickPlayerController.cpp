@@ -86,11 +86,11 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 		Fighter->FaceTowards(Fighter->GetActorLocation() + Right * (Sideways * 100.f));
 	}
 
-	if (Held({ EKeys::C, EKeys::LeftControl, EKeys::Gamepad_RightTrigger }))
+	if (Held({ EKeys::LeftControl, EKeys::RightControl, EKeys::C, EKeys::Gamepad_RightTrigger }))
 	{
 		Fighter->Guard(EMove::Duck);
 	}
-	else if (Held({ EKeys::L, EKeys::LeftShift, EKeys::Gamepad_LeftTrigger }))
+	else if (Held({ EKeys::RightMouseButton, EKeys::LeftShift, EKeys::RightShift, EKeys::L, EKeys::Gamepad_LeftTrigger }))
 	{
 		Fighter->Guard(EMove::Block);
 	}
@@ -337,9 +337,9 @@ void AStickPlayerController::SetupInputComponent()
 
 	// Walking, ducking and guarding are held keys, read every frame in PlayerTick.
 	Input->BindAction(MakeAction({ EKeys::LeftMouseButton, EKeys::J, EKeys::Gamepad_FaceButton_Left }), ETriggerEvent::Started, this, &AStickPlayerController::SubmitMove, EMove::Punch);
-	Input->BindAction(MakeAction({ EKeys::RightMouseButton, EKeys::K, EKeys::Gamepad_FaceButton_Top }), ETriggerEvent::Started, this, &AStickPlayerController::SubmitMove, EMove::Kick);
+	Input->BindAction(MakeAction({ EKeys::F, EKeys::K, EKeys::Gamepad_FaceButton_Top }), ETriggerEvent::Started, this, &AStickPlayerController::SubmitMove, EMove::Kick);
 	Input->BindAction(MakeAction({ EKeys::SpaceBar, EKeys::Enter, EKeys::Gamepad_FaceButton_Bottom }), ETriggerEvent::Started, this, &AStickPlayerController::JumpOrContinue);
-	Input->BindAction(MakeAction({ EKeys::E, EKeys::F, EKeys::Gamepad_FaceButton_Right }), ETriggerEvent::Started, this, &AStickPlayerController::GrabOrContinue);
+	Input->BindAction(MakeAction({ EKeys::E, EKeys::Gamepad_FaceButton_Right }), ETriggerEvent::Started, this, &AStickPlayerController::GrabOrContinue);
 	Input->BindAction(MakeAction({ EKeys::V }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleView);
 	// Escape ends a play session in the editor, so there is a second key.
 	Input->BindAction(MakeAction({ EKeys::P, EKeys::Escape, EKeys::Gamepad_Special_Right }), ETriggerEvent::Started, this, &AStickPlayerController::TogglePause);
