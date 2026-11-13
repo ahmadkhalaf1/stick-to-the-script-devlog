@@ -67,7 +67,7 @@ The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stic
 - [x] Team name: Page Twelve. The zip is `PageTwelve_StickToTheScript.zip`, made by `Tools\release.ps1 -Team PageTwelve`
 - [ ] Screenshots taken from the packaged game. Seven are in `Docs/store`, captured from the game's own window at 1920 by 1080 during a self-played run on Fri Nov 13, after the sets got their surfaces. The strip along the top, where a tool on the developer's PC draws its frame counter, is cut off. The developer has not chosen among them
 - [x] A cover image, 630 by 500: `Docs/store/cover.png`
-- [ ] The link to the 30 to 60 second gameplay video. The video exists since Fri Nov 13 (`Saved/Release/StickToTheScript_gameplay.mp4`, 56 seconds, a self-played run). It still has to be uploaded to YouTube or Vimeo for a link
+- [x] The link to the 30 to 60 second gameplay video: https://www.youtube.com/watch?v=zvQRRTC56iA (56 seconds, a self-played run, uploaded by the developer on Fri Nov 13). It is on the draft page too. It shows that day's build and is made again if the game changes much
 - [x] A public link for the dev log: https://github.com/ahmadkhalaf1/stick-to-the-script-devlog. It is a copy of this repository without the binary assets and without the history, refreshed by `Tools\publish_devlog.ps1`
 - [x] The gamepad column: no gamepad has been tried, so the page on itch.io lists keyboard and mouse only
 - [ ] The developer has read this text and agrees with it
@@ -78,7 +78,7 @@ The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stic
 |---|---|
 | Team name | Page Twelve. Members and Epic-account emails are collected outside the repository |
 | Game name | Stick to the Script |
-| Gameplay video | Made, 56 seconds; the link comes when it is uploaded |
+| Gameplay video | https://www.youtube.com/watch?v=zvQRRTC56iA |
 | Third-party assets | The Unreal Engine mannequin: meshes, rigs and animations from the engine's template content. The engine's Roboto font, for the lettering on the sets. Nothing from Fab or anywhere else |
 | AI and other tools | Claude Code with the model Claude Fable 5.2 (research, code, editor automation, dev log). fal.ai with ElevenLabs Sound Effects v3, Eleven v3 speech and ElevenLabs Music (the recorded blows, the director's voice, the music), and Whisper (to check the spoken lines). Unreal's MCP and toolset plugins (editor only, not in the build). The Claude Code plugins ponytail, Karpathy guidelines and claude-code-setup (agent behaviour only) |
 | Made before Nov 12 | Nothing |

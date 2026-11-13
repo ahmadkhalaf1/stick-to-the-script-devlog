@@ -739,6 +739,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **And an answer to an open question:** in this run the game held a median of 98 frames a second in the warehouse, 107 in the bar and 103 on the rooftop while its window was being recorded. So the recorded sound costs nothing, and the 42 measured two hours earlier was the other program.
 - **Not verified:** nobody has watched it with its sound on. The upload and the link.
 
+### 15:27–15:44 · The video gets its link, and a look at the music library
+
+- **Developer said:** to "Shall I upload the video to YouTube from your browser as unlisted?": "Yes, unlisted". Later: "I'll upload it", and then the link.
+- **What happened:** the agent could not do the upload. YouTube's upload page opened and the developer was signed in, but on that site another extension in the developer's browser makes the agent's browser tool refuse every click, key press and screenshot; reading the page still works. The way round that had worked for the file chooser, pressing controls through Windows, only reaches the tab that is in front, and this one was not. So the agent said so, prepared the file under a readable name with the text to paste, and the developer uploaded it in two minutes.
+- **Agent did:** checked that the link opens for someone who is not signed in, put it in the draft store page's video field, and saved the draft.
+- **Developer said:** "and btw i did create account at weloveindies ... u can view it in browsre and see how to use".
+- **Agent did:** looked. Tracks and sounds are collected into a project, licensed and downloaded as one zip; the licence for jam entries is free, bound to the one project, and a commercial release needs a paid one. The agent's advice: the game has its music, and whether tracks made by people would be better is a question for ears, which the agent has not got; listen to the video first. The developer: "Keep the music". Nothing was taken from there.
+- **Result:** the gameplay video is at https://www.youtube.com/watch?v=zvQRRTC56iA.
+- **Not verified:** whether the video is set to unlisted or public; the agent can see only that it opens.
+
 ---
 
 ## Asset and tool register
