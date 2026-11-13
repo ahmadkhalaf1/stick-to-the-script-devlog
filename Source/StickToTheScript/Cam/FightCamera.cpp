@@ -10,7 +10,7 @@ namespace
 	const float PushInDegrees = 5.f;
 	const float ShakeDegrees = 2.2f;
 
-	const float JoltOnPunch = 0.55f;
+	const float JoltOnPunch = 0.8f;
 	const float JoltOnHeavyHit = 1.f;
 	const float JoltOnBlock = 0.3f;
 

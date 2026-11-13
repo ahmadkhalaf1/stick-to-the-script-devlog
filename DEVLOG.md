@@ -862,6 +862,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![One punch on the ground, in slow motion: the stance, the step in, the cross, and back](Docs/devlog/55-jab-and-cross.jpg)
 
+### 19:11–19:26 · A blow that lands gets a burst of light, a longer freeze and more sound
+
+- **Developer said:** on the new punch: "Needs work". Asked what, with four choices and room for words: "make it feel like a real hit and make sound effects and visual effect maybe if needed", and the choice "Does not look like a hit".
+- **Agent did:** read what a landed blow already did before adding to it: a short freeze, blood, a recorded sound, a jolt of the camera, a skeleton flash. Nothing happened at the point of the blow. Added a burst of light there with rays shooting out, sparks, nearly doubled the freeze of a light blow, played the blow's recording louder with the code-made thump under it, and strengthened the camera's jolt.
+- **Result:** in pictures of a fight on self-play, the burst shows round the struck fighter as rays, at the moment the figure flashes to a skeleton. The Windows build was packaged again from this at 19:25. It has not been run since.
+- **Went wrong:** the first burst was a plain sphere, and the picture showed what that is: a pale ball nearly a metre wide, sitting over two fighters like a beach ball. It was not even bright, because on these sets a strength of 30 is merely white. Rebuilt as a small core and eight thin rays, five times brighter.
+- **Not verified:** the sound. The agent cannot hear it, and it now plays two sounds together for every blow, which may be better or may be mud. Whether a punch now feels like a hit is the developer's to say.
+
+![Two blows landing: rays burst out where the fist arrives](Docs/devlog/56-blows-that-land.jpg)
+
 ---
 
 ## Asset and tool register

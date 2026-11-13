@@ -97,6 +97,18 @@ private:
 	TArray<FDroplet> Droplets;
 	int32 NextDroplet = 0;
 	float SlowRealSecondsLeft = 0.f;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> BurstMaterial;
+
+	// A burst of light where a blow lands, for the moment the game holds still: a bright core, and rays that shoot out of it.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> BurstParts;
+	TArray<FVector> BurstRays;
+	FVector BurstAt = FVector::ZeroVector;
+	float BurstRealSecondsLeft = 0.f;
+	float BurstSize = 0.f;
+	void PlaceBurst();
 	// The film does not replay a swing, only what landed, so a shot that lands there has to bring its own bang.
 	bool bFilm = false;
 	// Which arms each fighter had broken at its last hit, so the crack sounds once, when one breaks.

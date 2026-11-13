@@ -23,9 +23,22 @@ namespace
 	const int32 DropsOnHeavyHit = 26;
 	const int32 DropsOnKnockout = 34;
 	const int32 SparksOnBlock = 9;
+	const int32 SparksOnPunch = 8;
+	const int32 SparksOnHeavyHit = 16;
+	// The burst of light at a blow: how long it lasts in real time, and how wide it gets, in metres.
+	const float BurstSeconds = 0.1f;
+	const float BurstSizeOnPunch = 0.38f;
+	const float BurstSizeOnHeavyHit = 0.62f;
+	const int32 BurstRayCount = 8;
+	const FLinearColor BurstColor(1.f, 0.85f, 0.45f);
+	// The sets are exposed so that 30 is white. Well above that it blooms, which is what makes it a flash and not a ball.
+	const float BurstStrength = 160.f;
+	// The recording is the crack of a blow. The sound made in code goes under it for its weight.
+	const float BlowVolume = 1.25f;
+	const float ThumpUnderABlow = 0.6f;
 
 	const float FreezeDilation = 0.05f;
-	const float FreezeOnPunchSeconds = 0.05f;
+	const float FreezeOnPunchSeconds = 0.09f;
 	const float FreezeOnHeavyHitSeconds = 0.14f;
 	const float FreezeOnBlockSeconds = 0.04f;
 	const float KnockoutDilation = 0.2f;
@@ -55,8 +68,10 @@ AImpactEffects::AImpactEffects()
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Light(TEXT("/Game/Materials/M_Light"));
 	DropletMesh = Sphere.Object;
 	DropletMaterial = Material.Object;
+	BurstMaterial = Light.Object;
 }
 
 void AImpactEffects::BeginPlay()
@@ -79,6 +94,29 @@ void AImpactEffects::BeginPlay()
 		Mesh->SetVisibility(false);
 		DropletMeshes.Add(Mesh);
 	}
+
+	// The first part is the core. The others are the rays.
+	for (int32 Part = 0; Part <= BurstRayCount; ++Part)
+	{
+		UStaticMeshComponent* Mesh = NewObject<UStaticMeshComponent>(this);
+		Mesh->SetStaticMesh(DropletMesh);
+		Mesh->SetMaterial(0, BurstMaterial ? BurstMaterial.Get() : DropletMaterial.Get());
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Mesh->SetCastShadow(false);
+		Mesh->SetupAttachment(RootComponent);
+		Mesh->SetUsingAbsoluteLocation(true);
+		Mesh->SetUsingAbsoluteRotation(true);
+		Mesh->SetUsingAbsoluteScale(true);
+		Mesh->RegisterComponent();
+		Mesh->SetVisibility(false);
+		if (UMaterialInstanceDynamic* Glow = Mesh->CreateDynamicMaterialInstance(0))
+		{
+			Glow->SetVectorParameterValue("Color", BurstColor);
+			Glow->SetScalarParameterValue("Strength", BurstStrength);
+		}
+		BurstParts.Add(Mesh);
+	}
+	BurstRays.SetNum(BurstRayCount);
 
 	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
 	Events->OnHit.AddDynamic(this, &AImpactEffects::HandleHit);
@@ -116,6 +154,13 @@ void AImpactEffects::Tick(float DeltaSeconds)
 		{
 			UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
 		}
+	}
+
+	if (BurstRealSecondsLeft > 0.f)
+	{
+		// In real time too: it has to open while the game is held still.
+		BurstRealSecondsLeft -= FApp::GetDeltaTime();
+		PlaceBurst();
 	}
 
 	for (int32 Index = 0; Index < PoolSize; ++Index)
@@ -166,6 +211,17 @@ void AImpactEffects::HandleHit(AActor* Attacker, AActor* Victim, EMove Move)
 	const FVector Direction = (Victim->GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal2D();
 	const int32 Drops = bKnockedOut ? DropsOnKnockout : bHeavy ? DropsOnHeavyHit : DropsOnPunch;
 	Spray(Struck->GetLastImpactPoint(), Direction, Drops, BloodRed, true, Victim->GetActorLocation().Z);
+	Spray(Struck->GetLastImpactPoint(), -Direction, bHeavy || bKnockedOut ? SparksOnHeavyHit : SparksOnPunch, SparkYellow, false, Victim->GetActorLocation().Z);
+	BurstSize = bHeavy || bKnockedOut ? BurstSizeOnHeavyHit : BurstSizeOnPunch;
+	BurstRealSecondsLeft = BurstSeconds;
+	BurstAt = Struck->GetLastImpactPoint();
+	for (int32 Ray = 0; Ray < BurstRayCount; ++Ray)
+	{
+		// Spread round the blow as the camera at the side sees it, each one a little off its place.
+		const float Angle = (Ray + FMath::FRandRange(-0.3f, 0.3f)) * UE_TWO_PI / BurstRayCount;
+		BurstRays[Ray] = FVector(FMath::Cos(Angle), FMath::FRandRange(-0.35f, 0.35f), FMath::Sin(Angle)).GetSafeNormal();
+	}
+	PlaceBurst();
 
 	if (bKnockedOut)
 	{
@@ -175,7 +231,9 @@ void AImpactEffects::HandleHit(AActor* Attacker, AActor* Victim, EMove Move)
 	else
 	{
 		SlowTime(FreezeDilation, bHeavy ? FreezeOnHeavyHitSeconds : FreezeOnPunchSeconds);
-		Play(bHeavy ? EImpactSound::HeavyHit : EImpactSound::Punch);
+		const EImpactSound Blow = bHeavy ? EImpactSound::HeavyHit : EImpactSound::Punch;
+		Play(Blow, BlowVolume);
+		Synth->Trigger(Blow, ThumpUnderABlow);
 		// The crack is for an arm that broke with this blow, which a heavy blow no longer always does.
 		const uint8 Broken = Struck->GetBrokenArms() & 3;
 		uint8& Heard = BrokenArmsHeard.FindOrAdd(Victim);
@@ -325,6 +383,25 @@ void AImpactEffects::Spray(const FVector& From, const FVector& Direction, int32 
 		Mesh->SetWorldScale3D(FVector(Drop.Size));
 		Mesh->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
 		Mesh->SetVisibility(true);
+	}
+}
+
+void AImpactEffects::PlaceBurst()
+{
+	const bool bShown = BurstRealSecondsLeft > 0.f;
+	const float Done = 1.f - FMath::Max(BurstRealSecondsLeft, 0.f) / BurstSeconds;
+	// The core is brightest at the blow and shrinks. The rays leave it, lengthening as they go.
+	BurstParts[0]->SetWorldLocation(BurstAt);
+	BurstParts[0]->SetWorldScale3D(FVector(BurstSize * FMath::Lerp(0.5f, 0.2f, Done)));
+	BurstParts[0]->SetVisibility(bShown);
+	for (int32 Ray = 0; Ray < BurstRayCount; ++Ray)
+	{
+		UStaticMeshComponent* Mesh = BurstParts[Ray + 1];
+		const float Length = BurstSize * FMath::Lerp(0.35f, 1.f, Done);
+		Mesh->SetWorldLocation(BurstAt + BurstRays[Ray] * (BurstSize * 100.f * FMath::Lerp(0.35f, 1.1f, Done)));
+		Mesh->SetWorldRotation(BurstRays[Ray].Rotation());
+		Mesh->SetWorldScale3D(FVector(Length, 0.035f, 0.035f));
+		Mesh->SetVisibility(bShown);
 	}
 }
 
