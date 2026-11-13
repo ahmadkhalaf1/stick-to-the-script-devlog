@@ -168,7 +168,7 @@ void AStickHUD::DrawHUD()
 			{
 				// shortcut: the keys are written here by hand, S2-FEEL-02 should read them from the input bindings.
 				DrawCentered(TEXT("W A S D move     Left click punch     Right click guard     F kick     Ctrl duck     Space jump     E grab, throw     Esc pause"), 950.f * Unit, 1.7f * Unit, FLinearColor::White);
-				DrawCentered(TEXT("Duck and punch: uppercut     Duck and kick: sweep     Guard and punch: chop     Guard and kick: roundhouse     Jump under a red bar, then kick"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+				DrawCentered(TEXT("Duck and punch: uppercut     Duck and kick: sweep     Guard and punch: hook     Guard and kick: roundhouse     Jump under a red bar, then kick"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
 			}
 		}
 	}

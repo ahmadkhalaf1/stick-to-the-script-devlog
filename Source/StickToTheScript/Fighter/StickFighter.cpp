@@ -557,6 +557,8 @@ namespace
 		float StunSeconds;
 	};
 	const FTechnique Techniques[] = {
+		// The punch of a fighter with two sound arms and empty hands: a jab that measures the distance and a cross that lands.
+		{ EMove::Punch, 0.3f, 0.35f, 1.f, false, StrikeConeCosine, true, false, 0.f, 0.f },
 		{ EMove::Kick, 0.26f, KickRecoverSeconds, 1.f, true, StrikeConeCosine, false, false, 0.f, 0.f },
 		{ EMove::Uppercut, 0.2f, 0.5f, 1.8f, false, StrikeConeCosine, false, false, 560.f, 0.95f },
 		{ EMove::Sweep, 0.24f, 0.5f, 0.7f, true, -1., false, false, 300.f, 1.1f },
@@ -675,6 +677,7 @@ AStickFighter::AStickFighter()
 	FIGHT_CLIP(LegSweep);
 	FIGHT_CLIP(RoundhouseKick);
 	FIGHT_CLIP(HookPunch);
+	FIGHT_CLIP(JabCross);
 	FIGHT_CLIP(HeadHit);
 	FIGHT_CLIP(StomachHit);
 	FIGHT_CLIP(FightingIdle_Anim);
@@ -691,6 +694,7 @@ AStickFighter::AStickFighter()
 	Learn(EMove::Sweep, LegSweep.Object);
 	Learn(EMove::Roundhouse, RoundhouseKick.Object);
 	Learn(EMove::Chop, HookPunch.Object);
+	Learn(EMove::Punch, JabCross.Object);
 	HitClips[0] = HeadHit.Object;
 	HitClips[1] = StomachHit.Object;
 	StanceClip = FightingIdle_Anim.Object;
@@ -1744,10 +1748,16 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 		}
 	}
 
+	// The jab and cross take both arms. With one hanging loose, or a weapon in the hands, the punch is the plain one.
+	if (Move == EMove::Punch && (LooseArms[0].bBroken || LooseArms[1].bBroken || Carried.IsValid() || !TechniqueClips.Contains(EMove::Punch)))
+	{
+		Posed = nullptr;
+	}
+
 	PoseSecondsLeft = 0.f;
 	SnapToWantedFacing();
 	// With no sound arm to punch with, a punch comes out as a kick.
-	if (Move == EMove::Punch && !Attack(Move, SecondsUntilContact))
+	if (Move == EMove::Punch && !Posed && !Attack(Move, SecondsUntilContact))
 	{
 		UE_LOG(LogStickFighter, Verbose, TEXT("%s has no sound arm to punch with, and kicks"), *GetName());
 		Move = EMove::Kick;

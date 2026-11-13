@@ -852,6 +852,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Developer said:** asked to try the bar in the warehouse in the build packaged at 18:08: "Swing is good".
 - **Result:** the swing stays as it is. That build had not been run by the agent; the developer's play is its first run.
 
+### 18:41–18:46 · The punch becomes a jab and a cross
+
+- **Developer said:** asked "what do u think we need to improve more?". The agent named three things: nobody has listened to the sound, the punch is the one move not on motion capture, and the film gives the player a choice of three cuts but no edit of their own. And two that are not improvements: the bar and the rooftop have not been played by hand with the new moves, and the store page shows the old game. The developer: "Yes, punches".
+- **Agent did:** made the jab-and-cross clip, converted and unused since this afternoon, the punch of any fighter with two sound arms and empty hands. Renamed the guard-and-punch move from "chop" to "hook" wherever it is said in words, since a hook is what it has been since the clips went in.
+- **Result:** one punch photographed in slow motion: the stance, a step in, the right arm out straight, and back. The punch now starts from the stance the fighter is standing in, which the engine's punches did not. The Windows build was packaged again from this at 18:45. It has not been run since.
+- **Went wrong:** the first test photographed the punch the first time it was thrown, and that time it was thrown from a jump. A second test threw one on the ground.
+- **Not verified:** a punch with one arm broken or a weapon in the hands, which keep the old animations by design. How the jab reads at an opponent's slower speed, where the whole clip is shown: the pictures are of the player's fast punch. Nobody has played it by hand.
+
+![One punch on the ground, in slow motion: the stance, the step in, the cross, and back](Docs/devlog/55-jab-and-cross.jpg)
+
 ---
 
 ## Asset and tool register
@@ -879,4 +889,4 @@ Kept current for the submission form.
 | Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Walls, floors, crates, containers |
 | Lettering on the sets | The engine's own font (Roboto) | The neon sign in the bar, the bay number in the warehouse |
 | Scene scripts | Made by the team: text files in `Content/Scripts` | The fights |
-| Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; eight of them in the game since that evening | The kicks, the uppercut, the sweep, the hook, the stance and the blows taken |
+| Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; nine of them in the game since that evening | The punch, the kicks, the uppercut, the sweep, the hook, the stance and the blows taken |
