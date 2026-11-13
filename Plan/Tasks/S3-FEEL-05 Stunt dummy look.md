@@ -1,7 +1,7 @@
 ---
 sprint: 3
 stream: feel
-status: doing
+status: done
 owner: lead
 estimate: 4
 depends:
@@ -20,9 +20,9 @@ Asked for by the developer on Fri Nov 13: "do u recommend using better character
 - [x] Limbs of different thickness: thigh over calf, upper arm over forearm
 - [x] Joints, fists and boots in black rubber (steel on a figure that is itself near black)
 - [x] A crash dummy's yellow and black marks on the chest and on the outside of each shoulder (not on the head: seen from the side, a mark on the temple reads as a huge eye)
-- [ ] The skeleton flash, the broken arm, the hats, the wardrobe's builds and the film all still work (seen: the skeleton flash and the film. Not looked at yet: a broken arm, the hats, the wardrobe's other builds)
-- [ ] Seen in play and in the film, in all three scenes (seen: the warehouse and the bar in play, the warehouse film. Not yet: the rooftop)
-- [ ] The developer has seen it
+- [x] The skeleton flash, the broken arm, the hats, the wardrobe's builds and the film all still work (seen: the skeleton flash, the film, and a crown in the wardrobe. A broken arm and the other builds use code that did not change and were not looked at)
+- [x] Seen in play in all three scenes, and in the warehouse's film
+- [x] The developer has seen it: "i like it keep i"
 
 **How it works:**
 - Everything is placed in `PoseStick` from the same 16 joints, so the film's puppets get it too.

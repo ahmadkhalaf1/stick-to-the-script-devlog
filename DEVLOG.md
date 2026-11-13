@@ -765,6 +765,12 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the first version had its marks on both sides of the head. The fight is watched from the side, and there a yellow disc with a black centre on the temple reads as one huge eye. They moved to the shoulders.
 - **Not verified:** the rooftop; a broken arm, the hats and the wardrobe's other builds with the new body; whether the chest is too round in a close shot, which is a matter of taste for the developer. The store's screenshots and the gameplay video still show the sticks.
 
+### 16:06–16:32 · The developer keeps the stunt dummies
+
+- **Developer said:** "show me", and on seeing the sticks and the dummies side by side: "i like it keep i".
+- **Agent did:** looked at what it had not yet seen with the new body: the rooftop in play, and the wardrobe with a crown on. Both are right.
+- **Still to do because of it:** the gameplay video, the store's screenshots and the zip on the draft page show the sticks. They are made again once, when the game is final, not after each change.
+
 ---
 
 ## Asset and tool register
