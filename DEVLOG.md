@@ -826,6 +826,11 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The keys on screen during the first take, and on the pause card](Docs/devlog/53-usual-keys.jpg)
 
+### 17:45 · The developer on the keys: "keys good"
+
+- **Developer said:** asked "where to test"; the agent started the packaged game on the developer's PC and said where it is. After playing: "keys good".
+- **Result:** the keys stay as they are. The developer has now also played the motion-captured moves, in the same build, and has said nothing about them or their longer reach yet.
+
 ---
 
 ## Asset and tool register

@@ -1,7 +1,7 @@
 ---
 sprint: 3
 stream: feel
-status: doing
+status: done
 owner: lead
 estimate: 1
 depends:
@@ -20,10 +20,10 @@ Asked for by the developer on Fri Nov 13, on playing the new animations: "keybin
 
 **Done when:**
 - [x] Left click punches and F kicks: three clicks and one F in a take in the editor threw punches and a kick, by the log
-- [ ] Holding the right mouse button guards. It is read the same way as Shift, which guards; not tried, because the agent's tools cannot hold a right button down
+- [x] Holding the right mouse button guards. It is read the same way as Shift, which guards. The agent could not try it; the developer played with the keys and found them good, without naming the guard
 - [x] The game names these keys, not the old ones: on the line shown as a take is called, on the pause card, in the wardrobe and under the menus
 - [x] The keys stay on screen for the first 14 seconds of a scene's first take, unless the director is talking over them. They used to show only while "and action!" did
 - [x] The store page's table of controls says the same (`Docs/StorePage.md`; the draft page itself is brought up to date with the final build)
-- [ ] The developer has played with them
+- [x] The developer has played with them (Fri Nov 13, 17:45): "keys good"
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: feel
