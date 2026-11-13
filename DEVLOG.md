@@ -837,6 +837,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Agent did:** explained it in plain terms: a kick used to hit someone up to about a metre away and now hits at about a metre and a half, because the motion-captured kick steps in and stretches further than the pose did. Said what to try: win the warehouse by kicking from as far as it connects, and see whether the opponents still get to you.
 - **Result:** asked whether the scene can be won that way without being touched: "No, it's fine". The reach stays.
 
+### 17:53–18:09 · The hang becomes a swing
+
+- **Developer said:** "swing at the bar should not stay solid when he catch it bar , he should swing , add some realistic physics to it".
+- **Agent did:** the hang was a fixed pose that rocked seven degrees on a timer. It is now a pendulum: the body keeps the speed it caught the bar with, gravity brings it back, it slows a little every second, the walk keys push it, and the legs follow a moment late. Letting go throws the fighter off the way the swing was going. A fighter may hang for 3.6 seconds instead of 2.4, since there is now something to do up there.
+- **Result:** fourteen pictures of one hang, on self-play in the editor: out to about half way to level, back to straight down, out again, then the kick off the bar, which landed. The Windows build was packaged again from this at 18:08. It has not been run since.
+- **Went wrong:** the first version let a held direction key drive the swing nearly level and keep it there, which no body can do. The push was eased from 7 to 5.
+- **Not verified:** letting go with the jump key in mid-swing; pushing the swing by hand, in time with it. Both need a person at the keys.
+
+![One hang on the bar, a picture every two thirds of a second in slow motion: out, back, out, and the kick](Docs/devlog/54-bar-swing.jpg)
+
 ---
 
 ## Asset and tool register

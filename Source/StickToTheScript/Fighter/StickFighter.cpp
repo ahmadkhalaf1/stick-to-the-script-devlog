@@ -107,7 +107,21 @@ namespace
 	// A bar is caught by a fighter this close under it, whose raised hands are within the slack of it.
 	const double BarGrabWidth = 42.;
 	const double BarGrabSlack = 14.;
-	const float MaxHangSeconds = 2.4f;
+	const float MaxHangSeconds = 3.6f;
+	// From the bar to the middle of the body that swings on it.
+	const float HangPendulumLength = 100.f;
+	// The swing loses this share of its speed a second, and the walk keys push it this hard.
+	const float HangSwingDamping = 0.45f;
+	const float HangSwingPush = 5.f;
+	const float HangSwingLimit = 1.35f;
+	// Nobody catches a bar and hangs dead still.
+	const float HangSwingAtLeast = 0.9f;
+	// The legs follow the body this many seconds late, up to this many degrees.
+	const float HangLegTrailSeconds = 0.09f;
+	const double HangLegTrailLimit = 26.;
+	// The kick off a bar swings back this far first, then through this far, in radians.
+	const float SwingKickBackAngle = -0.45f;
+	const float SwingKickThroughAngle = 1.12f;
 	// The kick off a bar: how long the swing takes, who it reaches, and how far the fighter flies after letting go.
 	const float SwingKickContactSeconds = 0.34f;
 	const double SwingKickReach = 205.;
@@ -585,8 +599,9 @@ namespace
 	}
 
 	// Hung by both hands from a bar: the shoulders an arm's length under the grip, and the whole body turned about the
-	// bar by Swing degrees, feet forward for a positive angle. LegsOut throws both legs ahead of the body for the kick.
-	void PoseHang(TArray<FVector>& Joints, const FVector& Forward, const FVector& Grip, double Swing, double LegsOut)
+	// bar by Swing degrees, towards world +X for a positive angle. LegsOut throws both legs ahead of the body for the kick,
+	// and LegTrail is how many degrees ahead of the body the legs are, which is behind it while they catch up.
+	void PoseHang(TArray<FVector>& Joints, const FVector& Forward, const FVector& Grip, double Swing, double LegsOut, double LegTrail)
 	{
 		const FLimbs Limbs(Joints);
 		const FVector Right = FVector::UpVector ^ Forward;
@@ -594,7 +609,7 @@ namespace
 		const FVector Shift = Grip - FVector(0., 0., Arm * 0.96) - (Joints[LeftShoulder] + Joints[RightShoulder]) * 0.5;
 		for (FVector& Joint : Joints)
 		{
-			Joint = Grip + (Joint + Shift - Grip).RotateAngleAxis(-Swing, Right);
+			Joint = Grip + (Joint + Shift - Grip).RotateAngleAxis(-Swing, FVector::YAxisVector);
 		}
 
 		for (int32 Side = 0; Side < 2; ++Side)
@@ -604,7 +619,7 @@ namespace
 
 		// The legs hang a little bent, knees forward. For the kick they go out straight, well ahead of the body.
 		const FVector Down = (Joints[PelvisJoint] - Joints[ChestJoint]).GetSafeNormal();
-		const FVector Along = Down.RotateAngleAxis(-FMath::Lerp(14., 58., LegsOut), Right);
+		const FVector Along = Down.RotateAngleAxis(-(FMath::Lerp(14., 58., LegsOut) + LegTrail), Right);
 		for (int32 Side = 0; Side < 2; ++Side)
 		{
 			const FVector Hip = Joints[LegJoints[Side][0]];
@@ -1310,16 +1325,11 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 	if (const ASwingBar* Bar = Hanging.Get())
 	{
 		const FVector Grip(Bar->GetActorLocation().X, GetActorLocation().Y, Bar->GetActorLocation().Z);
-		// It sways while it hangs. The kick swings back first, then through and up.
-		double Swing = 7. * FMath::Sin(HangSeconds * 5.);
-		double LegsOut = 0.;
-		if (SwingKickSeconds >= 0.f)
-		{
-			const double Done = FMath::Clamp(static_cast<double>(SwingKickSeconds / SwingKickContactSeconds), 0., 1.);
-			Swing = Done < 0.35 ? FMath::Lerp(Swing, -26., FMath::SmoothStep(0., 1., Done / 0.35)) : FMath::Lerp(-26., 64., FMath::Square((Done - 0.35) / 0.65));
-			LegsOut = FMath::SmoothStep(0., 1., (Done - 0.3) / 0.6);
-		}
-		PoseHang(Joints, GetActorForwardVector(), Grip, Swing, LegsOut);
+		const bool bKickingOff = SwingKickSeconds >= 0.f;
+		const double LegsOut = bKickingOff ? FMath::SmoothStep(0., 1., (FMath::Clamp(static_cast<double>(SwingKickSeconds / SwingKickContactSeconds), 0., 1.) - 0.3) / 0.6) : 0.;
+		// Swinging one way, the legs are still on their way from the other.
+		const double LegTrail = bKickingOff ? 0. : FMath::Clamp(-FMath::RadiansToDegrees(SwingSpeed) * HangLegTrailSeconds * GetActorForwardVector().X, -HangLegTrailLimit, HangLegTrailLimit);
+		PoseHang(Joints, GetActorForwardVector(), Grip, FMath::RadiansToDegrees(SwingAngle), LegsOut, LegTrail);
 	}
 
 	if (BlendSecondsLeft > 0.f && BlendFromLocal.Num() == Joints.Num())
@@ -1636,7 +1646,7 @@ void AStickFighter::Jump()
 {
 	if (Hanging.IsValid())
 	{
-		LetGoOfBar(FVector::ZeroVector, 0.f);
+		SwingOffBar();
 		return;
 	}
 
@@ -2291,6 +2301,13 @@ void AStickFighter::TryToGrabABar()
 		Hanging = *It;
 		HangSeconds = 0.f;
 		SwingKickSeconds = -1.f;
+		// The body arrives with the speed of the jump that caught the bar, and that speed is its first swing.
+		SwingAngle = 0.f;
+		SwingSpeed = static_cast<float>(MovedPerSecond.X) / HangPendulumLength;
+		if (FMath::Abs(SwingSpeed) < HangSwingAtLeast)
+		{
+			SwingSpeed = GetActorForwardVector().X >= 0. ? HangSwingAtLeast : -HangSwingAtLeast;
+		}
 		JumpHeight = static_cast<float>(HangHeight);
 		JumpSpeed = 0.f;
 		KnockVelocity = FVector::ZeroVector;
@@ -2307,16 +2324,39 @@ void AStickFighter::AdvanceHang(float DeltaSeconds)
 	if (SwingKickSeconds >= 0.f)
 	{
 		SwingKickSeconds += DeltaSeconds;
+		// The kick takes the swing over: back first, then through and up, towards where the fighter faces.
+		const float Facing = GetActorForwardVector().X >= 0. ? 1.f : -1.f;
+		const float Done = FMath::Clamp(SwingKickSeconds / SwingKickContactSeconds, 0.f, 1.f);
+		SwingAngle = Done < 0.35f ? FMath::Lerp(KickSwingFrom, Facing * SwingKickBackAngle, FMath::SmoothStep(0.f, 1.f, Done / 0.35f))
+			: Facing * FMath::Lerp(SwingKickBackAngle, SwingKickThroughAngle, FMath::Square((Done - 0.35f) / 0.65f));
 		if (SwingKickSeconds >= SwingKickContactSeconds)
 		{
 			LandSwingKick();
 		}
+		return;
 	}
-	// Nobody waits out a fight up there.
-	else if (HangSeconds > MaxHangSeconds)
+
+	// A pendulum: gravity pulls it back to straight down, it loses a little speed, and walking left or right pushes it.
+	const float Push = FMath::Clamp(static_cast<float>(WalkInput.X), -1.f, 1.f);
+	SwingSpeed += (-(JumpGravity / HangPendulumLength) * FMath::Sin(SwingAngle) - HangSwingDamping * SwingSpeed + HangSwingPush * Push) * DeltaSeconds;
+	SwingAngle += SwingSpeed * DeltaSeconds;
+	if (FMath::Abs(SwingAngle) > HangSwingLimit)
 	{
-		LetGoOfBar(FVector::ZeroVector, 0.f);
+		SwingAngle = FMath::Clamp(SwingAngle, -HangSwingLimit, HangSwingLimit);
+		SwingSpeed = 0.f;
 	}
+
+	// Nobody waits out a fight up there.
+	if (HangSeconds > MaxHangSeconds)
+	{
+		SwingOffBar();
+	}
+}
+
+void AStickFighter::SwingOffBar()
+{
+	const float Speed = SwingSpeed * HangPendulumLength;
+	LetGoOfBar(FVector(Speed * FMath::Cos(SwingAngle), 0., 0.), Speed * FMath::Sin(SwingAngle));
 }
 
 bool AStickFighter::StartSwingKick()
@@ -2327,6 +2367,7 @@ bool AStickFighter::StartSwingKick()
 	}
 
 	SnapToWantedFacing();
+	KickSwingFrom = SwingAngle;
 	SwingKickSeconds = 0.f;
 	StrikeMove = EMove::SwingKick;
 	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, EMove::SwingKick);
@@ -2366,6 +2407,9 @@ void AStickFighter::LandSwingKick()
 
 void AStickFighter::LetGoOfBar(const FVector& Velocity, float UpSpeed)
 {
+	// The body leaves the bar from where the swing has carried it, not from straight under it.
+	SetActorLocation(GetActorLocation() + FVector(HangPendulumLength * FMath::Sin(SwingAngle), 0., 0.));
+	JumpHeight += HangPendulumLength * (1.f - FMath::Cos(SwingAngle));
 	CaptureBlendFrom();
 	Hanging = nullptr;
 	SwingKickSeconds = -1.f;

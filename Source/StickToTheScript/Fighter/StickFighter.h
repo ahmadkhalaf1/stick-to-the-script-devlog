@@ -205,6 +205,8 @@ private:
 	void TryToGrabABar();
 	void AdvanceHang(float DeltaSeconds);
 	void LetGoOfBar(const FVector& Velocity, float UpSpeed);
+	// Lets go and flies off the way the swing was going.
+	void SwingOffBar();
 	bool StartSwingKick();
 	void LandSwingKick();
 	FVector WantedForward() const;
@@ -382,6 +384,11 @@ private:
 	float HangSeconds = 0.f;
 	// Under 0 while the fighter only hangs. From 0 up, how long its kick off the bar has been going.
 	float SwingKickSeconds = -1.f;
+	// Hanging, the body is a pendulum on the bar. Its angle from straight down, in radians, is positive towards world +X:
+	// a bar runs along Y, so that is the one way a body on it can swing, whichever way the fighter faces.
+	float SwingAngle = 0.f;
+	float SwingSpeed = 0.f;
+	float KickSwingFrom = 0.f;
 	// Only a jump the fighter chose can catch a bar. One thrown into the air by a blow does not.
 	bool bMayGrabABar = false;
 
