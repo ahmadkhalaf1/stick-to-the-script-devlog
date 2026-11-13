@@ -749,6 +749,22 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the gameplay video is at https://www.youtube.com/watch?v=zvQRRTC56iA.
 - **Not verified:** whether the video is set to unlisted or public; the agent can see only that it opens.
 
+### 15:59–16:06 · The sticks become stunt dummies
+
+- **Developer said:** the game is not ready to submit, and then: "do u recommend using better character than the stick figure? maybe sth more modern or nicer in 2026".
+- **Agent advised against a different character, and said why:** every move beyond three animations, and the whole film, exists only as the positions of the stick's sixteen joints. A normal skinned character does not follow those joints, so it would lose the uppercut, the sweep, the roundhouse, the bar and the broken arm, with two days left. What it proposed instead: keep the joints and give them a body, as a stunt dummy, which is also what the story says these figures are. The developer: "ok".
+- **Agent did:** in the one function that draws a figure from its joints:
+  - a chest, a waist and hips round the spine, and a boot on each foot that stands square to its shin, so it follows the leg through a kick;
+  - limbs of different thickness: a thigh thicker than a calf, an upper arm than a forearm;
+  - joints, fists and boots in black rubber, or in steel on a figure that is itself near black;
+  - a crash dummy's yellow mark with a black centre, on the chest and on the outside of each shoulder.
+- **Result:** `Tools/check.ps1` passes with 8 tests. Nothing underneath changed, so the moves, the film, the skeleton flash and the wardrobe's builds work as before. The bar in play above, the warehouse film below:
+
+![Stunt dummies in the bar, and two frames of the warehouse film](Docs/devlog/51-stunt-dummies.jpg)
+
+- **Went wrong:** the first version had its marks on both sides of the head. The fight is watched from the side, and there a yellow disc with a black centre on the temple reads as one huge eye. They moved to the shoulders.
+- **Not verified:** the rooftop; a broken arm, the hats and the wardrobe's other builds with the new body; whether the chest is too round in a close shot, which is a matter of taste for the developer. The store's screenshots and the gameplay video still show the sticks.
+
 ---
 
 ## Asset and tool register

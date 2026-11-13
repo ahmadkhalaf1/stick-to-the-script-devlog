@@ -118,12 +118,45 @@ namespace
 	const float LandSquashSeconds = 0.16f;
 	const double LandSquashDepth = 0.4;
 
-	// The trunk is drawn thicker than the limbs, and the shoulders and hips a little thicker, so the figure has a body.
+	// How thick each limb of LimbJoints is drawn, as a share of the figure's thickness: a thigh is thicker than a calf
+	// and an upper arm than a forearm, which is most of what makes a row of sticks read as a body.
 	const float TrunkWidth = 1.6f;
 	const float GirdleWidth = 1.25f;
-	const float JointBallWidth = 1.05f;
-	const float HandAndFootWidth = 1.5f;
+	const float LimbWidths[] = {
+		TrunkWidth, TrunkWidth, 0.95f,
+		GirdleWidth, 1.25f, 0.95f,
+		GirdleWidth, 1.25f, 0.95f,
+		GirdleWidth, 1.5f, 1.1f,
+		GirdleWidth, 1.5f, 1.1f,
+	};
+	const float JointBallWidth = 1.3f;
+	const float HandAndFootWidth = 1.6f;
 	const int32 FirstBallJoint = LeftShoulder;
+
+	// The stunt dummy's body, in BodyParts.
+	enum { ChestPart, WaistPart, HipsPart, LeftBoot, RightBoot, BodyPartCount };
+	const FLinearColor MarkYellow(1.f, 0.7f, 0.f);
+	const FLinearColor MarkBlack(0.02f, 0.02f, 0.02f);
+
+	// A dummy's joints, fists and boots are black rubber. On a figure that is itself near black they are steel, so they still show.
+	FLinearColor RubberFor(const FLinearColor& Body)
+	{
+		return Body.GetLuminance() > 0.06f ? FLinearColor(0.025f, 0.025f, 0.03f) : FLinearColor(0.3f, 0.31f, 0.34f);
+	}
+
+	// A sphere stretched into a body part: Size is its width along the rotation's X, Y and Z, in centimetres.
+	void PlaceBlob(UStaticMeshComponent* Part, const FVector& Centre, const FRotator& Rotation, const FVector& Size)
+	{
+		Part->SetWorldLocationAndRotation(Centre, Rotation);
+		Part->SetWorldScale3D(Size / 100.);
+	}
+
+	// A flat disc, lying against a surface that faces Out.
+	void PlaceDisc(UStaticMeshComponent* Disc, const FVector& Centre, const FVector& Out, double Radius)
+	{
+		Disc->SetWorldLocationAndRotation(Centre, FRotationMatrix::MakeFromZ(Out).Rotator());
+		Disc->SetWorldScale3D(FVector(Radius * 2., Radius * 2., 0.5) / 100.);
+	}
 	const float StanceBlendPerSecond = 6.f;
 
 	// A legendary prop in the hands: one blow knocks out, reaches further, and throws the body.
@@ -658,6 +691,15 @@ AStickFighter::AStickFighter()
 		Ribs.Add(MakePart(FString::Printf(TEXT("Rib%d"), Rib), Cylinder.Object));
 		Ribs[Rib]->SetVisibility(false);
 	}
+	for (int32 Part = 0; Part < BodyPartCount; ++Part)
+	{
+		BodyParts.Add(MakePart(FString::Printf(TEXT("Body%d"), Part), Sphere.Object));
+	}
+	for (int32 Disc = 0; Disc < 6; ++Disc)
+	{
+		Marks.Add(MakePart(FString::Printf(TEXT("Mark%d"), Disc), Cylinder.Object));
+		Marks[Disc]->SetCastShadow(false);
+	}
 
 	for (int32 Side = 0; Side < 2; ++Side)
 	{
@@ -988,10 +1030,11 @@ void AStickFighter::SetColor(const FLinearColor& NewColor)
 	Head->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
 	Smear->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
 	Gun->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", FLinearColor(0.01f, 0.01f, 0.01f));
-	for (UStaticMeshComponent* Ball : JointBalls)
+	for (int32 Disc = 0; Disc < Marks.Num(); ++Disc)
 	{
-		Ball->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+		Marks[Disc]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Disc % 2 == 0 ? MarkYellow : MarkBlack);
 	}
+	TintBody(Color);
 	for (UStaticMeshComponent* Rib : Ribs)
 	{
 		Rib->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", FlashColor);
@@ -1362,9 +1405,34 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	const bool bBones = FlashSecondsLeft > 0.f;
 	for (int32 i = 0; i < Limbs.Num(); ++i)
 	{
-		const bool bTrunk = (LimbJoints[i][0] == PelvisJoint && LimbJoints[i][1] == ChestJoint) || LimbJoints[i][0] == ChestJoint;
-		const bool bGirdle = LimbJoints[i][1] == LeftShoulder || LimbJoints[i][1] == RightShoulder || LimbJoints[i][1] == LeftHip || LimbJoints[i][1] == RightHip;
-		PlaceLimb(Limbs[i], Joints[LimbJoints[i][0]], Joints[LimbJoints[i][1]], Thickness * (bBones ? BoneWidth : bTrunk ? TrunkWidth : bGirdle ? GirdleWidth : 1.f));
+		PlaceLimb(Limbs[i], Joints[LimbJoints[i][0]], Joints[LimbJoints[i][1]], Thickness * (bBones ? BoneWidth : LimbWidths[i]));
+	}
+
+	// The dummy's body goes round the spine. The skeleton flash shows what is under it, so it steps aside for that.
+	const FVector Spine = (Joints[NeckJoint] - Joints[PelvisJoint]).GetSafeNormal();
+	const FVector ShoulderSpan = Joints[RightShoulder] - Joints[LeftShoulder];
+	const FVector HipSpan = Joints[RightHip] - Joints[LeftHip];
+	const FVector Front = (ShoulderSpan ^ Spine).GetSafeNormal();
+	const FRotator Upright = FRotationMatrix::MakeFromZY(Spine, ShoulderSpan).Rotator();
+	const double Deep = Thickness * 2.3;
+	PlaceBlob(BodyParts[ChestPart], FMath::Lerp(Joints[ChestJoint], Joints[NeckJoint], 0.4), Upright,
+		FVector(Deep, ShoulderSpan.Size() + Thickness * 1.6, FVector::Dist(Joints[ChestJoint], Joints[NeckJoint]) * 1.5 + Thickness));
+	PlaceBlob(BodyParts[WaistPart], FMath::Lerp(Joints[PelvisJoint], Joints[ChestJoint], 0.55), Upright,
+		FVector(Deep * 0.85, ShoulderSpan.Size() * 0.6 + Thickness * 1.2, FVector::Dist(Joints[PelvisJoint], Joints[ChestJoint]) * 1.25));
+	PlaceBlob(BodyParts[HipsPart], Joints[PelvisJoint], FRotationMatrix::MakeFromZY(Spine, HipSpan).Rotator(),
+		FVector(Deep * 0.95, HipSpan.Size() + Thickness * 2.4, Thickness * 2.6));
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		// A boot stands square to its shin and points the way the body faces, so it follows the leg through a kick.
+		const FVector Foot = Joints[Side == 0 ? LeftFoot : RightFoot];
+		const FVector Shin = (Foot - Joints[Side == 0 ? LeftKnee : RightKnee]).GetSafeNormal();
+		const FVector Toe = (Front - Shin * (Front | Shin)).GetSafeNormal(UE_SMALL_NUMBER, Front);
+		PlaceBlob(BodyParts[LeftBoot + Side], Foot + Toe * Thickness * 0.9, FRotationMatrix::MakeFromXZ(Toe, -Shin).Rotator(),
+			FVector(Thickness * 3.2, Thickness * 1.6, Thickness * 1.5));
+	}
+	for (UStaticMeshComponent* Part : BodyParts)
+	{
+		Part->SetVisibility(!bBones);
 	}
 	for (int32 Ball = 0; Ball < JointBalls.Num(); ++Ball)
 	{
@@ -1470,6 +1538,22 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 		Eyes[Eye]->SetWorldLocation(Middle + (Ahead * 0.86 + Across * (Eye == 0 ? -0.36 : 0.36) + Up * 0.1) * HeadRadius);
 		// In the skeleton flash the eyes are the skull's sockets.
 		Eyes[Eye]->SetWorldScale3D(FVector(HeadRadius * (bBones ? 0.62 : 0.32) / 100.));
+	}
+
+	// The marks every crash dummy wears: yellow with a black centre, on the chest and on the outside of each shoulder.
+	// Not on the head: the fight is watched from the side, and there a mark on the temple reads as a huge eye.
+	const FVector ChestMiddle = FMath::Lerp(Joints[ChestJoint], Joints[NeckJoint], 0.4) + Front * Deep * 0.5;
+	const FVector Outward = ShoulderSpan.GetSafeNormal();
+	const double ShoulderBall = Thickness * JointBallWidth * 0.5;
+	const FVector MarkAt[] = { ChestMiddle, Joints[RightShoulder] + Outward * ShoulderBall, Joints[LeftShoulder] - Outward * ShoulderBall };
+	const FVector MarkFaces[] = { Front, Outward, -Outward };
+	const double MarkRadius[] = { Thickness * 0.85, Thickness * 0.5, Thickness * 0.5 };
+	for (int32 Mark = 0; Mark < 3; ++Mark)
+	{
+		PlaceDisc(Marks[Mark * 2], MarkAt[Mark], MarkFaces[Mark], MarkRadius[Mark]);
+		PlaceDisc(Marks[Mark * 2 + 1], MarkAt[Mark] + MarkFaces[Mark] * 0.3, MarkFaces[Mark], MarkRadius[Mark] * 0.5);
+		Marks[Mark * 2]->SetVisibility(!bBones);
+		Marks[Mark * 2 + 1]->SetVisibility(!bBones);
 	}
 
 	if (Hat != 0)
@@ -2053,9 +2137,15 @@ void AStickFighter::TintBody(const FLinearColor& Tint)
 	{
 		Part->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
 	}
+	// In its own colour the figure has its rubber joints, fists and boots. In any other tint it is all that tint.
+	const FLinearColor Rubber = Tint.Equals(Color) ? RubberFor(Color) : Tint;
 	for (UStaticMeshComponent* Ball : JointBalls)
 	{
-		Ball->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+		Ball->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Rubber);
+	}
+	for (int32 Part = 0; Part < BodyParts.Num(); ++Part)
+	{
+		BodyParts[Part]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Part >= LeftBoot ? Rubber : Tint);
 	}
 	Head->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
 	const bool bDarkEyes = !Tint.Equals(Color) || Color.GetLuminance() > 0.25f;

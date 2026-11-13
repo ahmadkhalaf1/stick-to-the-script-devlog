@@ -267,6 +267,14 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Eyes;
 
+	// What makes the stick a stunt dummy: a chest, a waist and hips round the spine, and a boot on each foot.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> BodyParts;
+
+	// A dummy's yellow and black marks: one on the chest and one on the outside of each shoulder, two discs each.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Marks;
+
 	// Shown only for the instant of a hit, when the figure is drawn as its own skeleton.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Ribs;
