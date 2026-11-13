@@ -771,6 +771,17 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Agent did:** looked at what it had not yet seen with the new body: the rooftop in play, and the wardrobe with a crown on. Both are right.
 - **Still to do because of it:** the gameplay video, the store's screenshots and the zip on the draft page show the sticks. They are made again once, when the game is final, not after each change.
 
+### 16:32–16:48 · Real fight animations: where they come from
+
+- **Developer said:** asked what should come next to make the game ready: "Real fight animations".
+- **Agent did:**
+  - Searched the engine's own templates for fight animations. There are none beyond the three punches and the charged attack the game already uses; the rest are deaths and hit reactions made for a rifle. So they have to come from outside.
+  - Proposed Mixamo, Adobe's free library of motion-captured animation, and said what it would take, including the developer's own sign-in. The developer signed in, and gave the word for the one click that lets Adobe see the account's name and address; by then the page had already moved on by itself.
+  - In the developer's browser, downloaded eleven clips: Fighting Idle, Jab Cross, Hook Punch, Uppercut, Mma Kick, Roundhouse Kick, Leg Sweep, Flying Kick, Hanging Idle, Head Hit and Stomach Hit. 20 MB in all, kept in `Saved/Incoming/Mixamo`, outside the repository.
+- **Went wrong:** four of the first downloads were the wrong clip, twice over. The agent clicked where the first result of a search usually is; a search with one or two results centres them, so the click hit nothing and the download button gave the clip chosen before. The file names showed it, and those four were fetched again by looking first. A "body block" turned out to be a goalkeeper's and was thrown away; the guard keeps its computed pose.
+- **Result:** the clips are on the PC. Nothing in the game uses them yet. What remains is in the task note: fit Mixamo's skeleton to the mannequin's, which is the risky part, and give each move its clip.
+- **Not verified:** that these clips convert at all.
+
 ---
 
 ## Asset and tool register
@@ -798,3 +809,4 @@ Kept current for the submission form.
 | Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Walls, floors, crates, containers |
 | Lettering on the sets | The engine's own font (Roboto) | The neon sign in the bar, the bay number in the warehouse |
 | Scene scripts | Made by the team: text files in `Content/Scripts` | The fights |
+| Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; not in the game yet | To replace the poses computed in code |
