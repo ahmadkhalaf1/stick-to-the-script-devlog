@@ -1296,6 +1296,18 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Also:** while the upload ran, one more open check was closed from the recording itself: the game's own player carries a crate over its head in both hands and throws it.
 - **Not verified:** the choice of cut made with the pointer in the packaged game is the one check of the bug bash still open. Whether the developer listened to the video's sound was not said.
 
+### 18:59 · What one recording can prove: the plan's open boxes gone through
+
+- **Developer said:** "Not yet", to submitting tonight.
+- **Agent did:** nothing to the game. The plan had 21 tasks still in work, most of them waiting on a box nobody had gone back to. The recording of 18:15 is five minutes of the packaged game with its picture, its sound and its log, so each open box was held against it.
+  - Measured from its log: the frame rate. Unreal writes a frame counter on every line; counted over 256 seconds it is 96 frames a second on average and 87 in the worst ten seconds, at 1080p in a window, while being recorded, on the developer's PC (RTX 3070, Ryzen 5 5600X). The box asks for 60 on a mid-range PC, which this is not, so it stays open with the number beside it.
+  - Measured from its sound: whether anything clips. No sample of the five minutes is at full scale. The largest is 32763 of 32767 and twenty are within 1 dB, so nothing is cut off and nothing could be louder.
+  - Seen in its picture: the pistol and the rifle fired with their targets in the frame, a crate carried over the head in both hands in the take and again in the film, the three films in the three cuts.
+  - Read against the register below: the game's credits card. It names every outside source of what is in the game. The register got one row for the everyday tools it had left out and a fuller line for ffmpeg.
+- **Result:** eight boxes ticked, each with the date and what showed it; one task (mix and credits) closed. Three boxes kept open with what is now known written beside them: the frame rate on a slower PC, a gun fired in the bar, the zip on a second machine.
+- **Left for the developer:** twelve boxes say "the developer has seen it", "has played it" or "has tried it"; one playthrough of the three scenes answers all of them. One check needs the real mouse: the choice of cut made with the pointer in the packaged game.
+- **Not verified:** the sound was measured again, not heard.
+
 ---
 
 ## Asset and tool register
@@ -1313,7 +1325,8 @@ Kept current for the submission form.
 | Recorded blows, whooshes, shouts, clapper and gunshot (26 takes) | ElevenLabs Sound Effects v3, through fal.ai. Asked for in words by `Tools/build_sounds.mjs`; the words are in that file | Played in place of the sounds made in code |
 | The director's voice (35 takes: 24 scene lines, 11 calls) | ElevenLabs Eleven v3 text to speech, voice "Callum", through fal.ai. The lines are in `Content/Scripts/Scene*.json` and `Tools/build_sounds.mjs` | "Action!", "Cut!", "That's a wrap", and what he shouts during a fight |
 | fal.ai | A partner of the jam. $30 of credit claimed by the developer, about $2.70 used | The API the recorded sound, voice and music were asked through, and its Whisper model to check the spoken lines |
-| ffmpeg | Open source, on the developer's PC | Turns what fal sends into WAV files; not in the game |
+| ffmpeg | Open source, on the developer's PC | Turns what fal sends into WAV files, makes the night sky's picture, records the game's window and cuts the gameplay video; not in the game |
+| Node.js, Git with LFS, GitHub, itch.io, YouTube, the Claude in Chrome browser extension | Everyday tools and services | The build and test scripts, the history, the public copy of this log, the store page, the gameplay video; the extension is how the agent fills in the store page. None is in the game |
 | Music made in code (fight pulse and film track) | Made by the team: a drum machine, bass and lead synthesised while the game runs | What plays where no recorded track exists |
 | Recorded music (a fight track for each scene and a film theme, a minute each) | ElevenLabs Music, through fal.ai. The prompts are in `Tools/build_sounds.mjs` | Played in place of the music made in code |
 | Block, duck, kick, flinch, broken arm, blood | Made by the team: computed in code | No animation or effect assets beyond the engine mannequin |

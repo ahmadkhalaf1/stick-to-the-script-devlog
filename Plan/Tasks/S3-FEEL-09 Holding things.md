@@ -23,8 +23,8 @@ Asked for by the developer in the night of Nov 13 to 14, in one message before g
 **Done when:**
 - [x] The rifle is shouldered and the pistol held in two hands, seen in play (03:48)
 - [x] A bottle is held in one hand, seen in play: on Nov 14 a bottle and a pan from the bar's counter were each picked up and held up in one hand by the shoulder
-- [ ] A crate is carried overhead in two hands. Not photographed since the holds were changed
-- [ ] The film shows the same
+- [x] A crate is carried overhead in two hands: seen in the packaged game's recording of Sat Nov 14, 18:15. Before that it had not been photographed since the holds were changed
+- [x] The film shows the same: the first film of that recording replays the carry and the throw
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: feel

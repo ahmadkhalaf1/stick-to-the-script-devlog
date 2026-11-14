@@ -17,6 +17,6 @@ depends:
 **Done when:**
 - [ ] No pops between moves
 - [ ] Hit stop on contact
-- [ ] Knocked-down fighters settle on the floor
+- [x] Knocked-down fighters settle on the floor: since the afternoon of Sat Nov 14 every knocked-out body ends its take lying on the floor inside the set, 14 to 18 cm up in the logs of the warehouse and the rooftop, and so in the pictures of the bar
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight

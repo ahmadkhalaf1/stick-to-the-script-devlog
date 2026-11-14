@@ -35,7 +35,7 @@ Asked for by the developer on Sat Nov 14: "also review how reply videos are made
 - [x] The warehouse's film again, 96 pictures: both fighters and their heads in the close shots, the camera on whoever goes down, no empty picture, the sign not in the way
 - [x] The bar's film, 150 pictures, sampled: the same
 - [x] The guard seen in play and in the film
-- [ ] The rooftop's film, the slow-motion cut and the long take
+- [x] The rooftop's film, the slow-motion cut and the long take: seen on Sat Nov 14, at 17:50 in the editor (the rooftop as the slow-motion cut, the bar as the long take) and at 18:15 in the packaged game's recording (the three scenes in the three cuts)
 - [ ] A fighter who is not part of a blow can still stand between the camera and it, out of focus
 - [ ] The developer has seen it
 

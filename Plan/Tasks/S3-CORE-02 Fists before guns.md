@@ -29,7 +29,7 @@ Reported by the developer on Sat Nov 14, watching the game play itself for the v
 **Done when:**
 - [x] More hands and feet than shots, and blows taken and blocked in every take: by the log, in all three scenes
 - [x] The bar is not lost three times running: won on the first take in the last two runs
-- [ ] The packaged build and the video have it
+- [x] The packaged build and the video have it: the recorded run of Sat Nov 14, 18:15, counts 87 blows with hands and feet, 11 things thrown and 9 shots that hit over four takes, and the video is cut from it
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: core

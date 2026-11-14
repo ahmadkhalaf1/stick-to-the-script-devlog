@@ -29,8 +29,8 @@ Reported by the developer on Sat Nov 14, after watching a self-played run and it
 - [x] With a pistol picked up, the player and the opponent it points at are both in the picture: seen in the editor in the warehouse
 - [x] The game playing itself: at each of eight shots the shooter and the one hit were both in the picture
 - [x] The film shows shots from the wide camera with both in it: seen
-- [ ] The same in the bar and on the rooftop, where it was not looked at
-- [ ] The packaged build has it. Packaged at 14:14 and run without a window: a wrap, a film, 16 shots, no errors. Its picture has not been looked at
+- [ ] The same in the bar and on the rooftop. Rooftop: seen in the packaged game's recording of Sat Nov 14, 18:15, a rifle shot with its target in the picture (`Docs/store/3-rooftop.jpg`). Bar: still not seen, no shot was fired there in that run
+- [x] The packaged build has it: in its recording of Sat Nov 14, 18:15, the pistol in the warehouse and the rifle on the rooftop are fired with their targets in the picture. Before that: packaged at 14:14 and run without a window: a wrap, a film, 16 shots, no errors. Its picture has not been looked at
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: cam
