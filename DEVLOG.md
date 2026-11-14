@@ -1368,6 +1368,36 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The big finish, a picture every 0.4 seconds: the key, the hook over the shoulder, the uppercut from the floor, the kick and what it does, and back to the fight](Docs/devlog/89-the-big-finish.jpg)
 
+### 22:19 · The keys: why they felt slow, and what was changed
+
+- **Developer said:** "closed", of the game that had kept the build from being packaged. Then, having played: "i still find controls and combining keys while playing hard and sticky laggy an dnot responsive enough need to be checked and improved". And a little later: "i had rob run running maybe thats why fps was bad".
+- **Agent did:**
+  - Packaged `main` with the big finish in it, 829 MB. It was not tried: the complaint came while it cooked, and the answer to it makes the build again.
+  - Looked at the frame rate before the code. Every line of the game's log carries a frame counter, and the log of the developer's own session was still on the disk. It says about 95 frames a second with the PC quiet, and 40 to 70 with dips to 30 in two stretches, 20:27 to 20:38 and 21:06 to 21:24. The agent's editor tests were running beside the game in both, and the developer says another game was open as well; which of the two it was is not known. For a minute and a half before the developer picked the game up again it was under 20, with no test of the agent's running. And in the two and a half minutes in which the hero landed any blows it was about 90. The log also says the game stood unplayed for an hour in between, losing a take every 25 seconds: 151 cuts. So the frame rate was not what the developer felt while playing.
+  - Read how a key becomes a move, and found these:
+    - A held key only counted once the body had got into its pose, about a twentieth of a second after the key, and never while another strike was playing out. Duck and punch pressed together gave a plain punch whenever the punch key landed first.
+    - The guard and the duck were ignored until a strike's whole follow-through was over: by the code's own numbers, 0.71 s from pressing kick. Walking and striking could cut it short; a defence could not.
+    - Up to three key presses were kept, each for three quarters of a second. By those numbers four quick punches went on for most of a second after the hands had stopped, and the direction keys did nothing until they were through.
+    - Every blow froze the whole game: 0.09 s, 0.14 s for a heavy one, 0.04 s for a block. With five opponents that is a good share of every second in which no key does anything.
+    - Behind a raised guard the fighter could not take a step.
+  - Changed them. The key itself counts at the moment of the press, and a held key that follows a strike key within 0.09 s turns the strike that has just begun into the move the two mean. The guard, the duck, walking off and a jump cut a follow-through short 0.04 s after a punch lands and 0.12 s after anything else, without bringing the next strike any sooner. One key press is kept, the newest. The freezes are 0.05, 0.09 and 0.02 s. The player's strikes arrive sooner (punch 0.13 s from 0.16, kick 0.22 from 0.26, the four others by about a sixth), a kick may follow a kick after 0.22 s instead of 0.3, the player's fighter walks slowly behind its guard, and a blow holds it helpless for three quarters as long. The opponents are as they were.
+  - For the tests, F6 in the editor makes the duck key count as held, then the guard key, then neither: the editor's tools can tap a key but not hold one.
+- **Result:** `Tools/check.ps1` passes. Timed in the editor, from the log's own stamps:
+  - A punch key every quarter of a second: a punch for every key, begun within a frame of it.
+  - Six punch keys 0.1 s apart: a throw (the game's own player had picked something up before the test took over) and three punches, 0.25 to 0.28 s apart, the last begun 0.11 s after the last key. (In the developer's session the same rhythm was 0.32 s, read from seven punches in a row.)
+  - Punch, punch, kick 0.125 s apart: all three, in that order.
+  - Punch key, and the duck key 7 ms and 27 ms after it: an uppercut both times, the punch turned 0.010 and 0.016 s after it began. Kick and duck in the same frame: a sweep.
+  - Punch, then the duck key in the middle of its follow-through, then punch: an uppercut, 0.25 s after the first punch began. By the old code that was a plain punch.
+  - With the duck or the guard held, the fighter is back in it 0.12 to 0.13 s after an uppercut, a sweep, a hook, a roundhouse or a kick lands.
+  - The game played itself through each scene in the editor (warehouse one take, bar one, rooftop two), and the packaged build, 829 MB and a 549 MB zip, played itself off screen from the first menu to the end card: three scenes, three films, five big finishes, no errors, 102 frames a second. The developer's saved progress was put back and compared.
+- **Went wrong:**
+  - The first setting for the kept key, two presses for 0.4 s, dropped the third of four kicks 17 ms before its turn. One press for 0.55 s does not.
+  - Two test runs never reached a fight. The test window floats on the developer's screen, and the mouse passing over it moved the menu's cursor to Credits and Quit before the test's Enter. The tests now go into a scene by a debug key.
+  - The first test sent four key taps within 21 ms and got one punch: taps inside one frame count as one press. Nobody types that fast; the taps are now 0.1 s apart.
+  - The last two trials of the last run fell into a stall of the editor: a hook logged as landing 0.55 s after it began, and as "0.40 s after it landed" 14 ms later. Their numbers were thrown away; both trials had passed in the run before.
+  - A read of the cook's store failed once during packaging and was tried again by the tool itself.
+- **Not verified:** how it feels to a person, which is the only test that counts here. Walking out of a strike and walking behind a guard, which need a held direction key. Whether the game is now too easy: its own player wins a scene in 19 to 28 seconds with the big finish, and had needed four takes for the bar earlier that evening.
+
 ---
 
 ## Asset and tool register

@@ -23,11 +23,15 @@
 namespace
 {
 	// The player's strikes arrive fast, so a press and its impact read as one moment.
-	const float PunchSeconds = 0.16f;
-	const float KickSeconds = 0.26f;
-	// Longer than the longest a fighter is held by its own move: a kick and its recovery.
-	const float AskedForKeptSeconds = 0.75f;
-	const int32 MostAskedFor = 3;
+	const float PunchSeconds = 0.13f;
+	const float KickSeconds = 0.22f;
+	// One key pressed during a move is kept for the moment that move ends, the newest one: three strikes kept in a row
+	// went on hitting long after the hands had stopped, and the fighter felt stuck in them. It is kept a little longer
+	// than the longest a fighter is held by its own move, a roundhouse and what follows it.
+	const float AskedForKeptSeconds = 0.55f;
+	const int32 MostAskedFor = 1;
+	// A strike key and a held key pressed together land a moment apart, in either order. Within this long they are one press.
+	const float KeysTogetherSeconds = 0.09f;
 
 	// A strike turns to face the nearest opponent inside this distance, so hits connect without careful aiming.
 	const double AimAssistDistance = 170.;
@@ -218,16 +222,31 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 	}
 
 	// Putting the guard up or going down takes back the strikes still waiting: a defence is wanted now, not after them.
-	const bool bDuckHeld = Held({ EKeys::LeftControl, EKeys::RightControl, EKeys::C, EKeys::Gamepad_RightTrigger });
-	const bool bGuardHeld = Held({ EKeys::RightMouseButton, EKeys::LeftShift, EKeys::RightShift, EKeys::L, EKeys::Gamepad_LeftTrigger });
-	if ((bDuckHeld || bGuardHeld) && !bWasDefending)
+	// And a strike that began a moment before the key was meant to go with it.
+	const EMove HeldNow = HeldKey();
+	const bool bDuckHeld = HeldNow == EMove::Duck;
+	const bool bGuardHeld = HeldNow == EMove::Block;
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (HeldNow != EMove::None && !bWasDefending)
 	{
-		AskedFor.Reset();
+		const bool bWaitingStrikeGoesWithIt = !AskedFor.IsEmpty() && AskedFor.Last().Move != EMove::None
+			&& Now - (AskedFor.Last().Until - AskedForKeptSeconds) < KeysTogetherSeconds;
+		if (bWaitingStrikeGoesWithIt)
+		{
+			FAskedFor Kept = AskedFor.Last();
+			Kept.Held = HeldNow;
+			AskedFor.Reset();
+			AskedFor.Add(Kept);
+		}
+		else
+		{
+			AskedFor.Reset();
+			Fighter->TurnStrikeInto(HeldNow);
+		}
 	}
-	bWasDefending = bDuckHeld || bGuardHeld;
+	bWasDefending = HeldNow != EMove::None;
 
 	// What was asked for too early is tried again every frame until it comes out or grows stale.
-	const float Now = GetWorld()->GetTimeSeconds();
 	while (!AskedFor.IsEmpty() && Now > AskedFor[0].Until)
 	{
 		AskedFor.RemoveAt(0);
@@ -243,7 +262,7 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 		}
 		else
 		{
-			bDone = Fighter->Strike(Next, Next == EMove::Kick ? KickSeconds : PunchSeconds);
+			bDone = Fighter->Strike(Next, Next == EMove::Kick ? KickSeconds : PunchSeconds, AskedFor[0].Held);
 		}
 		if (bDone)
 		{
@@ -278,10 +297,12 @@ void AStickPlayerController::SubmitMove(EMove Move)
 			{
 				Fighter->FaceTowards(Nearest->GetActorLocation());
 			}
+			// The key held with it decides the move now, whatever the fighter is still in the middle of.
+			const EMove HeldNow = HeldKey();
 			// Behind anything already waiting, or it would jump the queue.
-			if (!AskedFor.IsEmpty() || !Fighter->Strike(Move, Move == EMove::Kick ? KickSeconds : PunchSeconds))
+			if (!AskedFor.IsEmpty() || !Fighter->Strike(Move, Move == EMove::Kick ? KickSeconds : PunchSeconds, HeldNow))
 			{
-				AskFor(Move);
+				AskFor(Move, HeldNow);
 			}
 		}
 		return;
@@ -293,12 +314,42 @@ void AStickPlayerController::SubmitMove(EMove Move)
 	}
 }
 
-void AStickPlayerController::AskFor(EMove Move)
+void AStickPlayerController::AskFor(EMove Move, EMove Held)
 {
-	if (AskedFor.Num() < MostAskedFor)
+	// The newest key wins the last place: what the hands did last is what comes out.
+	if (AskedFor.Num() >= MostAskedFor)
 	{
-		AskedFor.Add({ Move, static_cast<float>(GetWorld()->GetTimeSeconds()) + AskedForKeptSeconds });
+		AskedFor.Pop();
 	}
+	AskedFor.Add({ Move, static_cast<float>(GetWorld()->GetTimeSeconds()) + AskedForKeptSeconds, Held });
+}
+
+void AStickPlayerController::CycleHeldForTests()
+{
+	HeldForTests = HeldForTests == EMove::None ? EMove::Duck : HeldForTests == EMove::Duck ? EMove::Block : EMove::None;
+}
+
+EMove AStickPlayerController::HeldKey() const
+{
+	if (HeldForTests != EMove::None)
+	{
+		return HeldForTests;
+	}
+	for (const FKey& Key : { EKeys::LeftControl, EKeys::RightControl, EKeys::C, EKeys::Gamepad_RightTrigger })
+	{
+		if (IsInputKeyDown(Key))
+		{
+			return EMove::Duck;
+		}
+	}
+	for (const FKey& Key : { EKeys::RightMouseButton, EKeys::LeftShift, EKeys::RightShift, EKeys::L, EKeys::Gamepad_LeftTrigger })
+	{
+		if (IsInputKeyDown(Key))
+		{
+			return EMove::Block;
+		}
+	}
+	return EMove::None;
 }
 
 void AStickPlayerController::JumpOrContinue()
@@ -632,6 +683,7 @@ void AStickPlayerController::SetupInputComponent()
 	Input->BindAction(MakeAction({ EKeys::F8 }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleSlowFighters);
 #if WITH_EDITOR
 	Input->BindAction(MakeAction({ EKeys::F7 }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleOpponentsHeld);
+	Input->BindAction(MakeAction({ EKeys::F6 }), ETriggerEvent::Started, this, &AStickPlayerController::CycleHeldForTests);
 #endif
 	Input->BindAction(MakeAction({ EKeys::One }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 0);
 	Input->BindAction(MakeAction({ EKeys::Two }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 1);

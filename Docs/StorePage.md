@@ -19,7 +19,7 @@ You are the stunt performer. The script says you lose. Ignore it, win the fight,
 You were hired to lose. The script says the gang beats you in the warehouse, in the bar and on the rooftop. You have other ideas.
 
 - **A free fight, not a string of prompts.** Walk, punch, kick, duck, guard and jump. Duck and punch for an uppercut, duck and kick for a sweep, guard and punch for a hook, guard and kick for a spinning roundhouse. Jump under a red bar to hang from it, then kick off it. Throw whatever is lying on the set: crates, bottles, a watermelon, a wet-floor sign, a frying pan. The keys stay along the bottom of the screen and say what each one does at that moment.
-- **The big finish.** Every blow you land fills a bar. When it is full the screen shows you a key: press it, and one spinning kick, in slow motion and close up, takes everyone near you apart.
+- **The big finish.** Every blow you land fills a bar. When it is full the screen shows you a key: press it, and a hook, an uppercut and a spinning kick, in slow motion and each from its own camera, take everyone near you apart.
 - **Guns, if you get to them first.** A pistol in the warehouse, a rifle on the roof, and gunmen whose aim you can see and duck. Put a gunman down and his pistol is yours.
 - **Go down and it is "Cut!"** Back to one, and every retake comes out of your fee.
 - **Win and it is a wrap.** The take is played back as a film, and the cut is yours: the action cut, the slow-motion cut, or one long take. After it come the outtakes: the takes you lost, as they were shot.

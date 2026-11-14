@@ -46,9 +46,10 @@ namespace
 	const int32 ShotLineCount = 16;
 
 	const float FreezeDilation = 0.05f;
-	const float FreezeOnPunchSeconds = 0.09f;
-	const float FreezeOnHeavyHitSeconds = 0.14f;
-	const float FreezeOnBlockSeconds = 0.04f;
+	// Short: every freeze is time in which no key does anything. At 0.09, 0.14 and 0.04 a fight with five in it felt held back.
+	const float FreezeOnPunchSeconds = 0.05f;
+	const float FreezeOnHeavyHitSeconds = 0.09f;
+	const float FreezeOnBlockSeconds = 0.02f;
 	const float KnockoutDilation = 0.2f;
 	const float KnockoutSlowSeconds = 0.9f;
 	const float FinishDilation = 0.4f;

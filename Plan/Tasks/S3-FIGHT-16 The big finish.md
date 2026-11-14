@@ -30,7 +30,7 @@ depends:
 - [x] The bodies stay in the close picture (the first try knocked them out of it)
 - [x] The film of a take with a finish in it plays to its slate, no error
 - [ ] The finish tried on the boss
-- [ ] The packaged build has it
+- [x] The packaged build has it: five of them in one self-played run on Sat Nov 14, 22:14
 - [ ] The developer has pressed Q
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight

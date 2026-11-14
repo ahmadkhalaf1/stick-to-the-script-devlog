@@ -103,7 +103,12 @@ public:
 	// A punch or a kick with no chosen victim: it lands on whoever of the other team is in reach when it arrives.
 	// What the fighter is holding turns it into another move. Ducked, a punch is an uppercut and a kick a sweep.
 	// Behind a raised guard, a punch is a chop and a kick a roundhouse.
-	bool Strike(EMove Move, float SecondsUntilContact);
+	// Held is the key the player has down, Duck or Block: it counts at once, before the body has got into that pose.
+	bool Strike(EMove Move, float SecondsUntilContact, EMove Held = EMove::None);
+
+	// Two keys pressed together land a moment apart, in either order. A plain strike that has only just begun becomes
+	// the move it makes with the key that followed it. False when there is no such strike to change.
+	bool TurnStrikeInto(EMove Held);
 
 	// One move asked for by name: Punch, Kick, Uppercut, Sweep, Roundhouse or Chop. 0 seconds means its own time.
 	bool StrikeWith(EMove Move, float SecondsUntilContact);
@@ -140,6 +145,10 @@ public:
 
 	// True when a new move would be accepted: standing, walking, or in the tail of a strike that has already landed.
 	bool CanAct() const;
+
+	// True a little sooner than CanAct, for the player's fighter: walking off, a guard or a jump may cut a strike's
+	// follow-through short before another strike may.
+	bool CanBreakOff() const;
 	bool IsStriking() const { return bStrikeOnItsWay || SwingKickSeconds >= 0.f; }
 	bool IsHanging() const { return Hanging.IsValid(); }
 	bool IsStunned() const { return StunSecondsLeft > 0.f; }
@@ -468,6 +477,11 @@ private:
 	bool bFreeStrike = false;
 	bool bStrikeFromAir = false;
 	float SecondsSinceContact = 0.f;
+	// After a follow-through was left early: how long until the next strike may start.
+	float StrikeAgainSecondsLeft = 0.f;
+	bool IsFreeOnceLanded(float AfterAPunch, float AfterAnyOther) const;
+	void BreakOff();
+	void StepIntoStrike(float SecondsUntilContact);
 
 	int32 DemoStep = 0;
 	float DemoRestSeconds = 0.f;

@@ -315,6 +315,16 @@ namespace
 	const float GuardHoldSeconds = 0.12f;
 	// A kick is strong, so its follow-through cannot be cut short as early as a punch's.
 	const float KickCancelSeconds = 0.3f;
+	const float PlayerKickCancelSeconds = 0.22f;
+	// Walking off, a guard or a jump cuts the player's follow-through short sooner than another strike may: the keys
+	// answer almost as the blow lands.
+	const float BreakOffSeconds = 0.04f;
+	const float KickBreakOffSeconds = 0.12f;
+	// Two keys count as pressed together when the second follows the first within this long.
+	const float PressedTogetherSeconds = 0.09f;
+	// The player's fighter shakes a blow off sooner than the stuntmen do.
+	const float PlayerStunShare = 0.75f;
+	const float GuardWalkSpeedShare = 0.45f;
 	// The third quick blow in a row sends its victim flying. That ends the string and gives everyone room.
 	const int32 BlowsInAFinisher = 3;
 	const float BlowChainSeconds = 1.f;
@@ -629,10 +639,10 @@ namespace
 		// The punch of a fighter with two sound arms and empty hands: a jab that measures the distance and a cross that lands.
 		{ EMove::Punch, 0.3f, 0.35f, 1.f, false, StrikeConeCosine, true, false, 0.f, 0.f },
 		{ EMove::Kick, 0.26f, KickRecoverSeconds, 1.f, true, StrikeConeCosine, false, false, 0.f, 0.f },
-		{ EMove::Uppercut, 0.2f, 0.5f, 1.8f, false, StrikeConeCosine, false, false, 560.f, 0.95f },
-		{ EMove::Sweep, 0.24f, 0.5f, 0.7f, true, -1., false, false, 300.f, 1.1f },
-		{ EMove::Roundhouse, 0.36f, 0.5f, 1.6f, true, 0., true, true, 0.f, 0.f },
-		{ EMove::Chop, 0.28f, 0.42f, 1.3f, false, StrikeConeCosine, false, true, 0.f, 1.2f },
+		{ EMove::Uppercut, 0.17f, 0.5f, 1.8f, false, StrikeConeCosine, false, false, 560.f, 0.95f },
+		{ EMove::Sweep, 0.2f, 0.5f, 0.7f, true, -1., false, false, 300.f, 1.1f },
+		{ EMove::Roundhouse, 0.3f, 0.5f, 1.6f, true, 0., true, true, 0.f, 0.f },
+		{ EMove::Chop, 0.24f, 0.42f, 1.3f, false, StrikeConeCosine, false, true, 0.f, 1.2f },
 	};
 
 	const FTechnique* FindTechnique(EMove Move)
@@ -967,6 +977,7 @@ void AStickFighter::Tick(float DeltaSeconds)
 	}
 
 	StunSecondsLeft = FMath::Max(StunSecondsLeft - DeltaSeconds, 0.f);
+	StrikeAgainSecondsLeft = FMath::Max(StrikeAgainSecondsLeft - DeltaSeconds, 0.f);
 	if (StunSecondsLeft <= 0.f && State == EFighterState::Idle && Playing && (Playing == HitClips[0] || Playing == HitClips[1]))
 	{
 		ReturnToIdle();
@@ -1897,10 +1908,10 @@ void AStickFighter::Jump()
 		return;
 	}
 
-	// A jump may come out of the tail of a strike, at the moment another strike could.
-	if (State == EFighterState::Busy && CanAct())
+	// A jump may come out of the tail of a strike.
+	if (State == EFighterState::Busy && CanBreakOff())
 	{
-		ReturnToIdle();
+		BreakOff();
 	}
 	const bool bOnItsFeet = State == EFighterState::Idle || State == EFighterState::Moving;
 	if (!bFree || !bOnItsFeet || bMoving || JumpHeight > 0.f || StunSecondsLeft > 0.f)
@@ -1925,6 +1936,11 @@ void AStickFighter::Guard(EMove Pose)
 		return;
 	}
 
+	// The player's guard comes up out of a strike that has landed. It used to wait for the whole follow-through.
+	if (Team == 0 && State == EFighterState::Busy && JumpHeight <= 0.f && CanBreakOff())
+	{
+		BreakOff();
+	}
 	if (State == EFighterState::Idle || (State == EFighterState::Moving && !bMoving))
 	{
 		HeldPose = Pose;
@@ -1932,7 +1948,7 @@ void AStickFighter::Guard(EMove Pose)
 	}
 }
 
-bool AStickFighter::CanAct() const
+bool AStickFighter::IsFreeOnceLanded(float AfterAPunch, float AfterAnyOther) const
 {
 	// The big finish is not interrupted, least of all by the fighter throwing it.
 	if (bPuppet || bMoving || StunSecondsLeft > 0.f || bFinishing)
@@ -1943,10 +1959,31 @@ bool AStickFighter::CanAct() const
 	{
 		return true;
 	}
-	return State == EFighterState::Busy && !bStrikeOnItsWay && SecondsSinceContact >= (StrikeMove == EMove::Punch ? CancelSeconds : KickCancelSeconds);
+	return State == EFighterState::Busy && !bStrikeOnItsWay && SecondsSinceContact >= (StrikeMove == EMove::Punch ? AfterAPunch : AfterAnyOther);
 }
 
-bool AStickFighter::Strike(EMove Move, float SecondsUntilContact)
+bool AStickFighter::CanAct() const
+{
+	return StrikeAgainSecondsLeft <= 0.f && IsFreeOnceLanded(CancelSeconds, Team == 0 ? PlayerKickCancelSeconds : KickCancelSeconds);
+}
+
+bool AStickFighter::CanBreakOff() const
+{
+	return Team == 0 ? IsFreeOnceLanded(BreakOffSeconds, KickBreakOffSeconds) : CanAct();
+}
+
+void AStickFighter::BreakOff()
+{
+	// Leaving a follow-through early does not bring the next strike any sooner.
+	if (State == EFighterState::Busy)
+	{
+		StrikeAgainSecondsLeft = FMath::Max((StrikeMove == EMove::Punch ? CancelSeconds : PlayerKickCancelSeconds) - SecondsSinceContact, StrikeAgainSecondsLeft);
+		UE_LOG(LogStickFighter, Verbose, TEXT("%s breaks off its %s %.2f s after it landed"), *GetName(), *UEnum::GetValueAsString(StrikeMove), SecondsSinceContact);
+	}
+	ReturnToIdle();
+}
+
+bool AStickFighter::Strike(EMove Move, float SecondsUntilContact, EMove Held)
 {
 	if (Move != EMove::Punch && Move != EMove::Kick)
 	{
@@ -1955,16 +1992,36 @@ bool AStickFighter::Strike(EMove Move, float SecondsUntilContact)
 	// On its feet and empty-handed, what the fighter is holding turns the plain strike into another.
 	if (JumpHeight <= 0.f && !Carried.IsValid())
 	{
-		if (IsDucking())
+		if (IsDucking() || Held == EMove::Duck)
 		{
 			return StrikeWith(Move == EMove::Punch ? EMove::Uppercut : EMove::Sweep, 0.f);
 		}
-		if (IsGuarding())
+		if (IsGuarding() || Held == EMove::Block)
 		{
 			return StrikeWith(Move == EMove::Punch ? EMove::Chop : EMove::Roundhouse, 0.f);
 		}
 	}
 	return StrikeWith(Move, SecondsUntilContact);
+}
+
+bool AStickFighter::TurnStrikeInto(EMove Held)
+{
+	const bool bPunch = StrikeMove == EMove::Punch;
+	// Only a plain strike posed in code and thrown freely, in its first moment, on the floor and empty-handed.
+	if (!bStrikeOnItsWay || !bKicking || !bFreeStrike || bFinishing || (!bPunch && StrikeMove != EMove::Kick)
+		|| KickElapsed > PressedTogetherSeconds || JumpHeight > 0.f || Carried.IsValid() || Hanging.IsValid())
+	{
+		return false;
+	}
+	const EMove Move = Held == EMove::Duck ? (bPunch ? EMove::Uppercut : EMove::Sweep) : (bPunch ? EMove::Chop : EMove::Roundhouse);
+	const FTechnique* Posed = FindTechnique(Move);
+	UE_LOG(LogStickFighter, Verbose, TEXT("%s turns its %s into %s, %.3f s after it began"), *GetName(), *UEnum::GetValueAsString(StrikeMove), *UEnum::GetValueAsString(Move), KickElapsed);
+	// The posed punch is only thrown with two sound arms, so the uppercut and the chop have the arm they need.
+	PosedSide = 1;
+	StartPosed(Move, Posed->WindUpSeconds);
+	StepIntoStrike(Posed->WindUpSeconds);
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, Move);
+	return true;
 }
 
 bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
@@ -2039,9 +2096,15 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 	}
 	bFreeStrike = true;
 	bStrikeFromAir = JumpHeight > OutOfReachHeight * 0.5f;
+	StepIntoStrike(SecondsUntilContact);
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, Move);
+	return true;
+}
 
-	// The fighter steps into its strike, or back from a target that is too close, so the blow arrives on a body:
-	// not in the air in front of one, and not through it.
+// The fighter steps into its strike, or back from a target that is too close, so the blow arrives on a body:
+// not in the air in front of one, and not through it.
+void AStickFighter::StepIntoStrike(float SecondsUntilContact)
+{
 	LungeVelocity = FVector::ZeroVector;
 	const FVector Facing = WantedForward();
 	double Nearest = StrikeReach + BodyRadius + LungeDistance;
@@ -2055,8 +2118,6 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 			LungeVelocity = To.GetSafeNormal() * (FMath::Max(Distance - StrikeReach - TouchGap, -StepBackDistance) / FMath::Max(SecondsUntilContact, 0.05f));
 		}
 	}
-	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, Move);
-	return true;
 }
 
 void AStickFighter::LandFreeStrike(const FVector& StrikePoint)
@@ -2314,7 +2375,7 @@ void AStickFighter::TakeBlow(float Damage, const FVector& StrikePoint, const FVe
 		return;
 	}
 
-	StunSecondsLeft = bSentFlying ? HeavyStunSeconds : StunSeconds;
+	StunSecondsLeft = (bSentFlying ? HeavyStunSeconds : StunSeconds) * (Team == 0 ? PlayerStunShare : 1.f);
 	PoseSecondsLeft = 0.f;
 	UAnimSequenceBase* Reaction = HitClips[StrikePoint.Z > Body->GetBoneLocation(JointBones[ChestJoint]).Z ? 0 : 1];
 	// In the air the fall is the picture. On its feet the fighter takes the blow where it landed.
@@ -2628,17 +2689,18 @@ void AStickFighter::AdvanceFreeMovement(float DeltaSeconds)
 	const bool bGrounded = JumpHeight <= 0.f;
 
 	// Walking away cuts short the tail of a strike, so a fighter is never stuck watching its own follow-through.
-	if (!WalkInput.IsNearlyZero() && State == EFighterState::Busy && CanAct())
+	if (!WalkInput.IsNearlyZero() && State == EFighterState::Busy && CanBreakOff())
 	{
-		ReturnToIdle();
+		BreakOff();
 	}
 
 	const bool bOnItsFeet = State == EFighterState::Idle || State == EFighterState::Moving;
-	// Ducked, a fighter still creeps along. Behind a guard it stands its ground.
-	const bool bCreeps = HeldPose == EMove::Duck && PoseAlpha >= 0.3f;
+	// Ducked, a fighter still creeps along. Behind a guard the player's does too; a stuntman stands his ground.
+	const bool bCreeps = PoseAlpha >= 0.3f && (HeldPose == EMove::Duck || Team == 0);
 	const bool bMayWalk = bOnItsFeet && !bMoving && StunSecondsLeft <= 0.f && (PoseAlpha < 0.3f || bCreeps);
 	const double InputLength = WalkInput.Size();
-	const FVector2D Velocity = bMayWalk && InputLength > 0.05 ? WalkInput / FMath::Max(InputLength, 1.) * WalkSpeed * (bCreeps ? DuckWalkSpeedShare : 1.f) : FVector2D::ZeroVector;
+	const float SpeedShare = !bCreeps ? 1.f : HeldPose == EMove::Duck ? DuckWalkSpeedShare : GuardWalkSpeedShare;
+	const FVector2D Velocity = bMayWalk && InputLength > 0.05 ? WalkInput / FMath::Max(InputLength, 1.) * WalkSpeed * SpeedShare : FVector2D::ZeroVector;
 	const bool bWantsToWalk = !Velocity.IsNearlyZero(1.);
 
 	// Someone backing away from what it faces walks backwards, instead of jogging on the spot in reverse.
