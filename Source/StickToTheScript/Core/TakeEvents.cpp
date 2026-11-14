@@ -27,6 +27,12 @@ void UTakeEvents::Initialize(FSubsystemCollectionBase& Collection)
 	OnFighterDown.AddDynamic(this, &UTakeEvents::LogFighterDown);
 	OnBarGrabbed.AddDynamic(this, &UTakeEvents::LogBarGrabbed);
 	OnOuttake.AddDynamic(this, &UTakeEvents::LogOuttake);
+	OnFinish.AddDynamic(this, &UTakeEvents::LogFinish);
+}
+
+void UTakeEvents::LogFinish(AActor* Attacker, int32 Beat)
+{
+	UE_LOG(LogTakeEvents, Log, TEXT("OnFinish: %s starts blow %d of the big finish"), *GetNameSafe(Attacker), Beat + 1);
 }
 
 void UTakeEvents::LogOuttake(int32 TakeNumber, bool bCut)
@@ -156,9 +162,10 @@ bool FTakeEventsLogTest::RunTest(const FString& Parameters)
 	Events->OnBarGrabbed.Broadcast(nullptr);
 	Events->OnWardrobe.Broadcast(FText());
 	Events->OnOuttake.Broadcast(1, false);
+	Events->OnFinish.Broadcast(nullptr, 0);
 	GLog->RemoveOutputDevice(&Counter);
 
-	return TestEqual(TEXT("Log lines printed by the fourteen events"), Counter.LineCount, 14);
+	return TestEqual(TEXT("Log lines printed by the fifteen events"), Counter.LineCount, 15);
 }
 
 #endif

@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSwingSignature, AActor*, Attacker,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFighterDownSignature, AActor*, Fighter, bool, bPlayer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBarGrabbedSignature, AActor*, Fighter);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOuttakeSignature, int32, TakeNumber, bool, bCut);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFinishSignature, AActor*, Attacker, int32, Beat);
 
 UCLASS()
 class UTakeEvents : public UWorldSubsystem
@@ -86,7 +87,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Take")
 	FOuttakeSignature OnOuttake;
 
+	// A blow of the big finish has been started: three of them on one opponent, counted from 0, and the last takes
+	// everyone near with it. Each one's hit follows as OnHit.
+	UPROPERTY(BlueprintAssignable, Category = "Take")
+	FFinishSignature OnFinish;
+
 private:
+	UFUNCTION()
+	void LogFinish(AActor* Attacker, int32 Beat);
+
 	UFUNCTION()
 	void LogTakeStarted(int32 TakeNumber);
 

@@ -49,6 +49,7 @@ On `UTakeEvents`, a world subsystem. Everything outside the core stream reacts t
 | `OnSwing(AActor* Attacker, EMove Move)` | a strike or a throw starts in a free fight; it may still miss | sound |
 | `OnFighterDown(AActor* Fighter, bool bPlayer)` | a fighter is knocked out in a free fight | director |
 | `OnOuttake(int32 TakeNumber, bool bCut)` | after the film, the end of a take that was cut is shown again: fired as it starts, and once more at its "Cut!" | interface, sound |
+| `OnFinish(AActor* Attacker, int32 Beat)` | a blow of the big finish has been started: three on one opponent, counted from 0; its hit follows as `OnHit` a moment later | slow motion, the camera's cuts |
 
 How to use them:
 

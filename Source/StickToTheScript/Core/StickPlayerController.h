@@ -37,6 +37,11 @@ public:
 	// For tests and demos: with autoplay on, the keys 1, 2 and 3 go straight to that scene.
 	void JumpToScene(int32 Index);
 
+	// The big finish, once its bar is full and somebody is near. The film's low camera takes the picture for it.
+	void TryFinish();
+	// 0 to 1: how full the bar is. Blows that land fill it.
+	float GetFinishCharge() const { return FinishCharge; }
+
 	// The fighter the player walks around the fight.
 	UPROPERTY()
 	TObjectPtr<AStickFighter> Fighter;
@@ -53,6 +58,26 @@ private:
 
 	UFUNCTION()
 	void HandleTakeFinished(const FTake& Take);
+
+	UFUNCTION()
+	void HandleTakeStarted(int32 TakeNumber);
+
+	UFUNCTION()
+	void HandleHit(AActor* Attacker, AActor* Victim, EMove Move);
+
+	UFUNCTION()
+	void HandleFinish(AActor* Attacker, int32 Beat);
+
+	float FinishCharge = 0.f;
+	// The finish's own blows do not fill the bar it has just emptied.
+	double FinishOwnBlowsUntilRealSeconds = 0.;
+	// The view the finish cut away from, and when to cut back to it.
+	UPROPERTY()
+	TObjectPtr<AActor> ViewBeforeFinish;
+	UPROPERTY()
+	TObjectPtr<AActor> FinishCamera;
+	double FinishShotUntilRealSeconds = 0.;
+	void EndFinishShot();
 
 	// False while paused: the keys then answer the pause menu and must not reach the fighter.
 	bool IsFighting() const;
@@ -71,6 +96,8 @@ private:
 	int32 AutoplayShotsThisTake = 0;
 	float AutoplayRestUntilSeconds = 0.f;
 	bool bAutoplayGuards = false;
+	// Since when the finish bar has been full, for the game's own player. Negative while it is not.
+	float AutoplayFinishFullSinceSeconds = -1.f;
 	// Strikes and jumps asked for before the fighter could do them, in the order they were asked for. Each is done the
 	// instant it can be, so keys pressed during the move before are not lost, and grows stale if that takes too long.
 	struct FAskedFor

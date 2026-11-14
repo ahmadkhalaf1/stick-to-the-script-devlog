@@ -17,6 +17,7 @@
 #include "StickToTheScript/Cam/FinalCut.h"
 #include "StickToTheScript/Core/GameFlow.h"
 #include "StickToTheScript/Core/StickGameInstance.h"
+#include "StickToTheScript/Core/StickPlayerController.h"
 #include "StickToTheScript/Core/TakeDirector.h"
 #include "StickToTheScript/Core/TakeEvents.h"
 #include "StickToTheScript/Fighter/StickFighter.h"
@@ -268,10 +269,29 @@ void AStickHUD::DrawHUD()
 			const float Health = Player->GetHealthFraction();
 			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), 48.f * Unit, 98.f * Unit, 320.f * Unit, 18.f * Unit);
 			DrawRect(Health < 0.3f ? RecordingRed : FLinearColor::White, 51.f * Unit, 101.f * Unit, 314.f * Unit * Health, 12.f * Unit);
+			if (const AStickPlayerController* Hands = Cast<AStickPlayerController>(PlayerOwner))
+			{
+				// Under the health, the bar that blows fill. Full, it shows the key that spends it on everyone near.
+				const float Charge = Hands->GetFinishCharge();
+				DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), 48.f * Unit, 120.f * Unit, 320.f * Unit, 12.f * Unit);
+				DrawRect(HighlightGold, 51.f * Unit, 122.f * Unit, 314.f * Unit * Charge, 8.f * Unit);
+				if (Charge >= 1.f)
+				{
+					const float Pulse = 0.72f + 0.28f * FMath::Sin(static_cast<float>(GetWorld()->GetRealTimeSeconds()) * 9.f);
+					const float Key = 80.f * Unit;
+					const float KeyX = Width * 0.5f - 250.f * Unit;
+					const float KeyY = 806.f * Unit;
+					DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.85f), KeyX - 5.f * Unit, KeyY - 5.f * Unit, Key + 10.f * Unit, Key + 10.f * Unit);
+					DrawRect(FLinearColor(Pulse, 0.78f * Pulse, 0.2f * Pulse), KeyX, KeyY, Key, Key);
+					Write(TEXT("Q"), FLinearColor::Black, KeyX + 23.f * Unit, KeyY + 7.f * Unit, Font, 4.8f * Unit);
+					Write(TEXT("FINISH THEM"), FLinearColor::Black, KeyX + Key + 26.f * Unit + 3.f, KeyY + 9.f * Unit + 3.f, Font, 4.4f * Unit);
+					Write(TEXT("FINISH THEM"), HighlightGold, KeyX + Key + 26.f * Unit, KeyY + 9.f * Unit, Font, 4.4f * Unit);
+				}
+			}
 			if (const AThrownProp* Held = Player->GetCarried(); Held && Held->IsGun())
 			{
 				// What is in the hands, and how many rounds are left in it. Empty, it is red: all it is good for is throwing.
-				Write(FString::Printf(TEXT("%s   %d"), Held->GetGunName(), Held->GetShotsLeft()), Held->GetShotsLeft() > 0 ? HighlightGold : RecordingRed, 48.f * Unit, 130.f * Unit, Font, 2.f * Unit);
+				Write(FString::Printf(TEXT("%s   %d"), Held->GetGunName(), Held->GetShotsLeft()), Held->GetShotsLeft() > 0 ? HighlightGold : RecordingRed, 48.f * Unit, 142.f * Unit, Font, 2.f * Unit);
 			}
 
 			// Every opponent in the fight carries a bar over the head. The scene's boss has a bar of his own instead, along

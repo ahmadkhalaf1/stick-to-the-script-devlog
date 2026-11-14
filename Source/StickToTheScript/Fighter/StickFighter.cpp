@@ -92,6 +92,20 @@ namespace
 	const float DuckWalkSpeedShare = 0.5f;
 	// How long a swung weapon takes to come back up after it has landed.
 	const float WeaponSwingBackSeconds = 0.3f;
+	// The big finish reaches everyone this near, all round. It ends anyone up to this health, and only hurts the rest:
+	// a boss is not a one-button fight.
+	const double FinishRadius = 340.;
+	const EMove FinishMoves[] = { EMove::Chop, EMove::Uppercut, EMove::Roundhouse };
+	const float FinishWindUps[] = { 0.2f, 0.26f, 0.4f };
+	const float FinishBetweenBlowsSeconds = 0.1f;
+	// Whoever it is for stays where he is for this long, and the uppercut lifts him this fast.
+	const float FinishHeldSeconds = 2.5f;
+	const float FinishLiftSpeed = 430.f;
+	const float FinishGivenUpAfterSeconds = 3.f;
+	const float FinishEndsUpToHealth = 200.f;
+	const float FinishDamageToTheStrong = 110.f;
+	// Not far: what is left of them should come down inside the picture that is watching.
+	const float FinishLaunchSpeed = 250.f;
 	const float BlockedRecoil = 0.35f;
 	const float KnockoutSpeed = 200.f;
 	// How far outside the arena a body that is down may travel before it is stopped.
@@ -989,6 +1003,24 @@ void AStickFighter::Tick(float DeltaSeconds)
 			WeaponSwingElapsed = -1.f;
 		}
 	}
+	if (bFinishing)
+	{
+		FinishSecondsLeft -= DeltaSeconds;
+		if (FinishSecondsLeft <= 0.f || State == EFighterState::Down)
+		{
+			// Something stopped it. Better an unfinished finish than a fighter nothing can touch.
+			bFinishing = false;
+			FinishNextBeatSecondsLeft = -1.f;
+		}
+		else if (FinishNextBeatSecondsLeft >= 0.f)
+		{
+			FinishNextBeatSecondsLeft -= DeltaSeconds;
+			if (FinishNextBeatSecondsLeft < 0.f)
+			{
+				StartFinishBeat();
+			}
+		}
+	}
 
 	if (bDemoAllMoves && State != EFighterState::Busy)
 	{
@@ -1225,6 +1257,7 @@ void AStickFighter::HandleTakeStarted(int32 TakeNumber)
 	LooseArms[0].bBroken = false;
 	LooseArms[1].bBroken = false;
 	Severed = 0;
+	bFinishing = false;
 	Health = MaxHealth;
 	StunSecondsLeft = 0.f;
 	KnockVelocity = FVector::ZeroVector;
@@ -1901,7 +1934,8 @@ void AStickFighter::Guard(EMove Pose)
 
 bool AStickFighter::CanAct() const
 {
-	if (bPuppet || bMoving || StunSecondsLeft > 0.f)
+	// The big finish is not interrupted, least of all by the fighter throwing it.
+	if (bPuppet || bMoving || StunSecondsLeft > 0.f || bFinishing)
 	{
 		return false;
 	}
@@ -2027,6 +2061,12 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 
 void AStickFighter::LandFreeStrike(const FVector& StrikePoint)
 {
+	if (bFinishing)
+	{
+		LandFinish();
+		return;
+	}
+
 	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
 	const FTechnique* Posed = bKicking ? FindTechnique(StrikeMove) : nullptr;
 	const bool bWithALeg = Posed && Posed->bWithALeg;
@@ -2112,9 +2152,115 @@ void AStickFighter::LandFreeStrike(const FVector& StrikePoint)
 		*GetName(), *UEnum::GetValueAsString(StrikeMove), NearestMiss, StrikeReach, BodyRadius);
 }
 
+bool AStickFighter::Finish()
+{
+	const FTechnique* Kick = FindTechnique(EMove::Roundhouse);
+	if (!Kick || !CanAct() || Hanging.IsValid() || JumpHeight > 0.f)
+	{
+		return false;
+	}
+	AStickFighter* Nearest = nullptr;
+	double NearestDistance = FinishRadius;
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		const double Distance = FVector::Dist2D(It->GetActorLocation(), GetActorLocation());
+		if (It->Team != Team && !It->IsDown() && Distance < NearestDistance)
+		{
+			NearestDistance = Distance;
+			Nearest = *It;
+		}
+	}
+	if (!Nearest)
+	{
+		return false;
+	}
+
+	FinishVictim = Nearest;
+	FinishBeat = 0;
+	FinishSecondsLeft = FinishGivenUpAfterSeconds;
+	bFinishing = true;
+	StartFinishBeat();
+	return true;
+}
+
+void AStickFighter::StartFinishBeat()
+{
+	const EMove Move = FinishMoves[FinishBeat];
+	const float WindUp = FinishWindUps[FinishBeat];
+	const AStickFighter* Victim = FinishVictim.Get();
+	if (Victim)
+	{
+		FaceTowards(Victim->GetActorLocation());
+	}
+	PoseSecondsLeft = 0.f;
+	SnapToWantedFacing();
+	StartPosed(Move, WindUp);
+	bFreeStrike = true;
+	bStrikeFromAir = false;
+	// It steps in, or back, to where the blow lands on a body, as any strike does.
+	LungeVelocity = FVector::ZeroVector;
+	if (Victim)
+	{
+		const FVector To = (Victim->GetActorLocation() - GetActorLocation()) * FVector(1., 1., 0.);
+		LungeVelocity = To.GetSafeNormal() * (FMath::Max(To.Size() - StrikeReach - TouchGap, -StepBackDistance) / WindUp);
+	}
+	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
+	Events->OnSwing.Broadcast(this, Move);
+	Events->OnFinish.Broadcast(this, FinishBeat);
+}
+
+void AStickFighter::LandFinish()
+{
+	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
+	if (FinishBeat + 1 < static_cast<int32>(UE_ARRAY_COUNT(FinishMoves)))
+	{
+		// The first two blows only stop him and lift him. He is still there, on his feet or off them, for the kick.
+		AStickFighter* Victim = FinishVictim.Get();
+		if (Victim && !Victim->IsDown())
+		{
+			const FVector Away = ((Victim->GetActorLocation() - GetActorLocation()) * FVector(1., 1., 0.)).GetSafeNormal(UE_SMALL_NUMBER, GetActorForwardVector());
+			Victim->StartRecoil(Victim->GetJointPositions()[FinishBeat == 0 ? SkullJoint : ChestJoint], Away, HeavyRecoil);
+			Victim->KnockVelocity = FVector::ZeroVector;
+			Victim->StunSecondsLeft = FMath::Max(Victim->StunSecondsLeft, FinishHeldSeconds);
+			if (FinishBeat == 1)
+			{
+				Victim->PopUp(FinishLiftSpeed, FinishHeldSeconds);
+			}
+			Events->OnHit.Broadcast(this, Victim, FinishMoves[FinishBeat]);
+		}
+		++FinishBeat;
+		FinishNextBeatSecondsLeft = FinishBetweenBlowsSeconds;
+		return;
+	}
+
+	bFinishing = false;
+	FinishVictim = nullptr;
+	const FVector From = GetActorLocation();
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		AStickFighter* Other = *It;
+		if (Other->Team == Team || Other->IsDown() || FVector::Dist2D(Other->GetActorLocation(), From) > FinishRadius)
+		{
+			continue;
+		}
+		const FVector Away = ((Other->GetActorLocation() - From) * FVector(1., 1., 0.)).GetSafeNormal(UE_SMALL_NUMBER, GetActorForwardVector());
+		const FVector Chest = Other->GetJointPositions()[ChestJoint];
+		Other->SufferBlow(this, Other->MaxHealth > FinishEndsUpToHealth ? FinishDamageToTheStrong : Other->MaxHealth * 4.f, Chest, Away, true, EMove::Roundhouse);
+		if (Other->IsDown())
+		{
+			// Nobody finished is left in one piece: both forearms and both shins go their own way.
+			Other->Launch(Away, FinishLaunchSpeed);
+			for (int32 Limb = 0; Limb < 4; ++Limb)
+			{
+				Other->Sever(Chest);
+			}
+		}
+	}
+}
+
 void AStickFighter::SufferBlow(AStickFighter* Attacker, float Damage, const FVector& Point, const FVector& Direction, bool bHeavy, EMove Move)
 {
-	if (IsDown())
+	if (IsDown() || bFinishing)
 	{
 		return;
 	}

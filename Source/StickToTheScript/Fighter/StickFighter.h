@@ -124,6 +124,11 @@ public:
 	FVector GetCarryPoint() const;
 	// 0 while a carried weapon is held up, 1 as its swing lands.
 	float GetWeaponSwing() const;
+
+	// The big finish: three blows on the nearest opponent, a hook that stops him, an uppercut that lifts him and a
+	// spinning kick that takes him and everyone near apart. Nothing touches the fighter until the last has landed.
+	// False when it cannot be started now, or nobody is near enough to be finished.
+	bool Finish();
 	// 0 the left hand, 1 the right.
 	FVector GetHandPoint(int32 Side) const;
 
@@ -405,6 +410,15 @@ private:
 	// Since a swing of the carried weapon began, and when it lands. Negative while nothing is swung.
 	float WeaponSwingElapsed = -1.f;
 	float WeaponSwingContactAt = 0.f;
+	// The big finish is under way: which of its blows is on its way, who it is for, when the next one starts, and how
+	// long the whole of it may still take before it is given up, so nothing can leave a fighter untouchable for good.
+	bool bFinishing = false;
+	int32 FinishBeat = 0;
+	TWeakObjectPtr<AStickFighter> FinishVictim;
+	float FinishNextBeatSecondsLeft = -1.f;
+	float FinishSecondsLeft = 0.f;
+	void StartFinishBeat();
+	void LandFinish();
 	int32 BlowsInARow = 0;
 	float LastBlowSeconds = 0.f;
 

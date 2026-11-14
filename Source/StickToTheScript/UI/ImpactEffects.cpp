@@ -51,6 +51,9 @@ namespace
 	const float FreezeOnBlockSeconds = 0.04f;
 	const float KnockoutDilation = 0.2f;
 	const float KnockoutSlowSeconds = 0.9f;
+	const float FinishDilation = 0.4f;
+	// From the start of one of its blows: long enough to reach the next, which sets it again.
+	const float FinishSlowSeconds = 1.3f;
 
 	const int32 MostTakesOfASound = 6;
 	const float PitchSpreadOfABlow = 0.05f;
@@ -162,6 +165,7 @@ void AImpactEffects::BeginPlay()
 	Events->OnBlocked.AddDynamic(this, &AImpactEffects::HandleBlocked);
 	Events->OnSwing.AddDynamic(this, &AImpactEffects::HandleSwing);
 	Events->OnBarGrabbed.AddDynamic(this, &AImpactEffects::HandleBarGrabbed);
+	Events->OnFinish.AddDynamic(this, &AImpactEffects::HandleFinish);
 	Events->OnTakeStarted.AddDynamic(this, &AImpactEffects::HandleTakeStarted);
 	Events->OnCut.AddDynamic(this, &AImpactEffects::HandleCut);
 	Events->OnFinalCutStarted.AddDynamic(this, &AImpactEffects::HandleFinalCutStarted);
@@ -186,13 +190,21 @@ void AImpactEffects::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	FinishRealSecondsLeft = FMath::Max(FinishRealSecondsLeft - static_cast<float>(FApp::GetDeltaTime()), 0.f);
 	if (SlowRealSecondsLeft > 0.f)
 	{
 		// Counted in real time: the game's own clock is the thing being slowed.
 		SlowRealSecondsLeft -= FApp::GetDeltaTime();
 		if (SlowRealSecondsLeft <= 0.f)
 		{
-			UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+			if (FinishRealSecondsLeft > 0.f)
+			{
+				SlowTime(FinishDilation, FinishRealSecondsLeft);
+			}
+			else
+			{
+				UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+			}
 		}
 	}
 
@@ -313,6 +325,13 @@ void AImpactEffects::HandleBlocked(AActor* Attacker, AActor* Defender)
 void AImpactEffects::HandleBarGrabbed(AActor* Fighter)
 {
 	Play(EImpactSound::Clang);
+}
+
+void AImpactEffects::HandleFinish(AActor* Attacker, int32 Beat)
+{
+	// Every blow of it is watched on its way. A blow's own frozen frame ends back in this slow motion, not at full speed.
+	FinishRealSecondsLeft = FinishSlowSeconds;
+	SlowTime(FinishDilation, FinishSlowSeconds);
 }
 
 void AImpactEffects::HandleSwing(AActor* Attacker, EMove Move)

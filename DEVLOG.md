@@ -1353,6 +1353,21 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The chosen card says PLAY, and the wardrobe has a button for going on](Docs/devlog/88-buttons-that-say-so.jpg)
 
+### 21:23 · The big finish: a bar, a key, and three blows cut like a film
+
+- **Developer said:** "If not hard. I want to add a power bar that get filled by hitting enemies, then provide a cinematic finish move by showing an overlay button icon asking to finish the enemies and it should show a nice animation with High quality cinematic view and object destruction where enemies get destroyed into parts". And, while the first version was being tested: "i want finish move to be more cinematic with more than 1 move , something similar to how big games do like call of duty or bf or others".
+- **Agent did:**
+  - Said what it would cost before starting. Not much, because the game had the parts already: limbs that come off and fly (a gun did that), slow motion on a knockout, the film's two close cameras with their lens, and clips for a hook, an uppercut and a spinning kick. Nothing new was drawn, modelled or animated.
+  - First version: a gold bar under the health that blows fill, a key on the screen when it is full, and one spinning kick in slow motion from the film's low camera that puts down everyone within 3.4 m and takes their forearms and shins off. It worked at the first test, 16 limbs in one fight. The pictures showed two faults: the bodies were knocked out of the close picture, and the game's own player spent the bar the instant it filled, so the key was never on the screen.
+  - Second version, after the developer's second message: three blows on the nearest opponent, each with its own picture. A hook that stops him, seen from over the hero's shoulder. An uppercut that lifts him off the floor, seen from the floor. The spinning kick that takes him and everyone near apart, seen from further back so the pieces are in the frame. Time runs at two fifths throughout and does not go back to full speed between the blows. The hero cannot be touched or interrupted until the last blow has landed, and a clock gives the whole thing up after three seconds if anything stops it, so nothing can leave a fighter untouchable.
+  - The boss is not ended by it: anyone with more than 200 health is hurt badly instead.
+  - The game's own player waits 1.2 seconds with a full bar before it spends it, so that the key is seen in a video.
+- **Result:** `Tools/check.ps1` passes with a fifteenth event in its test. In the editor a fight was photographed every 0.4 seconds: the key with its bar, the three cuts, limbs of two opponents in the air, and the picture given back to the fight. A scene with a finish in it then played to its wrap and its film ran to the slate with no error.
+- **Went wrong:** the first version's close picture, told above. And the test that was to note when each picture was taken did not: a line of it was lost on its way through PowerShell, so the pictures were found by the times their files were written.
+- **Not verified:** a person pressing Q. The sound of it. The finish on the boss. The packaged build has none of this yet.
+
+![The big finish, a picture every 0.4 seconds: the key, the hook over the shoulder, the uppercut from the floor, the kick and what it does, and back to the fight](Docs/devlog/89-the-big-finish.jpg)
+
 ---
 
 ## Asset and tool register

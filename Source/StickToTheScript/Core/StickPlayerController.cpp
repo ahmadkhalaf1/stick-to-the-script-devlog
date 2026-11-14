@@ -10,6 +10,7 @@
 #include "InputMappingContext.h"
 #include "Kismet/GameplayStatics.h"
 #include "StickToTheScript/Cam/BodyCam.h"
+#include "StickToTheScript/Cam/FightCamera.h"
 #include "StickToTheScript/Core/GameFlow.h"
 #include "StickToTheScript/Core/StickGameInstance.h"
 #include "StickToTheScript/Core/TakeDirector.h"
@@ -45,6 +46,14 @@ namespace
 	const int32 AutoplayStrikesBeforeARest = 6;
 	const float AutoplayRestSeconds = 1.6f;
 	const float AutoplayGuardShare = 0.7f;
+
+	// What a blow that lands adds to the finish bar: about a dozen blows fill it, fewer if they are big ones.
+	const float FinishChargeForABlow = 0.07f;
+	const float FinishChargeForABigBlow = 0.11f;
+	// How long the low camera keeps the picture, by the clock on the wall: the kick in slow motion and what it does.
+	const double FinishShotRealSeconds = 2.4;
+	// The game's own player lets a full bar be seen for this long before it spends it.
+	const float AutoplayFinishShownSeconds = 1.2f;
 }
 
 void AStickPlayerController::BeginPlay()
@@ -55,11 +64,116 @@ void AStickPlayerController::BeginPlay()
 	Events->OnAction.AddDynamic(this, &AStickPlayerController::HandleAction);
 	Events->OnCut.AddDynamic(this, &AStickPlayerController::HandleCut);
 	Events->OnTakeFinished.AddDynamic(this, &AStickPlayerController::HandleTakeFinished);
+	Events->OnTakeStarted.AddDynamic(this, &AStickPlayerController::HandleTakeStarted);
+	Events->OnHit.AddDynamic(this, &AStickPlayerController::HandleHit);
+	Events->OnFinish.AddDynamic(this, &AStickPlayerController::HandleFinish);
+}
+
+void AStickPlayerController::HandleTakeStarted(int32 TakeNumber)
+{
+	FinishCharge = 0.f;
+	EndFinishShot();
+}
+
+void AStickPlayerController::HandleHit(AActor* Attacker, AActor* Victim, EMove Move)
+{
+	if (Attacker == Fighter && Attacker && GetWorld()->GetRealTimeSeconds() > FinishOwnBlowsUntilRealSeconds)
+	{
+		FinishCharge = FMath::Min(FinishCharge + (IsHeavyMove(Move) ? FinishChargeForABigBlow : FinishChargeForABlow), 1.f);
+	}
+}
+
+void AStickPlayerController::TryFinish()
+{
+	if (!IsFighting() || FinishCharge < 1.f || !Fighter->Finish())
+	{
+		return;
+	}
+	FinishCharge = 0.f;
+}
+
+// Each blow of the finish gets its own picture, as a film would cut it: the hook from over the hero's shoulder, the
+// uppercut from the floor, the kick from further back so that what it does is all in the frame.
+void AStickPlayerController::HandleFinish(AActor* Attacker, int32 Beat)
+{
+	if (Attacker != Fighter || !Fighter)
+	{
+		return;
+	}
+	FinishOwnBlowsUntilRealSeconds = GetWorld()->GetRealTimeSeconds() + FinishShotRealSeconds;
+
+	TArray<AActor*> Close;
+	TArray<AActor*> Low;
+	TArray<AActor*> Wide;
+	UGameplayStatics::GetAllActorsWithTag(this, "Cam_Close", Close);
+	UGameplayStatics::GetAllActorsWithTag(this, "Cam_Low", Low);
+	UGameplayStatics::GetAllActorsWithTag(this, "Cam_Wide", Wide);
+	if (Close.IsEmpty() || Low.IsEmpty() || Wide.IsEmpty())
+	{
+		return;
+	}
+	if (!FinishCamera)
+	{
+		ViewBeforeFinish = GetViewTarget();
+	}
+
+	const AStickFighter* Victim = NearestOpponent(UE_BIG_NUMBER);
+	const FVector Hero = Fighter->GetJointPositions()[StickJoint::ChestJoint];
+	const FVector Theirs = Victim ? Victim->GetJointPositions()[StickJoint::ChestJoint] : Hero + Fighter->GetActorForwardVector() * 80.;
+	const FVector Pair = (Hero + Theirs) * 0.5;
+	const FVector Side = -Wide[0]->GetActorForwardVector().GetSafeNormal2D();
+	// From the hero towards whoever is being finished, flat along the fight.
+	const FVector Onward = ((Theirs - Hero) * FVector(1., 1., 0.)).GetSafeNormal(UE_SMALL_NUMBER, Fighter->GetActorForwardVector());
+	const double Floor = Fighter->GetActorLocation().Z;
+
+	struct FAngle
+	{
+		bool bLow;
+		double Out;
+		double Along;
+		double Height;
+		double LookUp;
+		float FieldOfView;
+	};
+	const FAngle Angles[] = {
+		{ false, 250., -150., 135., 15., 50.f },
+		{ true, 240., 70., 28., 55., 65.f },
+		{ false, 430., 60., 80., 10., 62.f },
+	};
+	const FAngle& Angle = Angles[FMath::Clamp(Beat, 0, static_cast<int32>(UE_ARRAY_COUNT(Angles)) - 1)];
+	const FVector Place = FVector(Pair.X, Pair.Y, Floor + Angle.Height) + Side * Angle.Out + Onward * Angle.Along;
+	const FVector LookAt = Pair + FVector(0., 0., Angle.LookUp);
+	FinishCamera = Angle.bLow ? Low[0] : Close[0];
+	FinishCamera->SetActorLocationAndRotation(Place, (LookAt - Place).Rotation());
+	if (AFightCamera* Lens = Cast<AFightCamera>(FinishCamera))
+	{
+		Lens->BaseFieldOfView = Angle.FieldOfView;
+		Lens->FocusOn(Pair);
+	}
+	SetViewTarget(FinishCamera);
+	FinishShotUntilRealSeconds = GetWorld()->GetRealTimeSeconds() + FinishShotRealSeconds;
+}
+
+void AStickPlayerController::EndFinishShot()
+{
+	// Only if the picture is still the finish's own: the film may have taken it since.
+	if (FinishCamera && GetViewTarget() == FinishCamera && ViewBeforeFinish)
+	{
+		SetViewTarget(ViewBeforeFinish);
+	}
+	FinishCamera = nullptr;
+	ViewBeforeFinish = nullptr;
+	FinishShotUntilRealSeconds = 0.;
 }
 
 void AStickPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+
+	if (FinishCamera && GetWorld()->GetRealTimeSeconds() > FinishShotUntilRealSeconds)
+	{
+		EndFinishShot();
+	}
 
 	if (!bFightLive || !Fighter || Fighter->IsDown())
 	{
@@ -358,6 +472,19 @@ void AStickPlayerController::PlayItself()
 		Fighter->Walk(FVector2D::ZeroVector);
 		return;
 	}
+	// A full bar is spent on whoever is near, once it has been on the screen long enough to be read.
+	if (FinishCharge < 1.f)
+	{
+		AutoplayFinishFullSinceSeconds = -1.f;
+	}
+	else if (AutoplayFinishFullSinceSeconds < 0.f)
+	{
+		AutoplayFinishFullSinceSeconds = GetWorld()->GetTimeSeconds();
+	}
+	else if (GetWorld()->GetTimeSeconds() - AutoplayFinishFullSinceSeconds > AutoplayFinishShownSeconds)
+	{
+		TryFinish();
+	}
 
 	const FVector Mine = Fighter->GetActorLocation();
 	const FVector Theirs = Target->GetActorLocation();
@@ -491,6 +618,7 @@ void AStickPlayerController::SetupInputComponent()
 	Input->BindAction(MakeAction({ EKeys::SpaceBar, EKeys::Enter, EKeys::Gamepad_FaceButton_Bottom }), ETriggerEvent::Started, this, &AStickPlayerController::JumpOrContinue);
 	Input->BindAction(MakeAction({ EKeys::E, EKeys::Gamepad_FaceButton_Right }), ETriggerEvent::Started, this, &AStickPlayerController::GrabOrContinue);
 	Input->BindAction(MakeAction({ EKeys::V }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleView);
+	Input->BindAction(MakeAction({ EKeys::Q, EKeys::Gamepad_RightShoulder }), ETriggerEvent::Started, this, &AStickPlayerController::TryFinish);
 	// Escape ends a play session in the editor, so there is a second key.
 	Input->BindAction(MakeAction({ EKeys::P, EKeys::Escape, EKeys::Gamepad_Special_Right }), ETriggerEvent::Started, this, &AStickPlayerController::TogglePause);
 

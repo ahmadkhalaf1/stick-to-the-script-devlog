@@ -53,6 +53,11 @@ private:
 	void HandleBarGrabbed(AActor* Fighter);
 
 	UFUNCTION()
+	void HandleFinish(AActor* Attacker, int32 Beat);
+	// While the big finish runs, time does not go back to full speed between its blows.
+	float FinishRealSecondsLeft = 0.f;
+
+	UFUNCTION()
 	void HandleTakeStarted(int32 TakeNumber);
 
 	UFUNCTION()
