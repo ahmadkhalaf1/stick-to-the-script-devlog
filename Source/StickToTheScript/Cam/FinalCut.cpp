@@ -76,6 +76,7 @@ namespace
 	const double CloseUpTowardsAttacker = 70.;
 	const float CloseUpFollowSpeed = 6.f;
 	const double PropHidesWithin = 55.;
+	const double CloseUpLosesBeyond = 560.;
 	const float StayAfterImpactSeconds = 1.f;
 	// In a long fight not every blow earns a cut. A knockout always does; the rest only after this long on other shots.
 	const float SecondsBetweenCloseUps = 2.5f;
@@ -143,7 +144,18 @@ void AFinalCut::Tick(float DeltaSeconds)
 			// someone was knocked across the room.
 			if (Shots.IsValidIndex(CurrentShot))
 			{
-				ShotLookAt = FMath::VInterpTo(ShotLookAt, FindSubject(Shots[CurrentShot]), DeltaSeconds, CloseUpFollowSpeed);
+				const FVector Subject = FindSubject(Shots[CurrentShot]);
+				// Someone knocked the length of the set is a speck from here, in a picture of nothing. The wide camera takes over.
+				if (FVector::Dist(Camera->GetActorLocation(), Subject) > CloseUpLosesBeyond)
+				{
+					ShotCamera = WideCamera;
+					if (APlayerController* Player = GetWorld()->GetFirstPlayerController())
+					{
+						Player->SetViewTarget(Cameras[WideCamera]);
+					}
+					break;
+				}
+				ShotLookAt = FMath::VInterpTo(ShotLookAt, Subject, DeltaSeconds, CloseUpFollowSpeed);
 				Camera->SetActorRotation((ShotLookAt - Camera->GetActorLocation()).Rotation());
 			}
 			Camera->AddActorWorldOffset((ShotLookAt - Camera->GetActorLocation()).GetSafeNormal() * PushInSpeed * DeltaSeconds);
@@ -506,8 +518,10 @@ bool AFinalCut::IsHiddenByAProp(const FVector& From, const FVector& To) const
 	{
 		const FVector At = Prop->GetActorLocation();
 		const double Along = ((At - From) | Line) / LengthSquared;
-		// What is at the far end is in somebody's hands or at their feet, and belongs in the shot.
-		if (Along > 0.05 && Along < 0.8 && FVector::Dist(At, From + Line * Along) < PropHidesWithin)
+		// What is at the far end is in somebody's hands or at their feet, and belongs in the shot. Nearer the camera
+		// a prop is in the way well to the side of the line too: the picture is that wide there, and the prop that big.
+		const double FromCamera = Along * FMath::Sqrt(LengthSquared);
+		if (Along > 0.05 && Along < 0.75 && FVector::Dist(At, From + Line * Along) < PropHidesWithin + FromCamera * 0.45)
 		{
 			return true;
 		}

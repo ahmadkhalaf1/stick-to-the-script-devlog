@@ -1204,6 +1204,17 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The guard, as the game's own player holds it](Docs/devlog/78-a-guard-that-looks-like-one.jpg)
 
+### 16:03 · Bodies that fly off the set: half mended
+
+- **Developer said:** "Later", to recording the video. And then, watching the game: "sth new i see , dead enemy is flying out of the map at the end".
+- **Agent did:** while the video waited, filmed the rooftop and the warehouse again and looked at the frames. Two more things went into the film: a prop is now counted as in the way when it is near the camera and well to the side of the line, not only on it, and a close shot whose people have been knocked more than 5.6 metres from it hands over to the wide camera. Then the bodies. An opponent hit by a swing kick or a golden weapon is launched at 720 to 950 cm a second and comes down seven or eight metres on, off the end of the roof. Three tries:
+  1. Take a downed body's speed outward away once it is past the edge of the set. The log showed the rule firing and the body travelling on.
+  2. Put the body back at the edge by hand as well. That held it, in mid-air: a ragdoll that is moved hangs where it was put, in the pose it was moved in. Two opponents stood three metres up over the parapet in the film. Taken out again.
+  3. Take its spin away with its speed, and launch nobody faster than 520 cm a second.
+- **Result:** `Tools/check.ps1` passes with the third. Nobody hangs in the air. But in the rooftop's film the last picture still has no body lying in it: the two opponents knocked out last are out of the picture, and the log still shows a body drifting a metre and a half past the edge while the rule fires. So this is not mended. What moves a downed body after its speed is taken away has not been found.
+- **Went wrong:** the second try made it worse before it was looked at. And the slow-motion cut and the long take could not be chosen in the test: the choice follows the pointer, and the developer's mouse was moving over the test's window, so every film came out as the action cut.
+- **Not verified:** the slow-motion cut, the long take. Where the bodies end up.
+
 ---
 
 ## Asset and tool register

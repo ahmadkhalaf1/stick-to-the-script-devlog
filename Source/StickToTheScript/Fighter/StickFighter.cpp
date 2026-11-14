@@ -89,6 +89,10 @@ namespace
 	const float HeavyRecoil = 1.6f;
 	const float BlockedRecoil = 0.35f;
 	const float KnockoutSpeed = 200.f;
+	// How far outside the arena a body that is down may travel before it is stopped.
+	const double DownedBeyondArena = 150.;
+	const double DownedAcrossArena = 20.;
+	const float MostLaunchSpeed = 520.f;
 	const float AnimationEndTolerance = 0.02f;
 	// A motion-captured move is never played faster than this, and this much of its way back is shown.
 	const float MaxClipRate = 2.f;
@@ -842,6 +846,26 @@ void AStickFighter::BeginPlay()
 void AStickFighter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	// Knocked out and sent flying, a body still stays on the set. Past where the fighters are held, by the room a thrown
+	// prop is given, it loses its speed outward and comes down there, not off the end of the roof.
+	if (State == EFighterState::Down && bFree && !bPuppet)
+	{
+		const FVector At = Body->GetBoneLocation(JointBones[PelvisJoint]);
+		const FVector2D Over = FVector2D(At) - ClampToArena(FVector2D(At));
+		const FVector Speed = Body->GetPhysicsLinearVelocity(JointBones[PelvisJoint]);
+		// Across the set there is less room: a body lying towards the camera is under the bottom of the picture.
+		const bool bLeavingAlong = FMath::Abs(Over.X) > DownedBeyondArena && Over.X * Speed.X > 0.;
+		const bool bLeavingAcross = FMath::Abs(Over.Y) > DownedAcrossArena && Over.Y * Speed.Y > 0.;
+		if (bLeavingAlong || bLeavingAcross)
+		{
+			// Its speed outward goes, and its spin with it: a tumbling body rolls on along the floor otherwise. It is not
+			// moved back by hand. That was tried, and a ragdoll that is moved hangs in the air in the pose it was moved in.
+			UE_LOG(LogStickFighter, Verbose, TEXT("%s, knocked out, is held at the edge of the set at %.0f, %.0f"), *GetName(), At.X, At.Y);
+			Body->SetAllPhysicsLinearVelocity(FVector(bLeavingAlong ? 0. : Speed.X, bLeavingAcross ? 0. : Speed.Y, Speed.Z));
+			Body->SetAllPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+		}
+	}
 
 	if (FlashSecondsLeft > 0.f)
 	{
@@ -2647,7 +2671,8 @@ void AStickFighter::Launch(const FVector& Direction, float Speed)
 {
 	if (State == EFighterState::Down)
 	{
-		Body->SetAllPhysicsLinearVelocity((Direction.GetSafeNormal2D() + FVector(0., 0., 0.55)) * Speed);
+		// Sent flying means three metres, not the length of the set.
+		Body->SetAllPhysicsLinearVelocity((Direction.GetSafeNormal2D() + FVector(0., 0., 0.55)) * FMath::Min(Speed, MostLaunchSpeed));
 	}
 }
 
