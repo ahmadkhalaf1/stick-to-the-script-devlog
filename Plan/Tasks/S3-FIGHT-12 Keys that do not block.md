@@ -24,7 +24,7 @@ Asked for by the developer in the night of Nov 13 to 14, in one message before g
 
 **Found:** a key pressed while a move was going was dropped, and a kick locked the fighter for 0.45 s after it landed. A held guard or duck was not a cause: it only changes which strike comes.
 
-**Done:** the controller keeps up to three presses in order (`AskedFor` in `Core/StickPlayerController`), each for 0.75 s, and does each the moment the fighter can act. A jump comes out of the tail of a strike. The lock after a kick is 0.3 s.
+**Done:** the controller keeps up to three presses in order (`AskedFor` in `Core/StickPlayerController`), each for 0.75 s, and does each the moment the fighter can act. A jump comes out of the tail of a strike. The lock after a kick is 0.3 s. Putting the guard up or ducking empties the line, so a defence is not kept waiting behind strikes; checked by the log with the guard key held.
 
 **Left open:** a press older than 0.75 s is dropped. Holding a strike key does not repeat the strike.
 

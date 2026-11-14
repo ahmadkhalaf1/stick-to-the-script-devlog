@@ -90,6 +90,15 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 		Fighter->FaceTowards(Fighter->GetActorLocation() + Right * (Sideways * 100.f));
 	}
 
+	// Putting the guard up or going down takes back the strikes still waiting: a defence is wanted now, not after them.
+	const bool bDuckHeld = Held({ EKeys::LeftControl, EKeys::RightControl, EKeys::C, EKeys::Gamepad_RightTrigger });
+	const bool bGuardHeld = Held({ EKeys::RightMouseButton, EKeys::LeftShift, EKeys::RightShift, EKeys::L, EKeys::Gamepad_LeftTrigger });
+	if ((bDuckHeld || bGuardHeld) && !bWasDefending)
+	{
+		AskedFor.Reset();
+	}
+	bWasDefending = bDuckHeld || bGuardHeld;
+
 	// What was asked for too early is tried again every frame until it comes out or grows stale.
 	const float Now = GetWorld()->GetTimeSeconds();
 	while (!AskedFor.IsEmpty() && Now > AskedFor[0].Until)
@@ -122,11 +131,11 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 		Fighter->StrikeWith(EMove::Punch, 0.f);
 	}
 
-	if (Held({ EKeys::LeftControl, EKeys::RightControl, EKeys::C, EKeys::Gamepad_RightTrigger }))
+	if (bDuckHeld)
 	{
 		Fighter->Guard(EMove::Duck);
 	}
-	else if (Held({ EKeys::RightMouseButton, EKeys::LeftShift, EKeys::RightShift, EKeys::L, EKeys::Gamepad_LeftTrigger }))
+	else if (bGuardHeld)
 	{
 		Fighter->Guard(EMove::Block);
 	}

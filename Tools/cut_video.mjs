@@ -35,12 +35,13 @@ const films = all('OnFinalCutStarted').map(start => ({ from: start.at, to: (log.
 if (films.length === 0) throw new Error('No film was finished in this run. Record a longer one.');
 const seen = spawnSync('ffmpeg', ['-hide_banner', '-i', `${DIR}run.mp4`, '-vf', 'crop=600:50:1250:45,blackdetect=d=2:pic_th=0.97:pix_th=0.08', '-an', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
 const blacks = [...seen.matchAll(/black_start:([\d.]+) black_end:([\d.]+)/g)].map(found => ({ from: Number(found[1]), to: Number(found[2]) }));
-// The first film is matched to the stretch of black that lasts as long as it did.
-const wanted = films[0].to - films[0].from;
-const match = blacks.map(black => ({ ...black, off: Math.abs(black.to - black.from - wanted) })).sort((a, b) => a.off - b.off)[0];
-if (!match || match.off > 0.6) throw new Error(`The film's black bars were not found in the picture (looked for ${wanted.toFixed(1)} s of them)`);
-const pictureStarted = films[0].from - match.from;
-console.log(`picture in step with the log: film 1 is ${wanted.toFixed(2)} s in the log, ${(match.to - match.from).toFixed(2)} s in the picture`);
+// A film is matched to the stretch of black that lasts as long as it did. Any film will do, and the best fit is taken:
+// a film that ends in a dark corner of a set runs on into the card after it, and its stretch comes out too long.
+const match = films.flatMap((film, number) => blacks.map(black => ({ film, number, black, off: Math.abs(black.to - black.from - (film.to - film.from)) })))
+  .sort((a, b) => a.off - b.off)[0];
+if (!match || match.off > 0.6) throw new Error(`No film's black bars were found in the picture (films of ${films.map(film => (film.to - film.from).toFixed(1)).join(', ')} s)`);
+const pictureStarted = match.film.from - match.black.from;
+console.log(`picture in step with the log: film ${match.number + 1} is ${(match.film.to - match.film.from).toFixed(2)} s in the log, ${(match.black.to - match.black.from).toFixed(2)} s in the picture`);
 
 // The sound file does not keep the log's time. It starts a little after the log says it did, and it loses a little
 // more whenever a level loads and the game stops making sound for a moment. So it is measured where it can be: a

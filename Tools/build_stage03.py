@@ -27,7 +27,7 @@ metal_look = material("MI_SetMetal", 0.05, 0.05, 0.06)
 
 # The roof is 30 m long and 12 m deep, with no walls and no ceiling: night all around, under a photographed sky of
 # moonlit cloud. There is nothing under its horizon, so that is let down behind the parapet.
-sky("MI_RoofSky", (900, 100, 0), 5.0, 301.0, 8.0)
+sky("MI_RoofSky", (900, 100, 0), 3.2, 301.0, 8.0)
 
 # The fight starts at the origin and runs along +X towards the helipad, filmed from the +Y side.
 block("Roof", CUBE, roof_look, (900, 100, -10), (30.0, 12.0, 0.2))
@@ -104,7 +104,7 @@ for index, (x, y, width, top) in enumerate(towers):
 # Two cool lights for the city, so the towers and their windows show against the dark. They sit below the roof and
 # behind its back edge: from anywhere else they light the roof as well, and wash the whole set out.
 for index, x in enumerate((200, 1700)):
-    city = spot_light(f"Light_City_{index}", (x, -650, -250), (x, -1700, 450), 12000.0, (0.6, 0.68, 1.0), 72.0)
+    city = spot_light(f"Light_City_{index}", (x, -650, -250), (x, -1700, 450), 3500.0, (0.7, 0.78, 1.0), 72.0)
     city.light_component.set_attenuation_radius(4000.0)
     cosmetic(city.light_component, "volumetric_scattering_intensity", 0.0)
 

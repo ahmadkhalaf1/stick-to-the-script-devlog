@@ -104,6 +104,8 @@ private:
 	bool bPuppet = false;
 	bool bCanStillHit = false;
 	FTransform Home;
+	// Let fall by the props crew at the start of a take, it comes down where it belongs, which may be a counter top.
+	bool bDroppingIn = false;
 	// Whoever carries it, and after a throw whoever threw it.
 	TWeakObjectPtr<AStickFighter> Holder;
 	int32 ThrowerTeam = INDEX_NONE;

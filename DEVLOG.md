@@ -1006,6 +1006,54 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** nothing in the making. The log of the recorded run has nine "floating in the film" warnings and no errors. The three of the run before were read one by one: a fighter hanging from the bar, and a body in the air after a blow. The check that prints them knows about neither in the film. The nine were counted, not read.
 - **Not verified:** nobody has watched the video or heard its sound; its sheet of frames was looked at, not the moving picture. Neither the video nor the zip has been uploaded: the store page still has the build and the video of Nov 13.
 
+### 05:10 · Putting the guard up takes back what was waiting
+
+- **Developer said:** nothing new. This follows from "fix the keys combination , need to be smooth".
+- **Agent did:** read the night's own change again and saw that it had made defence slower. Up to three strikes kept in line still came out after the player put the guard up, where before tonight they were simply lost. Now the guard going up, or a duck going down, empties the line. A strike pressed after that still comes, so guard and punch is still a hook.
+- **Result:** by the log, in the editor, with the guard key really held down: kick, punch, punch gave all three; the same three with the guard put up a fifth of a second later gave the kick alone, twice. The next blow from an opponent landed 1.3 and 1.6 seconds after the kick, so it is not what stopped the punches. Packaged again at 825 MB, zip 547 MB; the packaged game then played two scenes by itself at a median of 97 and 104 frames a second.
+- **Went wrong:** three test runs. The first held Shift, which the game never saw, because the test sent the key without its scan code; L, another guard key, worked. The second was spoiled by opponents reaching the fighter, so the test now walks away from them first. The third ended without stopping its play session; that was noticed from the missing result, and the session was stopped before the next run.
+- **Not verified:** a human hand on the keys.
+
+### 05:25 · The roof at night, and the video, the zip and the store pictures again
+
+- **Developer said:** nothing new. Asleep.
+- **Agent did:** looked at frames of the video made half an hour before and saw that the roof was not at night: the towers stood bright blue under a pale sky. Turned the sky down by a third and the light on the towers to under a third. Then packaged, zipped, recorded and cut again, so that the video, the zip and the code agree, and took the store page's seven pictures afresh from the new video.
+- **Result:** the towers are dark shapes with lit windows under dark cloud. The package is 825 MB, the zip 547 MB, the video 52.8 seconds in 17 pieces. The packaged game ran the warehouse at a median of 96 frames a second and the bar at 106.
+- **Went wrong:** the first video was recorded and cut before anyone had looked at how each set came out in it, so five minutes of recording were done twice. One of the seven store pictures came from the wrong second of the video, the bar where the warehouse film was wanted, and was taken again.
+- **Not verified:** the video's sound. The pictures are in `Docs/store`, not on the store page, which still shows the game of Nov 13.
+
+![The new store pictures: the warehouse, the bar, the roof at night, and the roof in the long take](Docs/devlog/67-roof-at-night.jpg)
+
+### 05:31 · The shop, tried with the mouse, and what was bought
+
+- **Developer said:** nothing new. Asleep. These were boxes left open in the plan: "the shop sells them and the next scene has what was bought", "the shop with the mouse", "how a held bat sits in the hands".
+- **Agent did:** wrote a test that plays the way a person would: pauses a take, goes back to the menu, opens the shop, moves the real pointer down the list until the row it wants is the chosen one, clicks, goes back and starts scene 1, then presses E. Ran it for the pistol and for the wooden bat.
+- **Result:** the pointer chose each row in turn on its way down. A click bought the pistol: $350 off the bank, "Sold.", and "waiting for your next scene" on its row. The next scene's card said it was at the fighter's feet, it was, and E picked it up with 8 rounds. The same for the bat, $150: it lay at the feet, and in the hands it sits with both hands on the thin end and the bat over the right shoulder.
+- **Went wrong:** four runs before the first good one, all the test's own fault. The click that gives the play window the keys is also a "go" on the title, so the test was in scene 1 before it looked for the shop. Feeling its way down a menu by reading the log pressed a key too many, because the log is written late; it now counts its presses and reads the chosen row before every "go". It once stood on "Quit" for that reason and stopped itself. And it read the pause card one row short, because that card starts with its rows.
+- **Not verified:** the rifle from the shop; that the pointer is hidden in a take, which a picture taken through the editor cannot show; anything by a human hand.
+
+![The pointer on the pistol's row, the row after the click, the pistol at the fighter's feet beside the scene's own, and in the hands](Docs/devlog/68-shop-with-the-mouse.jpg)
+
+![The bought bat at the feet, in the hands, and going back for a swing](Docs/devlog/69-the-bat-in-the-hands.jpg)
+
+### 05:42 · Props fell through the bar counter, and a check that cried wolf
+
+- **Developer said:** nothing new. Asleep.
+- **Agent did:** while trying to photograph a bottle in the hand, saw the bar's bottles standing on the floor at the foot of the counter. Since the change of the evening before that drops every prop in at the start of a take, a prop came down until it met the floor, wherever it had been put, and the bar's bottles, its pan and its stool are put on the counter. A prop let fall by the props crew now comes down to its own place. Thrown or dropped, it still lands on the floor. Second: the film's "floating" check warned in every run about fighters swinging on a bar or thrown by a blow. A figure in the film does not know why it is in the air, so that check now speaks only after longer than the longest swing.
+- **Result:** the bottles stand on the counter, seen in the editor. Packaged again at 825 MB, zip 547 MB. The packaged game played the warehouse and the bar by itself at a median of 93 and 106 frames a second, and its log has no warnings, where the three runs before had two to nine.
+- **Went wrong:** the fault was in the game since the evening before, in two videos and in the store pictures taken an hour ago, and no test saw it. Every self-played run passed, because nothing checks where a prop comes to rest. It was found by looking at a picture taken for another reason. The picture of a bottle in the hand was never got: three tries, each undone by the fight going on around the fighter.
+- **Not verified:** the pan and the stool on the counter, which were outside the picture; a bottle held in one hand. The video and the store pictures still show the bottles on the floor.
+
+![The bar with its bottles back on the counter](Docs/devlog/70-bottles-on-the-counter.jpg)
+
+### 05:53 · The video a third time, and the cutter taught about dark corners
+
+- **Developer said:** nothing new. Asleep.
+- **Agent did:** recorded the packaged game once more, so the video and the store pictures show the bottles on the counter. The cutter then refused the recording: it puts picture and log in step by finding the first film's black bars, and that film had ended in a dark corner of the new warehouse, so its bars ran on into the cards before and after it, 28 seconds of black for an 18 second film. It now tries every film against every stretch of black and takes the best fit.
+- **Result:** the third film fitted to two hundredths of a second, and the video was cut: 56 seconds, 18 pieces. The seven store pictures are taken from it again.
+- **Went wrong:** the two recordings before this one were cut by luck: their first film happened to end in front of something bright. The new sets are darker in places than the old ones, and nothing said so until a cut failed.
+- **Not verified:** the video's sound. A line of small figures from a hardware monitor that runs on this PC (frames a second, processor heat) sits at the top edge of every recording made here, this one and the one from Nov 13 alike; it is for the developer to close that program before the last recording.
+
 ---
 
 ## Asset and tool register

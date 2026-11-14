@@ -32,7 +32,8 @@ Asked for by the developer on Fri Nov 13: "throwing items also need improvbment 
 - [x] A throw leans the body: seen in four slow-motion pictures
 - [x] A bottle breaks into pieces in play and again in the film: both in the log, once each. The pieces are too small to make out in the test's pictures, so how they look has not been judged
 - [x] The packaged build is made with it. It ran for a minute with no errors, at nine frames a second, with another game running on the PC and its own window not in front: no measure of anything
-- [ ] How a held bat sits in the model's hands has been looked at
+- [x] How a held bat sits in the model's hands has been looked at: bought, picked up and swung on Nov 14. Both hands on the thin end, the bat over the right shoulder
+- [x] A prop put on a counter comes to rest on it. Found broken on Nov 14: since props drop in at the start of a take they fell through to the floor. Fixed (`bDroppingIn` in `Fighter/ThrownProp`), and the bottles were seen on the bar
 - [ ] The developer has played it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: stage

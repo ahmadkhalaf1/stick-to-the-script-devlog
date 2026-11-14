@@ -38,7 +38,7 @@ Asked for by the developer in the night of Nov 13 to 14. First as a question: wh
 - [x] The film fires the shots again, with the flash and the blood
 - [x] The packaged build has them: eleven shots in a minute of self-play, nothing missing
 - [x] Realistic military models, as the developer asked: a service pistol and a bolt-action rifle, scanned, from Poly Haven. The rifle is now what its model is, five slow heavy rounds. The blaster is off the sets and out of the shop: no scan of a shotgun was found
-- [ ] The shop sells them and the next scene has what was bought. In the code, not tried
+- [x] The shop sells them and the next scene has what was bought. Tried on Nov 14 in the editor: the pistol bought with a click, $350 off the bank, "waiting for your next scene" on its row, the scene card saying it is at your feet, and it was there and picked up with 8 rounds
 - [ ] The gunman's pistol falls where he does and can be picked up. In the code, not seen
 - [ ] A ricochet has been seen. In the code; the test pictures did not catch one
 - [ ] The developer has played it

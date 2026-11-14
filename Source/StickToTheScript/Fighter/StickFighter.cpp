@@ -833,7 +833,9 @@ void AStickFighter::Tick(float DeltaSeconds)
 		// A knocked-out body flies before it lands, and that is not a fault.
 		if (!bPuppetDown)
 		{
-			WatchForFloating(PuppetPose.Joints, DeltaSeconds, TEXT("in the film"));
+			// A figure in the film does not know why it is in the air. The longest honest reason is a swing on a bar,
+			// so only longer than that is a fault.
+			WatchForFloating(PuppetPose.Joints, DeltaSeconds, TEXT("in the film"), MaxHangSeconds + 0.6f);
 		}
 		PoseStick(PuppetPose.Joints, PuppetPose.BrokenArms);
 		return;
@@ -938,7 +940,7 @@ void AStickFighter::Tick(float DeltaSeconds)
 	const TArray<FVector> Joints = GetJointPositions();
 	if (State != EFighterState::Down && JumpHeight <= 0.f)
 	{
-		WatchForFloating(Joints, DeltaSeconds, TEXT("in play"));
+		WatchForFloating(Joints, DeltaSeconds, TEXT("in play"), 0.3f);
 	}
 	PoseStick(Joints, GetBrokenArms());
 }
@@ -2525,7 +2527,7 @@ void AStickFighter::SnapToWantedFacing()
 
 // A self-check for something the developer saw once: a fighter walking above the floor with no jump to explain it.
 // It says what it knows the moment that happens, so the cause does not have to be guessed from a picture.
-void AStickFighter::WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When)
+void AStickFighter::WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When, float AllowedSeconds)
 {
 	// At a few frames a second a whole jump fits inside one frame, and its landing reads as floating. Seen with another
 	// game holding the processor; it says nothing about this one.
@@ -2536,7 +2538,7 @@ void AStickFighter::WatchForFloating(const TArray<FVector>& Joints, float DeltaS
 
 	const double FeetAbove = FMath::Min(Joints[LeftFoot].Z, Joints[RightFoot].Z) - FloorHeight;
 	FloatingSeconds = FeetAbove > 30. ? FloatingSeconds + DeltaSeconds : FMath::Min(FloatingSeconds, 0.f);
-	if (FloatingSeconds > 0.3f)
+	if (FloatingSeconds > AllowedSeconds)
 	{
 		UE_LOG(LogStickFighter, Warning, TEXT("Floating %s: %s has both feet %.0f cm above the floor. Actor z %.0f, floor %.0f, pelvis z %.0f, body offset %s, state %d, jump %.0f, playing %s, stunned %.2f s"),
 			When, *GetName(), FeetAbove, GetActorLocation().Z, FloorHeight, Joints[PelvisJoint].Z, *Body->GetRelativeLocation().ToCompactString(), static_cast<int32>(State), JumpHeight,

@@ -70,6 +70,7 @@ private:
 		float Until = 0.f;
 	};
 	TArray<FAskedFor> AskedFor;
+	bool bWasDefending = false;
 	void AskFor(EMove Move);
 	bool bSlowFighters = false;
 };

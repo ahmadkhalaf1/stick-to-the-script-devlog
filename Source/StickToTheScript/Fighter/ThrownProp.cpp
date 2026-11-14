@@ -341,9 +341,11 @@ void AThrownProp::Tick(float DeltaSeconds)
 		Velocity.Y = 0.;
 	}
 
-	if (Location.Z <= FloorHeight + HalfHeight)
+	// Thrown or dropped, it lands on the floor. Only the props crew puts things on a counter.
+	const double Ground = bDroppingIn ? Home.GetLocation().Z : FloorHeight + HalfHeight;
+	if (Location.Z <= Ground)
 	{
-		Location.Z = FloorHeight + HalfHeight;
+		Location.Z = Ground;
 		SetActorLocation(Location);
 		const bool bBreaks = (bCanStillHit && Looks[static_cast<int32>(Kind)].bShatters) || (bThrown && IsLegendary());
 		bCanStillHit = false;
@@ -380,6 +382,7 @@ void AThrownProp::Release(const FVector& InVelocity)
 {
 	const AStickFighter* Thrower = Holder.Get();
 	ThrowerTeam = Thrower ? Thrower->Team : INDEX_NONE;
+	bDroppingIn = false;
 	Velocity = InVelocity;
 	bCanStillHit = !InVelocity.IsNearlyZero();
 	bThrown = bCanStillHit;
@@ -509,6 +512,7 @@ void AThrownProp::HandleTakeStarted(int32 TakeNumber)
 	{
 		AddActorWorldOffset(FVector(0., 0., FMath::FRandRange(DropInLowest, DropInHighest)));
 		Release(FVector::ZeroVector);
+		bDroppingIn = true;
 	}
 }
 

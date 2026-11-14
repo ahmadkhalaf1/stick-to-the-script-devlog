@@ -243,7 +243,7 @@ private:
 	FVector WantedForward() const;
 	void SnapToWantedFacing();
 	void TintBody(const FLinearColor& Tint);
-	void WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When);
+	void WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When, float AllowedSeconds);
 
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Limbs;
