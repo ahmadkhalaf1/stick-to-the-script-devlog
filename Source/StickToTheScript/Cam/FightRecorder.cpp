@@ -242,6 +242,12 @@ void AFightRecorder::StopAndReport()
 	const double Megabytes = static_cast<double>(Frames) * BytesPerFrame / (1024. * 1024.);
 	UE_LOG(LogFightRecorder, Log, TEXT("Take %d: %d frames and %d events over %.1f s use %.2f MB. A 60-second take at this rate would use %.1f MB."),
 		Recording.Number, Frames, Recording.Events.Num(), Seconds, Megabytes, Megabytes * 60. / Seconds);
+	// Where everyone was when it stopped: a body that has left the set shows up here as a number.
+	for (const AStickFighter* Fighter : Fighters)
+	{
+		const FVector Hips = Fighter->GetJointPositions()[StickJoint::PelvisJoint];
+		UE_LOG(LogFightRecorder, Log, TEXT("  %s ends take %d at %.0f, %.0f, %.0f"), *Fighter->GetName(), Recording.Number, Hips.X, Hips.Y, Hips.Z);
+	}
 }
 
 #if WITH_DEV_AUTOMATION_TESTS

@@ -6,8 +6,13 @@ $project = Join-Path $root 'StickToTheScript.uproject'
 $output = Join-Path $root 'Saved\Package'
 
 # Development, not Shipping: the jam asks for a development build, and it keeps the console and the log.
-# The cook runs without the agent plugins: they pull in GameFeatures, which logs an error that fails the cook.
-$cookWithoutAgentPlugins = '-AdditionalCookerOptions=-DisablePlugins=ModelContextProtocol,AllToolsets,LiveCodingToolset'
+# The plugins that let agents drive the editor are the ones the project file allows in the editor only.
+$agentPlugins = @((Get-Content $project -Raw | ConvertFrom-Json).Plugins | Where-Object { $_.TargetAllowList -contains 'Editor' } | ForEach-Object { $_.Name })
+if (-not $agentPlugins) {
+    Write-Host 'FAIL: the project file names no editor-only plugin, so nothing says what must stay out of the package.'
+    exit 1
+}
+$cookWithoutAgentPlugins = "-AdditionalCookerOptions=-DisablePlugins=$($agentPlugins -join ',')"
 # The Visual C++ runtime files go next to the game, so it starts on a PC that never had them installed.
 # The quotes are single on purpose: UAT fills in $(EngineDir), not PowerShell.
 $runtimeNextToGame = '-applocaldirectory=$(EngineDir)/Binaries/ThirdParty/AppLocalDependencies'
@@ -29,7 +34,7 @@ if (-not (Get-ChildItem $game -Recurse -Filter 'vcruntime140.dll')) {
 $unrealPak = Join-Path $engine 'Engine\Binaries\Win64\UnrealPak.exe'
 $packed = Get-ChildItem $game -Recurse -Filter *.pak | ForEach-Object { & $unrealPak $_.FullName -List }
 $loose = (Get-ChildItem $game -Recurse).FullName
-$leaked = @($packed) + @($loose) | Select-String -Pattern 'ModelContextProtocol|AllToolsets|LiveCodingToolset'
+$leaked = @($packed) + @($loose) | Select-String -Pattern ($agentPlugins -join '|')
 if ($leaked) {
     Write-Host "FAIL: editor-only plugins are in the package ($(@($leaked).Count) entries, first: $(@($leaked)[0]))."
     exit 1

@@ -118,7 +118,11 @@ def sky(name, center, strength, turn=0.0, drop=0.0):
     assets.save_asset(f"{MATERIALS}/{name}")
     ball = block("Sky", SPHERE, instance, center, (140.0, 140.0, 140.0))
     ball.static_mesh_component.set_cast_shadow(False)
+    # Nothing may touch the sky. A ball is solid to the physics, and the set is inside it: a knocked-out body, the one
+    # thing on a set that collides, was pushed out through it and ended up on its skin, seventy metres away.
     ball.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    ball.static_mesh_component.set_collision_profile_name("NoCollision")
+    ball.set_actor_enable_collision(False)
     cosmetic(ball.static_mesh_component, "affect_dynamic_indirect_lighting", False)
     cosmetic(ball.static_mesh_component, "affect_distance_field_lighting", False)
     return ball

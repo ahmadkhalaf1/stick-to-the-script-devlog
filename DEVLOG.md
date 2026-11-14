@@ -1215,6 +1215,41 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the second try made it worse before it was looked at. And the slow-motion cut and the long take could not be chosen in the test: the choice follows the pointer, and the developer's mouse was moving over the test's window, so every film came out as the action cut.
 - **Not verified:** the slow-motion cut, the long take. Where the bodies end up.
 
+### 16:27 · A wall for every part of a body, and no fist thrown round a gun
+
+- **Developer said:** "Yes, fix the bodies". And, watching: "punshing while holding rifle or gun should not be possible , he need to drop the item first".
+- **Agent did:** two things.
+  - The bodies. The rule that took a downed body's speed away at the edge of the set asked only its hips, and a tumbling body's hips are as often on their way back in as out. Every part of the ragdoll now meets the edge by itself and loses its own speed outward there. The first build of that failed to link over one check it did not need.
+  - The gun. With a gun in the hands the click fires and a kick is a kick, but the game's own player also threw uppercuts and chops with the rifle still in its hands. A fighter holding a gun now throws no arm technique at all, and the game's own player throws the gun at whoever is at arm's length before it uses its fists.
+- **Result:** `Tools/check.ps1` passes. The rooftop played itself to a wrap: 2 shots that hit, 22 blows with hands and feet, 3 thrown, 3 taken.
+- **Went wrong:** the bodies are still not right. In the last picture of that rooftop's film the hero stands alone again, with a severed limb on the floor and no body in sight. Whether they lie just under the bottom of the picture, at the wall towards the camera, or somewhere else has not been found: four tries on this today, none looked at with a number for where a body ends up, which is what the next try should start with.
+- **Not verified:** a person holding a gun and trying to punch. The warehouse and the bar with the new wall.
+
+### 16:42 · It was the sky: bodies on the rooftop were pushed out through it
+
+- **Developer said:** "Yes, fix the bodies". Later, about the editor: "can we stop showin gthis windo wmsg log Asset Manager settings do not include an entry for assets of type GameFeatureData", and then: "can we pause the work till i ask for it again?"
+- **Agent did:** after four tries at holding bodies with rules, made the recorder log where every fighter is when a take stops. On the rooftop the six opponents ended 40 to 80 metres away, one 30 metres up, all exactly 70 metres from the middle of the set: on the skin of the ball the night sky is painted in. In the warehouse they lay on the floor. A ball is solid to the physics, the set is inside it, and a knocked-out body is the one thing on a set that collides. The sky has been there since this morning, which is why the developer called it new. The ball is now switched off for collision three ways in `Tools/stage_kit.py` and the rooftop level built again.
+- **Result:** the rooftop played itself once more: all six bodies end the take on the floor inside the set, between x 692 and 1928.
+- **Went wrong:** four tries before measuring. For the message window, the entry it asks for was added to `Config/DefaultGame.ini`; the message was gone from the editor, and packaging failed, so the entry was taken out again and the message is back. The work was then paused at the developer's word: nothing is packaged since 16:07, so the build and the zip on disk have neither this fix nor the two before it.
+- **Not verified:** the rooftop's film with the bodies in it. Why the package failed with that entry.
+
+### 18:09 · The Message Log window at editor start is gone; slow motion and the long take seen
+
+- **Developer said:** "can we stop showin gthis windo wmsg log Asset Manager settings do not include an entry for assets of type GameFeatureData, which is required for game feature plugins to function. Add entry to PrimaryAssetTypesToScan?" Then "can we pause the work till i ask for it again?", and an hour later "continue".
+- **Agent did:**
+  - Before the pause, the obvious thing: the entry the message asks for, added to `Config/DefaultGame.ini`. The window went away and packaging failed, so the entry came out again and the window was back.
+  - After the pause, the cook's log said why. The game is cooked without the plugins that let agents drive the editor, the plugin that owns `GameFeatureData` is only there because of them, so the cook could not load the class the entry names and stopped on it. With the entry the cook fails; without it the editor complains.
+  - So the question became who switches that plugin on. A short script followed the dependencies of every engine plugin: of the 21 toolsets in the `AllToolsets` bundle, exactly two lead to `GameFeatures`, `GameFeaturesToolset` and `ConversationToolset`, and none of this project's tools calls either.
+  - `StickToTheScript.uproject` now names the other 19 toolsets one by one, each for the editor only. `Tools/package.ps1` no longer carries its own list of three names: it reads from the project file which plugins are editor-only, cooks without them and checks that none of them is in the package.
+  - With the editor open anyway, two checks that had been open since midday: the rooftop played itself and its film was shown as the slow-motion cut, the bar's as the long take, both chosen with the keys and photographed every 0.28 seconds.
+- **Result:** `Tools/check.ps1` passes. The editor's log has no line about `GameFeatureData` and the plugin is not mounted; the agent tools answered as before. `Tools/package.ps1` passes, 827 MB. The packaged game, run off screen, played a rooftop take to its wrap and its film to the slate with no error in its log, and all six bodies ended on the floor of the set, which also puts the afternoon's three fixes (the sky, the wall for every part of a body, no fist round a gun) into a build for the first time. The zip is 547 MB.
+- **Went wrong:** the first try, which broke packaging and was told above. The cause was in the packaging script's own comment the whole time: it already said the cook runs without the agent plugins because of `GameFeatures`. And the play of the warehouse before the merge sat in the wardrobe for 400 seconds the first time: the test's first click had landed on a scene's row in the menu, the level loaded, and the key that switches self-play on was lost in the load. The test now waits after that click, and the second run wrapped in 36 seconds. A person who clicks a scene gets the wardrobe, as meant.
+- **Not verified:** the editor was started minimised and its log was read; nobody has looked at the screen to see that no window opens. The choice of cut made with the pointer in the packaged game. The sound of anything today. The store page still carries the build of 13:31.
+
+![The rooftop's film as the slow-motion cut: the knocked-out bodies lie on the floor of the set to the slate](Docs/devlog/80-slow-motion-cut-bodies-stay.jpg)
+
+![The bar's film as the long take: one camera from the side, start to slate](Docs/devlog/81-the-long-take.jpg)
+
 ---
 
 ## Asset and tool register

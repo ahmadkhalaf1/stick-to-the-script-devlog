@@ -448,7 +448,12 @@ void AStickPlayerController::PlayItself()
 	{
 		Fighter->GrabOrThrow();
 	}
-	if (Distance < 108. && Fighter->CanAct())
+	if (Distance < 108. && Fighter->CanAct() && Held && Held->IsGun())
+	{
+		// At arm's length a gun is in the way of its fists, so it goes first: at whoever is in front of it.
+		Fighter->GrabOrThrow();
+	}
+	else if (Distance < 108. && Fighter->CanAct())
 	{
 		// It goes through everything it knows in turn, so a run that plays itself shows every move.
 		const EMove Moves[] = { EMove::Punch, EMove::Punch, EMove::Kick, EMove::Uppercut, EMove::Punch, EMove::Chop, EMove::Kick, EMove::Sweep, EMove::Punch, EMove::Roundhouse };

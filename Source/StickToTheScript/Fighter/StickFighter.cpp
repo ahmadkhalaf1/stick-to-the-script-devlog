@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "PhysicsEngine/BodyInstance.h"
 #include "StickToTheScript/Core/TakeEvents.h"
 #include "StickToTheScript/Fighter/DummyBody.h"
 #include "StickToTheScript/Fighter/SwingBar.h"
@@ -851,19 +852,27 @@ void AStickFighter::Tick(float DeltaSeconds)
 	// prop is given, it loses its speed outward and comes down there, not off the end of the roof.
 	if (State == EFighterState::Down && bFree && !bPuppet)
 	{
-		const FVector At = Body->GetBoneLocation(JointBones[PelvisJoint]);
-		const FVector2D Over = FVector2D(At) - ClampToArena(FVector2D(At));
-		const FVector Speed = Body->GetPhysicsLinearVelocity(JointBones[PelvisJoint]);
-		// Across the set there is less room: a body lying towards the camera is under the bottom of the picture.
-		const bool bLeavingAlong = FMath::Abs(Over.X) > DownedBeyondArena && Over.X * Speed.X > 0.;
-		const bool bLeavingAcross = FMath::Abs(Over.Y) > DownedAcrossArena && Over.Y * Speed.Y > 0.;
-		if (bLeavingAlong || bLeavingAcross)
+		// Each part of the body meets the wall by itself. Asking only the hips did not hold a body that tumbled: its
+		// hips were as often on their way back in as out. And it is not moved back by hand: that was tried, and a ragdoll
+		// that is moved hangs in the air in the pose it was moved in.
+		for (FBodyInstance* Part : Body->Bodies)
 		{
-			// Its speed outward goes, and its spin with it: a tumbling body rolls on along the floor otherwise. It is not
-			// moved back by hand. That was tried, and a ragdoll that is moved hangs in the air in the pose it was moved in.
-			UE_LOG(LogStickFighter, Verbose, TEXT("%s, knocked out, is held at the edge of the set at %.0f, %.0f"), *GetName(), At.X, At.Y);
-			Body->SetAllPhysicsLinearVelocity(FVector(bLeavingAlong ? 0. : Speed.X, bLeavingAcross ? 0. : Speed.Y, Speed.Z));
-			Body->SetAllPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+			if (!Part)
+			{
+				continue;
+			}
+			const FVector At = Part->GetUnrealWorldTransform().GetLocation();
+			const FVector2D Over = FVector2D(At) - ClampToArena(FVector2D(At));
+			FVector Speed = Part->GetUnrealWorldVelocity();
+			// Across the set there is less room: a body lying towards the camera is under the bottom of the picture.
+			const bool bLeavingAlong = FMath::Abs(Over.X) > DownedBeyondArena && Over.X * Speed.X > 0.;
+			const bool bLeavingAcross = FMath::Abs(Over.Y) > DownedAcrossArena && Over.Y * Speed.Y > 0.;
+			if (bLeavingAlong || bLeavingAcross)
+			{
+				Speed.X = bLeavingAlong ? 0. : Speed.X;
+				Speed.Y = bLeavingAcross ? 0. : Speed.Y;
+				Part->SetLinearVelocity(Speed, false);
+			}
 		}
 	}
 
@@ -1925,6 +1934,11 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 		if (Move == EMove::Punch)
 		{
 			return FireGun();
+		}
+		// No fist is thrown round a gun: it has to be let go of first.
+		if (Posed && !Posed->bWithALeg)
+		{
+			return false;
 		}
 	}
 	// With anything else in its hands, a strike is a throw.

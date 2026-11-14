@@ -94,7 +94,7 @@ Ambition and innovation, theme, fun factor, gameplay, visuals, level design and 
 - A new header must not share its file name with any engine or plugin header: Unreal refuses to build (`TakeRecorder.h` was taken).
 - A helper in an anonymous namespace needs a name no other source file in the module uses. Source files are compiled merged together, so two files that each define `Gravity` clash. `Tools/check.ps1` builds that way; a compile from the editor or an IDE may not, and will hide it.
 - Compile: `Tools/check.ps1`. The editor must be closed; a new `UCLASS` or `UPROPERTY` needs the restart anyway.
-- Launch the editor with `-ModelContextProtocolStartServer` so agents can drive it. The MCP and toolset plugins are enabled for the editor target only and must never ship.
+- Launch the editor with `-ModelContextProtocolStartServer` so agents can drive it. The MCP and toolset plugins are enabled for the editor target only and must never ship. The project file names the toolsets one by one instead of `AllToolsets`: `GameFeaturesToolset` and `ConversationToolset` switch on the `GameFeatures` plugin, which opens the Message Log at every start, and the entry it asks for fails the cook.
 - `.mcp.json` points agents at the editor's MCP server, `http://127.0.0.1:8000/mcp`. It only connects while the editor is open. If the connection shows as failed after the editor starts, only the developer can re-dial it; the server still answers JSON-RPC over plain HTTP at that URL (`list_toolsets`, `describe_toolset`, `call_tool`).
 - The MCP server runs tool calls one at a time on the game thread: never issue overlapping `unreal-mcp` calls.
 - `.uasset` / `.umap` files are binary: change them through the editor or MCP, never with text edits.
