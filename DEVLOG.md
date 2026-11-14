@@ -1154,6 +1154,14 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** three tries before it worked. The first click went to the file's "More..." button, which the agent's page reader had named as the upload button; it opened a download dialog, which was closed without downloading. Then the right button was clicked twice, once in a second tab, and no file chooser came: Chrome only opens one for the tab it is showing, and a tab the agent opens sits behind the one the developer is looking at. The agent will not switch a person's tabs with the keyboard, so it asked, and the developer clicked the tab. That is now written into the project's notes for the next upload.
 - **Not verified:** the download from the page. The page's pictures, video and text are still those of Nov 13: they show neither the key strip nor the outtakes.
 
+### 13:39 · The store page's text catches up with the game
+
+- **Developer said:** "Yes, update the text", to the question whether to bring the store page's text up to date now.
+- **Agent did:** read what the draft page said and found it a day and a half behind, and in one place untrue. It still said that no art was downloaded beyond the engine's mannequin and that every prop is generated, which stopped being so when the fighters got Mixamo's body and the sets got Poly Haven's scans. Its controls were the old ones: kick on the right mouse button, grab on F, a karate chop where there is now a hook. The agent first corrected `Docs/StorePage.md`, then put the same text on the page through the page's own editor, saved, and read the form and the page again.
+- **Result:** the draft page now has: the hook, the key strip, the guns, the outtakes and the shop's pistol and rifle in its list; the controls as they are, with firing a gun; "point and click" for the menus; a true "How it was made"; a new "Third-party assets" paragraph (the engine's mannequin and font, Mixamo's model and nine clips, and from Poly Haven 41 models, nine surfaces and a sky, all CC0); the install line, which the page did not have; and an AI disclosure that says what was not made by AI. The upload is untouched: one file, 547 MB. The page is still a draft.
+- **Went wrong:** the first call the agent made to the page's editor to give it the new text did nothing and reported nothing; the text was still the old one when read back. Asking the editor's own object worked. The sentence about the art became untrue during the night of Nov 13 to 14 and had stood on the draft since; nobody outside could see it, but it would have gone public as it was.
+- **Not verified:** the developer has not read the new text. The page's pictures and video are still those of Nov 13.
+
 ---
 
 ## Asset and tool register
