@@ -32,6 +32,8 @@ namespace
 	const double AimAssistDistance = 170.;
 
 	const float StickDeadZone = 0.25f;
+	// The game's own player holds a gun this long before its first shot.
+	const float AutoplayDrawSeconds = 0.6f;
 }
 
 void AStickPlayerController::BeginPlay()
@@ -378,10 +380,17 @@ void AStickPlayerController::PlayItself()
 	// It picks up whatever it passes, and throws it as soon as someone is lined up.
 	const double Distance = FVector::Dist2D(Mine, Theirs);
 	const AThrownProp* Held = Fighter->GetCarried();
-	if (Held && Held->IsGun() && Held->GetShotsLeft() > 0)
+	const float Now = GetWorld()->GetTimeSeconds();
+	const bool bLoadedGun = Held && Held->IsGun() && Held->GetShotsLeft() > 0;
+	if (!bLoadedGun)
 	{
-		// A gun with rounds in it is fired at whoever is lined up, not thrown.
-		if (Distance < 750. && FMath::Abs(Mine.Y - Theirs.Y) < 70. && Fighter->CanAct())
+		AutoplayUnarmedSeconds = Now;
+	}
+	if (bLoadedGun)
+	{
+		// A gun with rounds in it is fired at whoever is lined up, not thrown. Not in the first moment it is held:
+		// the camera needs that long to bring whoever it points at into the picture.
+		if (Now - AutoplayUnarmedSeconds > AutoplayDrawSeconds && Distance < 750. && FMath::Abs(Mine.Y - Theirs.Y) < 70. && Fighter->CanAct())
 		{
 			Fighter->StrikeWith(EMove::Punch, 0.f);
 		}

@@ -64,6 +64,8 @@ private:
 
 	bool bFightLive = false;
 	int32 AutoplayStrikes = 0;
+	// When the game's own player last had no loaded gun in its hands: it waits a moment after picking one up.
+	float AutoplayUnarmedSeconds = 0.f;
 	// Strikes and jumps asked for before the fighter could do them, in the order they were asked for. Each is done the
 	// instant it can be, so keys pressed during the move before are not lost, and grows stale if that takes too long.
 	struct FAskedFor

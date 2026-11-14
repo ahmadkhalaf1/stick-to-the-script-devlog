@@ -112,8 +112,9 @@ for index, x in enumerate((200, 1700)):
 for index, x in enumerate((100, 650, 1200, 1750)):
     spot_light(f"Light_Key_{index}", (x - 260, 330, 430), (x, 0, 110), 8000.0, (1.0, 0.86, 0.68), 36.0)
     spot_light(f"Light_Rim_{index}", (x + 330, -340, 450), (x, 0, 120), 6500.0, (0.5, 0.65, 1.0), 34.0)
-    # The stands are behind the travelling camera's track. In front of it they cross the picture as black bars.
-    block(f"Stand_Key_{index}", CYLINDER, metal_look, (x - 260, 460, 215), (0.06, 0.06, 4.3))
+    # The stands are behind the travelling camera's track, also where it has pulled back to hold a gun's target
+    # (Cam/FightCamera.cpp). In front of it they cross the picture as black bars.
+    block(f"Stand_Key_{index}", CYLINDER, metal_look, (x - 260, 830, 215), (0.06, 0.06, 4.3))
 spot_light("Light_Beacon", (1250, -430, 640), (1250, -150, 0), 7000.0, (1.0, 0.08, 0.08), 55.0)
 spot_light("Light_Helipad", (2120, 330, 480), (2120, 0, 60), 9000.0, (1.0, 0.9, 0.7), 40.0)
 fill_light((900, 150, 700), 2200.0, 1400.0, (0.5, 0.6, 1.0))

@@ -65,13 +65,14 @@ for index, x in enumerate(range(-300, 2101, 600)):
 for index, x in enumerate((100, 650, 1200, 1750)):
     spot_light(f"Light_Key_{index}", (x - 260, 330, 430), (x, 0, 110), 9000.0, (1.0, 0.86, 0.68), 36.0)
     spot_light(f"Light_Rim_{index}", (x + 330, -340, 450), (x, 0, 120), 6000.0, (0.6, 0.75, 1.0), 34.0)
-    # The stands are behind the travelling camera's track. In front of it they cross the picture as black bars.
-    block(f"Stand_Key_{index}", CYLINDER, metal_look, (x - 260, 460, 215), (0.06, 0.06, 4.3))
+    # The stands are behind the travelling camera's track, also where it has pulled back to hold a gun's target
+    # (Cam/FightCamera.cpp). In front of it they cross the picture as black bars.
+    block(f"Stand_Key_{index}", CYLINDER, metal_look, (x - 260, 830, 215), (0.06, 0.06, 4.3))
 # One more pool over the left end of the arena, with its lamps turned round because the wall is too close on that side.
 # Without it a fight that backs away from the first opponents ends up in the dark.
 spot_light("Light_Key_End", (-190, 330, 430), (-450, 0, 110), 9000.0, (1.0, 0.86, 0.68), 36.0)
 spot_light("Light_Rim_End", (-120, -340, 450), (-450, 0, 120), 6000.0, (0.6, 0.75, 1.0), 34.0)
-block("Stand_Key_End", CYLINDER, metal_look, (-190, 460, 215), (0.06, 0.06, 4.3))
+block("Stand_Key_End", CYLINDER, metal_look, (-190, 830, 215), (0.06, 0.06, 4.3))
 fill_light((850, 150, 535), 1100.0, 1400.0)
 
 # Lamps hanging over the goods at the back: a scanned lamp, a bulb that shows, and a warm pool under each. Their lights

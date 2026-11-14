@@ -68,6 +68,7 @@ namespace
 
 	// A close-up starts just before its strike lands and stays a moment after.
 	const float CutBeforeImpactSeconds = 0.35f;
+	const float CutAfterShotSeconds = 0.25f;
 	const float StayAfterImpactSeconds = 0.8f;
 	// In a long fight not every blow earns a cut. A knockout always does; the rest only after this long on other shots.
 	const float SecondsBetweenCloseUps = 2.5f;
@@ -336,6 +337,14 @@ void AFinalCut::PlanShots()
 		{
 			continue;
 		}
+		// A shot is watched from the wide camera, which holds the gun and whoever it points at in one picture: a
+		// close-up of someone hit from outside it says nothing about where the shot came from. Only when a shot puts
+		// someone down does the film cut in, and then after it has landed, to see the fall.
+		const bool bShot = Event.Kind == ERecordedEventKind::Hit && (Event.Move == EMove::Shot || Event.Move == EMove::Blast);
+		if (bShot && !Event.bKnockout)
+		{
+			continue;
+		}
 		if (!Event.bKnockout && Event.TimeSeconds < LastCloseUpSeconds + SecondsBetweenCloseUps)
 		{
 			continue;
@@ -343,7 +352,7 @@ void AFinalCut::PlanShots()
 		LastCloseUpSeconds = Event.TimeSeconds;
 
 		FShot CloseUp;
-		CloseUp.StartSeconds = Event.TimeSeconds - CutBeforeImpactSeconds;
+		CloseUp.StartSeconds = bShot ? Event.TimeSeconds + CutAfterShotSeconds : Event.TimeSeconds - CutBeforeImpactSeconds;
 		// Heavy hits and the knockout are seen from the floor, looking up. Everything else gets the side close-up.
 		const bool bBigMoment = Event.Kind == ERecordedEventKind::Hit && (Event.Move != EMove::Punch || Event.bKnockout);
 		CloseUp.Camera = bBigMoment ? LowCamera : CloseCamera;

@@ -1162,6 +1162,20 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the first call the agent made to the page's editor to give it the new text did nothing and reported nothing; the text was still the old one when read back. Asking the editor's own object worked. The sentence about the art became untrue during the night of Nov 13 to 14 and had stood on the draft since; nobody outside could see it, but it would have gone public as it was.
 - **Not verified:** the developer has not read the new text. The page's pictures and video are still those of Nov 13.
 
+### 14:12 · He was shooting at people nobody could see
+
+- **Developer said:** "one issue i noticed at the video reply and game play , your playtest is shooting before the enemy is in view , i dont see where and what is he shooting at , he is shooting at them from distance and the camera soes not always show where he is shooting at , then in the video its also the same we see him shooting but where?"
+- **Agent did:** looked at the numbers first. The camera travels with the player and sees about 3.2 metres to either side of it. A gun aimed itself at the nearest opponent up to 11 metres away, and the game's own player fired from 7.5. So most shots went to someone outside the picture, and the developer was right about all of it. In the film it was worse: every hit by a shot was cut to a close-up of the one hit, with no shooter in it.
+  - The camera now looks for who a gun in the player's hands points at, the way the fighter itself aims it, slides to the middle of the two and pulls back until both are in the picture. It works that out from joints and from where the gun is, so the film's puppets give it the same answer.
+  - A gun aims at nobody further than 9.5 metres, which is what the camera can hold. The game's own player waits 0.6 seconds with a gun before its first shot, the time the camera takes.
+  - In the film a hit by a shot stays on the wide camera, both of them in it. Only a shot that puts someone down gets a close-up, and a quarter of a second late, for the fall.
+  - The lamp stands of the warehouse and the rooftop stood right behind the camera's track, where a camera pulling back would have had them across the picture. They are moved back in the stage scripts and the two levels built again.
+- **Result:** `Tools/check.ps1` passes. In the editor, in the warehouse: with the pistol picked up the camera pulled back and both the player and the first opponent were in the picture; with the game playing itself, a picture taken at each of eight shots has the shooter and the one hit in it every time; and the film's shots are wide ones with both. Then packaged (827 MB) and zipped (547 MB, 14:14). The packaged game, with no window and no sound, played the warehouse to a wrap and showed its film; 16 shots were fired and its log has no errors. Nobody has looked at its picture: the new video was not recorded, because by then the developer was using the PC again.
+- **Went wrong:** the first version measured how far back to go from the middle of the two fighters. The one nearer the camera is the one the picture's edge reaches first, and it left the shooter cut in half at the edge. One picture showed it; it is measured from the nearer one now. And the five minutes recorded for a new video, just before the developer's message, show exactly this fault and are of no use.
+- **Not verified:** the bar and the rooftop, where the camera has less room and was not looked at. The slow-motion cut and the long take. A close-up in the film can still end up behind a prop: twice in one film the wet-floor sign filled half the picture, which is older than this change and still there.
+
+![With the pistol up, the camera holds both; two shots of the game playing itself; a shot in the film, from the wide camera](Docs/devlog/77-the-gun-and-its-target.jpg)
+
 ---
 
 ## Asset and tool register

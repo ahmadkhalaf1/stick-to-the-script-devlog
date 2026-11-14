@@ -49,7 +49,8 @@ namespace
 	const FLinearColor BoneColor(0.92f, 0.9f, 0.82f);
 	const FLinearColor StumpRed(0.3f, 0.f, 0.f);
 	// A gun is aimed at the nearest opponent within this distance and this much of straight ahead, and reaches this far.
-	const double GunAimDistance = 1100.;
+	// The distance is what the camera can hold in one picture (AimedAtWithin in Cam/FightCamera.cpp): nobody is aimed at unseen.
+	const double GunAimDistance = 950.;
 	const double GunAimCosine = 0.5;
 	const double GunRange = 1700.;
 	const double GunMuzzleAhead = 40.;
