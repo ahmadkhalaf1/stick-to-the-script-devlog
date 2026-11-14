@@ -1288,6 +1288,14 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** reading this run's log showed that the entry of 18:09 named the wrong scene. It said the packaged game had "played a rooftop take"; it had played the warehouse. The agent had not read the scene's card and had taken six opponents to mean the rooftop. The entry is corrected and says so. What it was meant to show holds, from a different run: in the recording made at 18:15 the packaged game did play the rooftop, and its log puts all six bodies on the floor of the set (heights of 14 to 17 cm, between x 634 and x 1926).
 - **Not verified:** the copy on itch.io itself has not been downloaded; what ran is the file it was uploaded from. The run was off screen and silent, so neither picture nor sound of this copy was looked at or heard.
 
+### 18:54 · The new video is on YouTube and on the page
+
+- **Developer said:** "Uploading now", then "where is video location", then the link: https://youtu.be/HJW6ExPfZdc
+- **Agent did:** showed the file in the file manager when asked where it was. When the link came, asked YouTube whether the video can be seen without a sign-in (it can: "StickToTheScript gameplay"), put the link into the draft page's video field, saved, loaded the form again and opened the page. Put the link into `Docs/StorePage.md`, where the jam's form will be filled from, and closed the plan's task for the video.
+- **Result:** the draft page plays the video of this evening's build above six pictures from the same run, and offers the build they were made from. It is still a draft and nothing is submitted.
+- **Also:** while the upload ran, one more open check was closed from the recording itself: the game's own player carries a crate over its head in both hands and throws it.
+- **Not verified:** the choice of cut made with the pointer in the packaged game is the one check of the bug bash still open. Whether the developer listened to the video's sound was not said.
+
 ---
 
 ## Asset and tool register
