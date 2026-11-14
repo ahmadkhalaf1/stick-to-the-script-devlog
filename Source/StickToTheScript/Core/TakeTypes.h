@@ -46,7 +46,9 @@ enum class EOpponentKind : uint8
 	Rusher,
 	Kicker,
 	Heavy,
-	Gunman
+	Gunman,
+	// One to a scene, last in its list: it waits until the others are down.
+	Boss
 };
 
 // One opponent of a scene.

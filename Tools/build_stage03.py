@@ -109,7 +109,8 @@ for index, x in enumerate((200, 1700)):
     cosmetic(city.light_component, "volumetric_scattering_intensity", 0.0)
 
 # On the roof: warm work lights from the camera side, a cool rim from behind, and a red warning light on the aerial.
-for index, x in enumerate((100, 650, 1200, 1750)):
+# The first pair is for the end behind the start: a fighter backed into it was a dark shape.
+for index, x in enumerate((-450, 100, 650, 1200, 1750)):
     spot_light(f"Light_Key_{index}", (x - 260, 330, 430), (x, 0, 110), 8000.0, (1.0, 0.86, 0.68), 36.0)
     spot_light(f"Light_Rim_{index}", (x + 330, -340, 450), (x, 0, 120), 6500.0, (0.5, 0.65, 1.0), 34.0)
     # The stands are behind the travelling camera's track, also where it has pulled back to hold a gun's target

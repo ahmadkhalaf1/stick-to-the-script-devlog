@@ -4,6 +4,8 @@
 #include "CanvasTypes.h"
 #include "Engine/Canvas.h"
 #include "Engine/Font.h"
+#include "Engine/Texture2D.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/SlateRenderer.h"
@@ -18,6 +20,7 @@
 #include "StickToTheScript/Core/TakeDirector.h"
 #include "StickToTheScript/Core/TakeEvents.h"
 #include "StickToTheScript/Fighter/StickFighter.h"
+#include "StickToTheScript/Fighter/StuntPartner.h"
 #include "StickToTheScript/Fighter/ThrownProp.h"
 #include "StickToTheScript/UI/ImpactEffects.h"
 #include "Sound/SoundBase.h"
@@ -42,6 +45,18 @@ namespace
 	const int32 HitsBetweenShouts = 6;
 	const float KeysStaySeconds = 14.f;
 	const float ShoutSeconds = 2.8f;
+	// How many scenes have a picture for the menu. A scene past these gets a plain card.
+	const int32 SceneCardCount = 3;
+}
+
+AStickHUD::AStickHUD()
+{
+	// Found here and not by name at run time: the cook only packs a picture something refers to.
+	for (int32 Scene = 1; Scene <= SceneCardCount; ++Scene)
+	{
+		SceneCards.Add(ConstructorHelpers::FObjectFinder<UTexture2D>(*FString::Printf(TEXT("/Game/UI/T_SceneCard%d"), Scene)).Object);
+		LockedSceneCards.Add(ConstructorHelpers::FObjectFinder<UTexture2D>(*FString::Printf(TEXT("/Game/UI/T_SceneCard%d_Locked"), Scene)).Object);
+	}
 }
 
 void AStickHUD::BeginPlay()
@@ -189,6 +204,11 @@ void AStickHUD::DrawHUD()
 	if (Slate == ESlate::Card)
 	{
 		DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.66f), 0.f, -Top, Width, Height);
+		if (CardLines.ContainsByPredicate([](const FString& Line) { return Line.Contains(TEXT("\tScene ")); }))
+		{
+			DrawSceneMenu(Unit);
+			return;
+		}
 		DrawCentered(CardHeadline, 270.f * Unit, 6.5f * Unit, FLinearColor::White);
 		DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, 405.f * Unit, 180.f * Unit, 6.f * Unit);
 		// A long card closes its lines up, so the last one stays on the screen.
@@ -253,6 +273,42 @@ void AStickHUD::DrawHUD()
 				// What is in the hands, and how many rounds are left in it. Empty, it is red: all it is good for is throwing.
 				Write(FString::Printf(TEXT("%s   %d"), Held->GetGunName(), Held->GetShotsLeft()), Held->GetShotsLeft() > 0 ? HighlightGold : RecordingRed, 48.f * Unit, 130.f * Unit, Font, 2.f * Unit);
 			}
+
+			// Every opponent in the fight carries a bar over the head. The scene's boss has a bar of his own instead, along
+			// the top, and as he comes on the hero is put right.
+			const AStuntPartner* Boss = nullptr;
+			for (TActorIterator<AStuntPartner> Each(GetWorld()); Each; ++Each)
+			{
+				if (!Each->IsInTheFight())
+				{
+					continue;
+				}
+				if (Each->IsBoss())
+				{
+					Boss = *Each;
+					continue;
+				}
+				const FVector Over = Project(Each->GetJointPositions()[StickJoint::SkullJoint] + FVector(0., 0., 34.));
+				if (Over.Z > 0.)
+				{
+					const float BarWidth = 84.f * Unit;
+					DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), Over.X - BarWidth * 0.5f, Over.Y - Top, BarWidth, 10.f * Unit);
+					DrawRect(RecordingRed, Over.X - BarWidth * 0.5f + 2.f * Unit, Over.Y - Top + 2.f * Unit, (BarWidth - 4.f * Unit) * Each->GetHealthFraction(), 6.f * Unit);
+				}
+			}
+			if (Boss)
+			{
+				const float BarWidth = 520.f * Unit;
+				DrawCentered(TEXT("THE BOSS"), 52.f * Unit, 1.8f * Unit, HighlightGold);
+				DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), (Width - BarWidth) * 0.5f, 98.f * Unit, BarWidth, 18.f * Unit);
+				DrawRect(RecordingRed, (Width - BarWidth) * 0.5f + 3.f * Unit, 101.f * Unit, (BarWidth - 6.f * Unit) * Boss->GetHealthFraction(), 12.f * Unit);
+				if (!bBossInTheFight)
+				{
+					Shout = TEXT("MAKE-UP!   A touch-up for the hero. The boss is on.");
+					ShoutUntilSeconds = Now + ShoutSeconds;
+				}
+			}
+			bBossInTheFight = Boss != nullptr;
 
 			if (Slate == ESlate::None && Now < ShoutUntilSeconds)
 			{
@@ -570,6 +626,115 @@ void AStickHUD::DrawMenuRow(const FString& Text, bool bChosen, float Y, float He
 bool AStickHUD::IsPointerIn(float X, float Y, float Width, float Height) const
 {
 	return Pointer.X >= X && Pointer.X <= X + Width && Pointer.Y >= Y && Pointer.Y <= Y + Height;
+}
+
+// Rows keep the numbers the menu gave them, scenes first, so the keys and the pointer choose what they always did.
+void AStickHUD::DrawSceneMenu(float Unit)
+{
+	UFont* Font = GEngine->GetLargeFont();
+	const float Width = Canvas->SizeX;
+	const FLinearColor Grey(0.45f, 0.45f, 0.45f);
+	DrawCentered(CardHeadline, 84.f * Unit, 5.5f * Unit, FLinearColor::White);
+	DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, 200.f * Unit, 180.f * Unit, 6.f * Unit);
+
+	struct FRow
+	{
+		FString Text;
+		bool bChosen;
+	};
+	TArray<FRow> Scenes;
+	TArray<FRow> Others;
+	float NoteY = 236.f;
+	for (const FString& Line : CardLines)
+	{
+		const bool bChosen = Line.StartsWith(TEXT(">\t"));
+		if (bChosen || Line.StartsWith(TEXT("\t")))
+		{
+			const FString Text = Line.RightChop(bChosen ? 2 : 1);
+			(Text.StartsWith(TEXT("Scene ")) && Others.IsEmpty() ? Scenes : Others).Add({ Text, bChosen });
+		}
+		else if (!Line.IsEmpty() && Scenes.IsEmpty())
+		{
+			// What the card says above its rows: the premise, and what is in the bank.
+			DrawCentered(Line, NoteY * Unit, 2.f * Unit, Line.StartsWith(TEXT("In the bank")) ? HighlightGold : FLinearColor::White);
+			NoteY += 48.f;
+		}
+		else if (!Line.IsEmpty())
+		{
+			DrawCentered(Line, 992.f * Unit, 1.7f * Unit, FLinearColor(0.78f, 0.78f, 0.78f));
+		}
+	}
+
+	const int32 Count = Scenes.Num();
+	const float Gap = 130.f * Unit;
+	const float CardWidth = FMath::Min(430.f * Unit, (1720.f * Unit - (Count - 1) * Gap) / Count);
+	const float CardHeight = CardWidth * 9.f / 16.f;
+	const float Left = (Width - Count * CardWidth - (Count - 1) * Gap) * 0.5f;
+	// Stepping stones: every other card sits a little lower, and the path runs from each to the next.
+	const auto TopOf = [Unit](int32 Scene) { return (376.f + (Scene % 2) * 44.f) * Unit; };
+	const auto IsLocked = [&Scenes](int32 Scene) { return Scenes[Scene].Text.EndsWith(TEXT(": locked")); };
+	for (int32 Scene = 0; Scene < Count; ++Scene)
+	{
+		const FRow& Row = Scenes[Scene];
+		const bool bLocked = IsLocked(Scene);
+		const float X = Left + Scene * (CardWidth + Gap);
+		const float Y = TopOf(Scene);
+
+		if (Scene + 1 < Count)
+		{
+			const int32 Stones = 5;
+			const float Stone = 12.f * Unit;
+			for (int32 Step = 1; Step <= Stones; ++Step)
+			{
+				const float Along = Step / static_cast<float>(Stones + 1);
+				DrawRect(IsLocked(Scene + 1) ? Grey : HighlightGold, X + CardWidth + Gap * Along - Stone * 0.5f,
+					FMath::Lerp(Y, TopOf(Scene + 1), Along) + (CardHeight - Stone) * 0.5f, Stone, Stone);
+			}
+		}
+
+		const float Edge = (Row.bChosen ? 6.f : 2.f) * Unit;
+		DrawRect(Row.bChosen ? HighlightGold : Grey, X - Edge, Y - Edge, CardWidth + Edge * 2.f, CardHeight + Edge * 2.f);
+		DrawRect(FLinearColor::Black, X, Y, CardWidth, CardHeight);
+		const TArray<TObjectPtr<UTexture2D>>& Pictures = bLocked ? LockedSceneCards : SceneCards;
+		if (Pictures.IsValidIndex(Scene) && Pictures[Scene])
+		{
+			// The card that is not chosen stands back a little.
+			const float Light = Row.bChosen ? 1.f : 0.7f;
+			DrawTexture(Pictures[Scene], X, Y, CardWidth, CardHeight, 0.f, 0.f, 1.f, 1.f, FLinearColor(Light, Light, Light));
+		}
+		DrawRect(Row.bChosen ? HighlightGold : FLinearColor(0.f, 0.f, 0.f, 0.75f), X, Y, 54.f * Unit, 54.f * Unit);
+		Write(FString::FromInt(Scene + 1), Row.bChosen ? FLinearColor::Black : FLinearColor::White, X + 17.f * Unit, Y + 5.f * Unit, Font, 2.6f * Unit);
+
+		float TextWidth = 0.f;
+		float TextHeight = 0.f;
+		if (bLocked)
+		{
+			Measure(TEXT("LOCKED"), TextWidth, TextHeight, Font, 3.f * Unit);
+			Write(TEXT("LOCKED"), FLinearColor(1.f, 1.f, 1.f, 0.85f), X + (CardWidth - TextWidth) * 0.5f, Y + (CardHeight - TextHeight) * 0.5f, Font, 3.f * Unit);
+		}
+		// Under the card, the scene's name without its number, which the card wears.
+		FString Name = Row.Text;
+		Row.Text.Split(TEXT(": "), nullptr, &Name);
+		const FString Label = bLocked ? FString::Printf(TEXT("Win scene %d first"), Scene) : Name;
+		Measure(Label, TextWidth, TextHeight, Font, 2.2f * Unit);
+		Write(Label, bLocked ? Grey : Row.bChosen ? HighlightGold : FLinearColor::White, X + (CardWidth - TextWidth) * 0.5f, Y + CardHeight + 16.f * Unit, Font, 2.2f * Unit);
+
+		if (bPointerMoved && Flow.IsValid() && IsPointerIn(X, Y, CardWidth, CardHeight + 60.f * Unit))
+		{
+			Flow->PointAtRow(Scene);
+		}
+	}
+
+	const float RowStep = 58.f;
+	for (int32 Index = 0; Index < Others.Num(); ++Index)
+	{
+		const float Y = (776.f + Index * RowStep) * Unit;
+		DrawMenuRow(Others[Index].Text, Others[Index].bChosen, Y, RowStep * Unit, 2.2f * Unit, Unit);
+		if (bPointerMoved && Flow.IsValid() && IsPointerIn((Width - MenuRowWidth * Unit) * 0.5f, Y - 4.f * Unit, MenuRowWidth * Unit, RowStep * Unit))
+		{
+			Flow->PointAtRow(Count + Index);
+		}
+	}
 }
 
 void AStickHUD::DrawWardrobe(float Unit)

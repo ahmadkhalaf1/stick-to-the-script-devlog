@@ -33,7 +33,7 @@
     { "Kind": "Kicker", "Enter": { "X": -300, "Y": -205 }, "Spot": { "X": -300, "Y": -60 }, "WakeDistance": 520, "Color": { "R": 0.03, "G": 0.2, "B": 0.05, "A": 1 } },
     { "Kind": "Rusher", "Enter": { "X": 770, "Y": -60 }, "Spot": { "X": 400, "Y": -60 }, "WakeDistance": 0, "Color": { "R": 0.02, "G": 0.05, "B": 0.3, "A": 1 } },
     { "Kind": "Thug", "Enter": { "X": -770, "Y": -60 }, "Spot": { "X": -400, "Y": -60 }, "WakeDistance": 0, "Color": { "R": 0.3, "G": 0.16, "B": 0.02, "A": 1 } },
-    { "Kind": "Rusher", "Enter": { "X": 770, "Y": -90 }, "Spot": { "X": 400, "Y": -20 }, "WakeDistance": 0, "Color": { "R": 0.16, "G": 0.03, "B": 0.25, "A": 1 } },
+    { "Kind": "Kicker", "Enter": { "X": 770, "Y": -90 }, "Spot": { "X": 400, "Y": -20 }, "WakeDistance": 0, "Color": { "R": 0.16, "G": 0.03, "B": 0.25, "A": 1 } },
     { "Kind": "Heavy", "Enter": { "X": -770, "Y": -80 }, "Spot": { "X": -380, "Y": -20 }, "WakeDistance": 0, "Color": { "R": 0.35, "G": 0.02, "B": 0.02, "A": 1 } }
   ]
 }

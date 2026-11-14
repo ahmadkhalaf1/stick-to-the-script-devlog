@@ -36,6 +36,7 @@
     { "Kind": "Rusher", "Enter": { "X": 760, "Y": 90 }, "Spot": { "X": 760, "Y": 90 }, "WakeDistance": 520, "Color": { "R": 0.02, "G": 0.05, "B": 0.3, "A": 1 } },
     { "Kind": "Kicker", "Enter": { "X": 1180, "Y": -90 }, "Spot": { "X": 1180, "Y": -90 }, "WakeDistance": 520, "Color": { "R": 0.03, "G": 0.2, "B": 0.05, "A": 1 } },
     { "Kind": "Gunman", "Enter": { "X": 1650, "Y": -70 }, "Spot": { "X": 1650, "Y": -70 }, "WakeDistance": 800, "Color": { "R": 0.02, "G": 0.25, "B": 0.3, "A": 1 } },
-    { "Kind": "Heavy", "Enter": { "X": 1800, "Y": 0 }, "Spot": { "X": 1800, "Y": 0 }, "WakeDistance": 520, "Color": { "R": 0.35, "G": 0.02, "B": 0.02, "A": 1 } }
+    { "Kind": "Heavy", "Enter": { "X": 1450, "Y": 20 }, "Spot": { "X": 1450, "Y": 20 }, "WakeDistance": 520, "Color": { "R": 0.35, "G": 0.02, "B": 0.02, "A": 1 } },
+    { "Kind": "Boss", "Enter": { "X": 1870, "Y": -30 }, "Spot": { "X": 1700, "Y": 0 }, "WakeDistance": 0, "Color": { "R": 0.45, "G": 0.02, "B": 0.22, "A": 1 } }
   ]
 }

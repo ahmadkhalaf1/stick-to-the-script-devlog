@@ -239,6 +239,12 @@ void AGameFlow::ChangeLook(int32 Row, int32 Direction)
 			MenuCursor = (MenuCursor - Direction + MenuRows) % MenuRows;
 			ShowMenu();
 		}
+		else if (Row == 0 && MenuRows > 0)
+		{
+			// Left and right too: the first menu lays its scenes out side by side.
+			MenuCursor = (MenuCursor + Direction + MenuRows) % MenuRows;
+			ShowMenu();
+		}
 		return;
 	}
 
@@ -613,7 +619,7 @@ void AGameFlow::ShowMenu()
 	}
 	Detail += bShop ? TEXT("\nW / S: choose      Left click: buy")
 		: bPaused || bCutting ? TEXT("\nW / S: choose      Left click: go")
-		: TEXT("\nW / S: choose      Left click: go      Esc: pause");
+		: TEXT("\nA / D  or  W / S: choose      Left click: go      Esc: pause");
 	ShowCard(bPaused ? TEXT("PAUSED") : bCutting ? TEXT("DIRECTOR'S CUT") : bShop ? TEXT("THE PROP SHOP") : TEXT("STICK TO THE SCRIPT"), Detail);
 }
 

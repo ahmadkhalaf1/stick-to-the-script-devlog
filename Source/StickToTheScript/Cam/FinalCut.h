@@ -103,7 +103,8 @@ private:
 	void ReplayEvent(const FRecordedEvent& Event);
 	void CutTo(const FShot& Shot);
 	FVector FindSubject(const FShot& Shot) const;
-	bool IsHiddenByAProp(const FVector& From, const FVector& To) const;
+	enum class EInTheWay : uint8 { Nothing, AProp, AFighter };
+	EInTheWay FindInTheWay(const FVector& From, const FVector& To, const FShot& Shot) const;
 	float PlaybackRate(float Seconds) const;
 
 	struct FBigMoment

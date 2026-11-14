@@ -26,7 +26,7 @@ You were hired to lose. The script says the gang beats you in the warehouse, in 
 - **A director with a voice**, and different things to shout in every scene.
 - **Something golden** drops onto the set once in every take. Pick it up.
 - **A prop shop** for what you bank: a bat, an iron bar, a sledgehammer, a pistol or a rifle for your next scene, and a halo, a crown or a new colour for good.
-- Three scenes, five kinds of opponent, a wardrobe, and a director who cannot believe what you are doing to his stuntmen.
+- Three scenes that get harder, five kinds of opponent and a boss on the roof, a wardrobe, and a director who cannot believe what you are doing to his stuntmen.
 
 ## Controls
 
@@ -46,7 +46,7 @@ You were hired to lose. The script says the gang beats you in the warehouse, in 
 | Hook, roundhouse | hold guard, then punch or kick | |
 | Off the bar | jump under a red bar, then kick | |
 
-In menus: point and click, or choose with W and S and punch.
+In menus: point and click, or choose with W, A, S and D and punch.
 
 ## How to run
 

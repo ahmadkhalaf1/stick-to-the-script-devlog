@@ -32,7 +32,6 @@
     { "Kind": "Rusher", "Enter": { "X": 1100, "Y": 60 }, "Spot": { "X": 1100, "Y": 60 }, "WakeDistance": 520, "Color": { "R": 0.02, "G": 0.05, "B": 0.3, "A": 1 } },
     { "Kind": "Kicker", "Enter": { "X": 900, "Y": -330 }, "Spot": { "X": 900, "Y": -40 }, "WakeDistance": 520, "Color": { "R": 0.03, "G": 0.2, "B": 0.05, "A": 1 } },
     { "Kind": "Thug", "Enter": { "X": 1500, "Y": -60 }, "Spot": { "X": 1500, "Y": -60 }, "WakeDistance": 520, "Color": { "R": 0.3, "G": 0.16, "B": 0.02, "A": 1 } },
-    { "Kind": "Rusher", "Enter": { "X": 1650, "Y": 80 }, "Spot": { "X": 1650, "Y": 80 }, "WakeDistance": 520, "Color": { "R": 0.16, "G": 0.03, "B": 0.25, "A": 1 } },
     { "Kind": "Heavy", "Enter": { "X": 2000, "Y": 0 }, "Spot": { "X": 2000, "Y": 0 }, "WakeDistance": 520, "Color": { "R": 0.35, "G": 0.02, "B": 0.02, "A": 1 } }
   ]
 }

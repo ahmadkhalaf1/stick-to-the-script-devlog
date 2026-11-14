@@ -10,6 +10,8 @@
 #include "StickToTheScript/Fighter/StickFighter.h"
 #include "StickToTheScript/Fighter/ThrownProp.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogFinalCut, Log, All);
+
 namespace
 {
 	// What the film keeps around each kind of moment.
@@ -76,6 +78,7 @@ namespace
 	const double CloseUpTowardsAttacker = 70.;
 	const float CloseUpFollowSpeed = 6.f;
 	const double PropHidesWithin = 55.;
+	const double BystanderHidesWithin = 45.;
 	const double CloseUpLosesBeyond = 560.;
 	const float StayAfterImpactSeconds = 1.f;
 	// In a long fight not every blow earns a cut. A knockout always does; the rest only after this long on other shots.
@@ -509,24 +512,42 @@ FVector AFinalCut::FindSubject(const FShot& Shot) const
 	return Struck + ((Attacker->GetJointPositions()[StickJoint::ChestJoint] - Struck) * 0.5).GetClampedToMaxSize(CloseUpTowardsAttacker);
 }
 
-// A prop standing between a camera and what it films fills half the picture with its back.
-bool AFinalCut::IsHiddenByAProp(const FVector& From, const FVector& To) const
+// A prop standing between a camera and what it films fills half the picture with its back. So does a fighter who is
+// no part of the blow, and out of focus.
+AFinalCut::EInTheWay AFinalCut::FindInTheWay(const FVector& From, const FVector& To, const FShot& Shot) const
 {
 	const FVector Line = To - From;
 	const double LengthSquared = FMath::Max(Line.SizeSquared(), 1.);
-	for (int32 Index = 0; const AThrownProp* Prop = Recorder->GetProp(Index); ++Index)
+	const auto IsInTheWay = [&](const FVector& At, double Within, double WiderWithDistance)
 	{
-		const FVector At = Prop->GetActorLocation();
 		const double Along = ((At - From) | Line) / LengthSquared;
 		// What is at the far end is in somebody's hands or at their feet, and belongs in the shot. Nearer the camera
 		// a prop is in the way well to the side of the line too: the picture is that wide there, and the prop that big.
 		const double FromCamera = Along * FMath::Sqrt(LengthSquared);
-		if (Along > 0.05 && Along < 0.75 && FVector::Dist(At, From + Line * Along) < PropHidesWithin + FromCamera * 0.45)
+		return Along > 0.05 && Along < 0.75 && FVector::Dist(At, From + Line * Along) < Within + FromCamera * WiderWithDistance;
+	};
+	for (int32 Index = 0; const AStickFighter* Bystander = Recorder->GetFighter(Index); ++Index)
+	{
+		if (Index == Shot.Attacker || Index == Shot.Victim)
 		{
-			return true;
+			continue;
+		}
+		// Only the middle of the picture: someone at its edge frames the blow, someone in its middle covers it.
+		const TArray<FVector> Joints = Bystander->GetJointPositions();
+		if (IsInTheWay(Joints[StickJoint::ChestJoint], BystanderHidesWithin, 0.25) || IsInTheWay(Joints[StickJoint::PelvisJoint], BystanderHidesWithin, 0.25))
+		{
+			UE_LOG(LogFinalCut, Verbose, TEXT("A place for the close shot of fighters %d and %d is passed over: fighter %d stands in front of it"), Shot.Attacker, Shot.Victim, Index);
+			return EInTheWay::AFighter;
 		}
 	}
-	return false;
+	for (int32 Index = 0; const AThrownProp* Prop = Recorder->GetProp(Index); ++Index)
+	{
+		if (IsInTheWay(Prop->GetActorLocation(), PropHidesWithin, 0.45))
+		{
+			return EInTheWay::AProp;
+		}
+	}
+	return EInTheWay::Nothing;
 }
 
 void AFinalCut::CutTo(const FShot& Shot)
@@ -547,22 +568,40 @@ void AFinalCut::CutTo(const FShot& Shot)
 
 		const FVector OnTheFloor(ShotLookAt.X, ShotLookAt.Y, Floor + 30.);
 		const FVector Level = ShotLookAt + Side * CloseUpDistance + FVector(0., 0., 10.);
-		// The first place a prop does not stand in front of. The last is taken whatever stands there.
+		// The first place nothing and nobody stands in front of. Failing that, the first with only a prop in front of it.
 		const FVector Places[] = {
 			Shot.Camera == CloseCamera ? Level : OnTheFloor + Side * LowDistance - Along * 90.,
 			Shot.Camera == CloseCamera ? Level + FVector(0., 0., 60.) : OnTheFloor + Side * LowDistance + Along * 90.,
 			Level + FVector(0., 0., 60.) - Along * 120.,
 			Level + FVector(0., 0., 60.) + Along * 120.,
 		};
-		FVector Place = Places[0];
+		const FVector* BehindAProp = nullptr;
+		const FVector* Clear = nullptr;
 		for (const FVector& Tried : Places)
 		{
-			if (!IsHiddenByAProp(Tried, ShotLookAt))
+			const EInTheWay InTheWay = FindInTheWay(Tried, ShotLookAt, Shot);
+			if (InTheWay == EInTheWay::Nothing)
 			{
-				Place = Tried;
+				Clear = &Tried;
 				break;
 			}
+			if (InTheWay == EInTheWay::AProp && !BehindAProp)
+			{
+				BehindAProp = &Tried;
+			}
 		}
+		if (!Clear && !BehindAProp)
+		{
+			// Somebody stands in front of every place: the blow would be filmed past a back. The wide camera sees it whole.
+			UE_LOG(LogFinalCut, Verbose, TEXT("The close shot of fighters %d and %d goes to the wide camera"), Shot.Attacker, Shot.Victim);
+			ShotCamera = WideCamera;
+			if (APlayerController* Viewer = GetWorld()->GetFirstPlayerController())
+			{
+				Viewer->SetViewTarget(Cameras[WideCamera]);
+			}
+			return;
+		}
+		FVector Place = Clear ? *Clear : *BehindAProp;
 		if (Shot.Camera == LowCamera && Player)
 		{
 			// Furniture stands beyond the ends of the arena, and a camera on the floor there films the underside of a table.

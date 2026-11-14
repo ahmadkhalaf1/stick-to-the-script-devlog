@@ -36,7 +36,7 @@ Asked for by the developer on Sat Nov 14: "also review how reply videos are made
 - [x] The bar's film, 150 pictures, sampled: the same
 - [x] The guard seen in play and in the film
 - [x] The rooftop's film, the slow-motion cut and the long take: seen on Sat Nov 14, at 17:50 in the editor (the rooftop as the slow-motion cut, the bar as the long take) and at 18:15 in the packaged game's recording (the three scenes in the three cuts)
-- [ ] A fighter who is not part of a blow can still stand between the camera and it, out of focus
+- [x] A fighter who is not part of a blow no longer stands between the camera and it: since Sat Nov 14 evening a place for a close shot is passed over when such a fighter is in the middle of its picture, and when every place has one the wide camera takes the shot. Seen in the editor: in three films of four a shot moved to a clear place. The handing over to the wide camera did not come up in those films and has not been seen. Before this: a fighter who is not part of a blow could still stand between the camera and it, out of focus
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: cam

@@ -15,6 +15,8 @@ class AStickHUD : public AHUD
 	GENERATED_BODY()
 
 public:
+	AStickHUD();
+
 	virtual void BeginPlay() override;
 	virtual void DrawHUD() override;
 
@@ -68,6 +70,13 @@ private:
 	void DrawCentered(const FString& Text, float Y, float Scale, const FLinearColor& Color);
 	// One row of a menu: a bar across the middle, gold under the chosen one. A row with a price or a state has it on the right.
 	void DrawMenuRow(const FString& Text, bool bChosen, float Y, float Height, float Scale, float Unit);
+	// The first menu: the scenes as picture cards on a path, in the order they are played, and the other rows under them.
+	void DrawSceneMenu(float Unit);
+	// A picture of each scene for its card, and the same out of focus for a scene still locked. Made by Tools/build_ui.py.
+	UPROPERTY()
+	TArray<TObjectPtr<class UTexture2D>> SceneCards;
+	UPROPERTY()
+	TArray<TObjectPtr<class UTexture2D>> LockedSceneCards;
 	// The wardrobe's panel: every colour as a swatch, every hat and build as a pip, what is chosen named large.
 	void DrawWardrobe(float Unit);
 	// A strip along the bottom of a take: every key, and what it does at this moment. A meaning that has changed, because
@@ -118,6 +127,7 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<USoundBase>> DirectorVoices;
 	float ShoutUntilSeconds = 0.f;
+	bool bBossInTheFight = false;
 	// The keys stay on screen until then: some seconds into a scene's first take.
 	float KeysUntilSeconds = 0.f;
 	TArray<FString> WardrobeLines;

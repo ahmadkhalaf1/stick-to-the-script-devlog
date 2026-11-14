@@ -42,6 +42,8 @@ namespace
 		{ 170.f, 180.f, 100.f, 0.6f, 1.3f, 0.5f, 0.35f, 14.f, 22.f, true, false, 10.f, 13.5f, EMove::Uppercut, EMove::Kick, 0.25f },
 		// The gunman: its range is the gap it keeps, its wind-up the time it aims, and its punch damage what a shot does.
 		{ 35.f, 230.f, 450.f, 1.f, 2.6f, 0.f, 0.f, 14.f, 0.f, false, true, 6.f, 10.5f, EMove::Punch, EMove::Kick, 0.f },
+		// The boss: a heavy who does not plod. He guards more, rests less, and half of what he throws is a big move.
+		{ 300.f, 230.f, 100.f, 0.5f, 0.8f, 0.5f, 0.5f, 16.f, 22.f, true, false, 10.5f, 14.f, EMove::Uppercut, EMove::Roundhouse, 0.45f },
 	};
 	// A bigger move is shown for longer before it lands, so it can be read and answered: step back, or duck a roundhouse.
 	const float SpecialWindUpScale = 1.35f;
@@ -220,6 +222,7 @@ void AStuntPartner::StartThinking(EOpponentKind Kind, float InWakeDistance)
 	SpecialShare = Style.SpecialShare;
 	bShoots = Kind == EOpponentKind::Gunman;
 	bArmed = bShoots;
+	bBoss = Kind == EOpponentKind::Boss;
 
 	WakeDistance = InWakeDistance;
 	bThinks = true;
@@ -249,6 +252,11 @@ void AStuntPartner::Think(float DeltaSeconds)
 			return;
 		}
 		Brain = EBrain::Entering;
+		if (bBoss)
+		{
+			// The hero has fought the whole scene to get here. Make-up puts him right, and the last fight starts even.
+			PlayerFighter->CatchBreath();
+		}
 		MoveTo(SpotLocation, static_cast<float>(FVector::Dist2D(Mine, SpotLocation)) / WalkSpeed, Theirs);
 		return;
 	}
@@ -380,6 +388,11 @@ bool AStuntPartner::ShouldWake() const
 		{
 			return false;
 		}
+	}
+	if (bBoss)
+	{
+		// The boss comes on alone, when everybody else is down.
+		return Fighting == 0;
 	}
 	return Fighting < MaxAttackers || FVector::Dist2D(PlayerFighter->GetActorLocation(), SpotLocation) < WakeDistance;
 }

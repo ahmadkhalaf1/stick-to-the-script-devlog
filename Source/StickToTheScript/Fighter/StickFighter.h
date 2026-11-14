@@ -142,6 +142,8 @@ public:
 	bool IsGuarding() const { return HeldPose == EMove::Block && PoseAlpha > 0.4f; }
 	bool IsDucking() const { return HeldPose == EMove::Duck && PoseAlpha > 0.5f; }
 	float GetHealthFraction() const { return FMath::Clamp(Health / MaxHealth, 0.f, 1.f); }
+	// Back to full strength, for a fight that starts in the middle of a take.
+	void CatchBreath() { Health = MaxHealth; }
 
 	// 0 is the player, 1 the opponents. A strike only lands on the other team.
 	int32 Team = 1;

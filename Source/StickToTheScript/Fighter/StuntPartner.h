@@ -22,6 +22,10 @@ public:
 	// True in the last moments of a gunman's aim, when its line has stopped following the player.
 	bool IsAboutToFire() const;
 
+	// True once it has joined the fight, until it is put down.
+	bool IsInTheFight() const { return Brain != EBrain::Asleep && !IsDown(); }
+	bool IsBoss() const { return bBoss; }
+
 	// Its place in the scene's list of opponents. The side and the lane it keeps come from it.
 	UPROPERTY(EditAnywhere, Category = "Partner")
 	int32 PartnerIndex = 0;
@@ -77,6 +81,7 @@ private:
 	TObjectPtr<UStaticMeshComponent> AimLine;
 
 	bool bShoots = false;
+	bool bBoss = false;
 	float AimSecondsLeft = 0.f;
 	float TracerSecondsLeft = 0.f;
 	FVector TracerEnd = FVector::ZeroVector;
