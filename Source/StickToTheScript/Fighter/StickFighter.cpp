@@ -2134,6 +2134,19 @@ bool AStickFighter::GrabOrThrow()
 		return true;
 	}
 
+	AThrownProp* Found = FindPropInReach();
+	if (!Found)
+	{
+		return false;
+	}
+
+	Found->PickUp(this);
+	Carried = Found;
+	return true;
+}
+
+AThrownProp* AStickFighter::FindPropInReach() const
+{
 	AThrownProp* Found = nullptr;
 	double Reach = GrabReach;
 	for (TActorIterator<AThrownProp> It(GetWorld()); It; ++It)
@@ -2145,14 +2158,7 @@ bool AStickFighter::GrabOrThrow()
 			Found = *It;
 		}
 	}
-	if (!Found)
-	{
-		return false;
-	}
-
-	Found->PickUp(this);
-	Carried = Found;
-	return true;
+	return Found;
 }
 
 // The punch, with a gun in the hands. Every pellet is a straight line: it stops in the first opponent it meets, or comes

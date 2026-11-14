@@ -113,6 +113,8 @@ public:
 
 	// Picks up the nearest loose prop in reach, or throws the one it carries. False when there was nothing to do.
 	bool GrabOrThrow();
+	// The loose prop a grab would pick up now: the nearest one in reach, or none.
+	AThrownProp* FindPropInReach() const;
 	bool IsCarrying() const { return Carried.IsValid(); }
 	const AThrownProp* GetCarried() const { return Carried.Get(); }
 	FVector2D GetArenaMin() const { return ArenaMin; }

@@ -213,13 +213,13 @@ void AStickHUD::DrawHUD()
 			{
 				DrawCentered(Shout, 960.f * Unit, 2.f * Unit, FLinearColor::White);
 			}
-			// The keys show as every take is called, and stay a while into a scene's first one, unless the director is talking over them.
+			// What the strip below cannot say by itself is told as every take is called, and a while into a scene's first
+			// one, unless the director is talking over it.
 			else if (Slate == ESlate::GetReady || (Slate == ESlate::None && Now < KeysUntilSeconds))
 			{
-				// shortcut: the keys are written here by hand, S2-FEEL-02 should read them from the input bindings.
-				DrawCentered(TEXT("W A S D move     Left click punch     Right click guard     F kick     Ctrl duck     Space jump     E grab, throw     Esc pause"), 950.f * Unit, 1.7f * Unit, FLinearColor::White);
-				DrawCentered(TEXT("Duck and punch: uppercut     Duck and kick: sweep     Guard and punch: hook     Guard and kick: roundhouse     Jump under a red bar, then kick     Holding a gun: left click fires"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+				DrawCentered(TEXT("Hold guard or duck and strike for other moves     Jump under a red bar to hang from it, then kick     Esc pause"), 966.f * Unit, 1.4f * Unit, FLinearColor(0.78f, 0.78f, 0.78f));
 			}
+			DrawKeys(*Player, Unit);
 		}
 	}
 
@@ -253,6 +253,80 @@ void AStickHUD::DrawHUD()
 		break;
 	}
 
+}
+
+void AStickHUD::DrawKeys(const AStickFighter& Player, float Unit)
+{
+	auto Down = [this](std::initializer_list<FKey> Keys)
+	{
+		for (const FKey& Key : Keys)
+		{
+			if (PlayerOwner && PlayerOwner->IsInputKeyDown(Key))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+
+	const AThrownProp* Held = Player.GetCarried();
+	const bool bHanging = Player.IsHanging();
+	// A strike with a throwable in the hands throws it. A gun and a weapon that is swung stay in them.
+	const bool bThrows = Held && !Held->IsGun() && !Held->IsSwung();
+	const bool bDucking = !Held && Player.IsDucking();
+	const bool bGuarding = !Held && Player.IsGuarding();
+
+	const TCHAR* Punch = bHanging ? TEXT("Swing kick") : bThrows ? TEXT("Throw") : Held && Held->IsGun() ? (Held->GetShotsLeft() > 0 ? TEXT("Fire") : TEXT("Empty"))
+		: Held ? TEXT("Swing") : bDucking ? TEXT("Uppercut") : bGuarding ? TEXT("Hook") : TEXT("Punch");
+	const TCHAR* Kick = bHanging ? TEXT("Swing kick") : bThrows ? TEXT("Throw") : bDucking ? TEXT("Sweep") : bGuarding ? TEXT("Roundhouse")
+		: Player.IsAirborne() ? TEXT("Flying kick") : TEXT("Kick");
+	const TCHAR* Grab = Held ? TEXT("Throw") : Player.FindPropInReach() ? TEXT("Pick up") : TEXT("Grab");
+
+	struct FKeyChip
+	{
+		const TCHAR* Key;
+		const TCHAR* Does;
+		// What it does as a rule. Anything else is worth a look.
+		const TCHAR* Plain;
+		bool bDown;
+	};
+	// shortcut: the keys are written here by hand, they should be read from the input bindings if those ever change.
+	const FKeyChip Chips[] = {
+		{ TEXT("W A S D"), TEXT("Move"), TEXT("Move"), Down({ EKeys::W, EKeys::A, EKeys::S, EKeys::D, EKeys::Up, EKeys::Left, EKeys::Down, EKeys::Right }) },
+		{ TEXT("Left click"), Punch, TEXT("Punch"), Down({ EKeys::LeftMouseButton, EKeys::J }) },
+		{ TEXT("F"), Kick, TEXT("Kick"), Down({ EKeys::F, EKeys::K }) },
+		{ TEXT("Right click"), TEXT("Guard"), TEXT("Guard"), Down({ EKeys::RightMouseButton, EKeys::LeftShift, EKeys::RightShift, EKeys::L }) },
+		{ TEXT("Ctrl"), TEXT("Duck"), TEXT("Duck"), Down({ EKeys::LeftControl, EKeys::RightControl, EKeys::C }) },
+		{ TEXT("Space"), bHanging ? TEXT("Let go") : TEXT("Jump"), TEXT("Jump"), Down({ EKeys::SpaceBar }) },
+		{ TEXT("E"), Grab, TEXT("Grab"), Down({ EKeys::E }) },
+	};
+
+	const float Scale = 1.45f * Unit;
+	const float Pad = 9.f * Unit;
+	const float AfterKey = 9.f * Unit;
+	const float BetweenChips = 30.f * Unit;
+	float Widths[UE_ARRAY_COUNT(Chips)][2];
+	float LineHeight = 0.f;
+	float Total = -BetweenChips;
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Chips); ++Index)
+	{
+		Measure(Chips[Index].Key, Widths[Index][0], LineHeight, nullptr, Scale);
+		Measure(Chips[Index].Does, Widths[Index][1], LineHeight, nullptr, Scale);
+		Total += Widths[Index][0] + Pad * 2.f + AfterKey + Widths[Index][1] + BetweenChips;
+	}
+
+	float X = (Canvas->SizeX - Total) * 0.5f;
+	const float Y = 1018.f * Unit;
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.4f), X - 22.f * Unit, Y - 10.f * Unit, Total + 44.f * Unit, LineHeight + 20.f * Unit);
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Chips); ++Index)
+	{
+		const FKeyChip& Chip = Chips[Index];
+		const bool bChanged = FCString::Strcmp(Chip.Does, Chip.Plain) != 0;
+		DrawRect(Chip.bDown ? FLinearColor::White : FLinearColor(1.f, 1.f, 1.f, 0.16f), X, Y - 4.f * Unit, Widths[Index][0] + Pad * 2.f, LineHeight + 8.f * Unit);
+		Write(Chip.Key, Chip.bDown ? FLinearColor::Black : FLinearColor::White, X + Pad, Y, nullptr, Scale);
+		Write(Chip.Does, bChanged ? HighlightGold : FLinearColor(0.8f, 0.8f, 0.8f), X + Widths[Index][0] + Pad * 2.f + AfterKey, Y, nullptr, Scale);
+		X += Widths[Index][0] + Pad * 2.f + AfterKey + Widths[Index][1] + BetweenChips;
+	}
 }
 
 void AStickHUD::HandleBoxOffice(const FText& What, int32 Dollars)

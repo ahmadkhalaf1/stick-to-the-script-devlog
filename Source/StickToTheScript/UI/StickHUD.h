@@ -67,6 +67,9 @@ private:
 	void DrawMenuRow(const FString& Text, bool bChosen, float Y, float Height, float Scale, float Unit);
 	// The wardrobe's panel: every colour as a swatch, every hat and build as a pip, what is chosen named large.
 	void DrawWardrobe(float Unit);
+	// A strip along the bottom of a take: every key, and what it does at this moment. A meaning that has changed, because
+	// of what the fighter holds or how it stands, is in gold, and a key that is down is lit.
+	void DrawKeys(const AStickFighter& Player, float Unit);
 
 	// Where the mouse pointer is, in the layout's own coordinates, or off it at (-1, -1). It works the menus and the
 	// wardrobe; in a take it is hidden and the click is a punch.

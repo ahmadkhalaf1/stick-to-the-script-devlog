@@ -1072,6 +1072,24 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** nothing in the run. One take of nine did not end in a wrap: it was still going when the eight minutes were up.
 - **Not verified:** a person playing it. Everything of this night is waiting for that.
 
+### 10:46 · The night's build goes on the store page draft
+
+- **Developer said:** "Yes, upload it", to the question whether the new build should go on the store page draft. Then, when the agent could not reach the browser: "use my browser its opened".
+- **Agent did:** opened the page's edit form in the developer's Chrome, pressed "Upload files", gave the file chooser the zip with `Tools\choose_file.ps1`, waited for the upload, saved, and read the form again.
+- **Result:** the page has one file, `PageTwelve_StickToTheScript.zip`, 547 MB, uploaded at 10:33, marked for Windows. The page is still a draft.
+- **Went wrong:** after the PC woke from its sleep, Chrome's extension was not connected, and three tries a minute apart changed nothing. The app's own browser was stopped by the site's check for robots and by its sign-in, neither of which the agent goes through. It took the developer opening the browser. And the plan said to delete the old file after uploading: there was nothing to delete. The new file has the old one's name and took its place in the list, with Windows already ticked.
+- **Not verified:** the download from the page. The page's pictures and video are still those of Nov 13.
+
+### 10:46 · The keys stay on screen, and say what they do now
+
+- **Developer said:** "find a nice way to keep key bind help visible at the game to help knowing what to press now mouse click only punsh"
+- **Agent did:** replaced the two lines of key help, which left the screen 14 seconds into a scene, with a strip of key caps along the bottom edge that stays for the whole take. Each cap has what it does beside it, and that changes with the moment: with duck held the click reads "Uppercut" and F "Sweep"; with a pistol in the hands the click reads "Fire" and E "Throw"; in the air F reads "Flying kick"; with a prop in reach E reads "Pick up". What differs from the plain meaning is in gold, and a key that is down lights its cap. The grab and the strip now ask the fighter the same question about what is in reach, so the strip cannot promise a pick-up that E would not do.
+- **Result:** seen in the editor in four states, one of them with the duck key really held down. Packaged at 825 MB, zip 547 MB. The packaged game shows the strip in a take, and played a minute and a half by itself at a median of 96 and 106 frames a second without a warning.
+- **Went wrong:** the first picture meant to show the pistol showed "Pick up" still: E had been pressed as the fighter came up from the duck, when it cannot grab. A second run pressed it standing.
+- **Not verified:** the strip on a bar, with a bat, and with a throwable in the hands, which are in the code and were not photographed; whether it is in the way for a person playing. The build on the store page is the one from before this change.
+
+![The strip in four moments: plain with a prop in reach, duck held, a pistol in the hands, and in the air](Docs/devlog/72-keys-that-stay.jpg)
+
 ---
 
 ## Asset and tool register
