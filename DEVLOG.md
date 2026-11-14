@@ -1265,6 +1265,19 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The new video, two frames a second: title, wardrobe, three fights, three films in three cuts, the slate](Docs/devlog/82-the-new-gameplay-video.jpg)
 
+### 18:43 · The evening's build and its pictures on the store page draft
+
+- **Developer said:** "Yes, upload it". Then, asked twice for a hand: "Tab is showing" and "Pressed OK".
+- **Agent did:**
+  - Opened the page's edit form in the developer's browser and clicked "Upload files". No file chooser came: the tab was in the background, as the project's notes say it would be, and the developer was using the browser. The agent asked instead of switching their tabs.
+  - With the tab showing, the chooser opened, `Tools/choose_file.ps1` gave it the zip, the upload took about two minutes, and the zip took the old one's place in the list. Saved.
+  - The pictures. By then the tab was in the background again and the chooser stayed shut. They did not need it: the click on "Add screenshots" leaves a hidden file input for pictures in the page, and the browser tool can hand files of up to 10 MB straight to an input. Six pictures, 1.4 MB, went in that way.
+  - Removing the first old picture froze the page for the agent: the page asks "Are you sure you want to delete this screenshot?" in a pop-up, and a pop-up in a background tab waits there until somebody looks. The developer pressed OK. The picture was still listed afterwards, so that answer did not take. As the developer had been told beforehand, the script then answered the page's question with yes for the six old pictures, one question each.
+  - The new pictures had landed in the order their uploads finished. The page's own "Move up" button, thirteen times, put them in the order warehouse, bar, rooftop, the choice of cut, a film shot, the slate. Saved, the form loaded again and the draft page opened to check.
+- **Result:** the draft has one file, `PageTwelve_StickToTheScript.zip`, 547 MB, for Windows, uploaded at 18:35, and six pictures from the evening's run in that order. It is still a draft.
+- **Went wrong:** the chooser that would not open, twice, and the pop-up nobody could see. Both come from driving a browser somebody else is using at the same moment; both are in `CLAUDE.md` now. Two of the eight pictures made were left off the page, since the page itself asks for three to five and had six.
+- **Not verified:** nobody has downloaded the zip from the page and run it. The video on the page is still the one of Nov 13; the new one is cut but not uploaded, which is the developer's to do. The page as a stranger would see it cannot be looked at while it is a draft.
+
 ---
 
 ## Asset and tool register
