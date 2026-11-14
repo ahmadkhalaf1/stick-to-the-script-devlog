@@ -96,6 +96,10 @@ private:
 	int32 CurrentTake = 0;
 	FString CardHeadline;
 	FString FilmCut;
+	// For the film's title card and the slate at its end, which the film says when to show.
+	FString FilmScene;
+	FString FilmTitle;
+	TWeakObjectPtr<const class AFinalCut> FilmShown;
 	TArray<FString> CardLines;
 	int32 CurrentPay = INDEX_NONE;
 

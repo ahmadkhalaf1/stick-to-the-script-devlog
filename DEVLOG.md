@@ -1120,6 +1120,19 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![A bottle in one hand at the bar; the packaged game's shop with the pointer on "Iron bar", then "Sold."; the wardrobe after three clicks; the take that followed, the pointer hidden](Docs/devlog/74-the-last-checks.jpg)
 
+### 12:59 · The film gets a title card, a slate and its whooshes
+
+- **Developer said:** "Yes, film polish", to the agent's question whether to go on to it. It was the second item on the list the agent had given: a title card and an end slate on the Director's Cut, and a whoosh on the swings in the film.
+- **Agent did:** three things, all planned since the second sprint and never built.
+  - The film now opens on a black card for 2.2 seconds: "A PAGE TWELVE PICTURE", the scene's name large, "THE DIRECTOR'S CUT" in gold, the cut and the take under it. The film's music starts with the card.
+  - It ends on its last frame, held 2.6 seconds under a clapperboard: the scene, the take, the cut, how long the film ran, and "CUT. PRINT IT." The film used to hold that frame for 1.2 seconds with nothing on it.
+  - The recorder kept one kind of swing, a gun going off, because only that needed its flash back. It now keeps every swing, and the film fires them all again, so each strike has the whoosh it had in the fight, and the big ones their shout.
+- **Result:** `Tools/check.ps1` passes. In the editor the game played the warehouse to a wrap in 28 seconds and the action cut was chosen: the card, the film and the slate are in the pictures below, and the slate reads 0:21. By the log the film swung 14 strikes and throws again and played 12 whooshes, 2 spinning ones and 3 shouts, where a film before this had none; its 8 shots as before.
+- **Went wrong:** nothing in the build. In the doing: the editor's play sessions make sound, and the developer was using the PC all through today's tests. The agent only thought of that after this one.
+- **Not verified:** how it sounds, which the agent cannot hear. The slow-motion cut and the long take with the new card and slate, and the other two scenes' names on the card. The video cutter, which finds a film in a recording by the black of its top bar, was read and not run: the corner it looks at is black under the card too, and the film's length in the log still runs from the card to the end of the slate.
+
+![The title card, a frame of the film, and the slate over its last frame](Docs/devlog/75-title-card-and-slate.jpg)
+
 ---
 
 ## Asset and tool register

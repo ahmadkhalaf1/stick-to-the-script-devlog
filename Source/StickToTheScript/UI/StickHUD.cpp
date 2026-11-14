@@ -110,6 +110,19 @@ void AStickHUD::DrawHUD()
 
 	if (Slate == ESlate::Film)
 	{
+		const AFinalCut* Film = FilmShown.Get();
+		if (Film && Film->IsOnTitleCard())
+		{
+			// Black, as a film's own title card is. The band is already playing.
+			DrawRect(FLinearColor::Black, 0.f, 0.f, Width, Height);
+			DrawCentered(TEXT("A  PAGE  TWELVE  PICTURE"), Top + 320.f * Unit, 1.6f * Unit, FLinearColor(0.6f, 0.6f, 0.6f));
+			DrawCentered(FilmTitle, Top + 410.f * Unit, 6.5f * Unit, FLinearColor::White);
+			DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, Top + 572.f * Unit, 180.f * Unit, 6.f * Unit);
+			DrawCentered(TEXT("THE DIRECTOR'S CUT"), Top + 612.f * Unit, 3.f * Unit, HighlightGold);
+			DrawCentered(FString::Printf(TEXT("%s      TAKE %d"), *FilmCut, CurrentTake), Top + 700.f * Unit, 1.9f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+			return;
+		}
+
 		// The film is letterboxed and carries no game interface: it is the result, not the shoot.
 		const float Bar = Height * 0.11f;
 		DrawRect(FLinearColor::Black, 0.f, 0.f, Width, Bar);
@@ -121,6 +134,25 @@ void AStickHUD::DrawHUD()
 		float SkipHeight = 0.f;
 		Measure(Skip, SkipWidth, SkipHeight, Font, 1.4f * Unit);
 		Write(Skip, FLinearColor(0.55f, 0.55f, 0.55f), Width - SkipWidth - 48.f * Unit, Height - Bar * 0.65f, Font, 1.4f * Unit);
+
+		if (Film && Film->IsOnEndSlate())
+		{
+			// A clapperboard over the last frame: its striped stick, then what a slate says.
+			const float BoardWidth = 860.f * Unit;
+			const float Left = (Width - BoardWidth) * 0.5f;
+			const float BoardTop = Top + 350.f * Unit;
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.84f), Left, BoardTop, BoardWidth, 380.f * Unit);
+			const int32 Stripes = 12;
+			for (int32 Stripe = 0; Stripe < Stripes; Stripe += 2)
+			{
+				DrawRect(FLinearColor::White, Left + Stripe * BoardWidth / Stripes, BoardTop, BoardWidth / Stripes, 36.f * Unit);
+			}
+			const int32 Ran = FMath::RoundToInt32(Film->GetRunningSeconds());
+			DrawCentered(TEXT("STICK TO THE SCRIPT"), BoardTop + 62.f * Unit, 2.f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+			DrawCentered(FString::Printf(TEXT("%s      TAKE %d"), *FilmScene, CurrentTake), BoardTop + 118.f * Unit, 4.2f * Unit, FLinearColor::White);
+			DrawCentered(FString::Printf(TEXT("%s      %d:%02d"), *FilmCut, Ran / 60, Ran % 60), BoardTop + 222.f * Unit, 2.2f * Unit, HighlightGold);
+			DrawCentered(TEXT("CUT.  PRINT IT."), BoardTop + 292.f * Unit, 2.6f * Unit, FLinearColor::White);
+		}
 		return;
 	}
 
@@ -440,9 +472,20 @@ void AStickHUD::HandleTakeFinished(const FTake& Take)
 
 void AStickHUD::HandleFinalCutStarted(const FTake& Take)
 {
-	if (const AFinalCut* Film = Cast<AFinalCut>(UGameplayStatics::GetActorOfClass(this, AFinalCut::StaticClass())))
+	FilmShown = Cast<AFinalCut>(UGameplayStatics::GetActorOfClass(this, AFinalCut::StaticClass()));
+	if (FilmShown.IsValid())
 	{
-		FilmCut = FString(AFinalCut::CutName(Film->GetCut())).ToUpper();
+		FilmCut = FString(AFinalCut::CutName(FilmShown->GetCut())).ToUpper();
+	}
+	if (const ATakeDirector* Director = Cast<ATakeDirector>(UGameplayStatics::GetActorOfClass(this, ATakeDirector::StaticClass())))
+	{
+		// "Scene 1: The warehouse" is "SCENE 1" on the slate and "THE WAREHOUSE" on the title card.
+		const FString Name = Director->Script.Name.ToString().ToUpper();
+		if (!Name.Split(TEXT(": "), &FilmScene, &FilmTitle))
+		{
+			FilmScene = Name;
+			FilmTitle = Name;
+		}
 	}
 	Slate = ESlate::Film;
 }

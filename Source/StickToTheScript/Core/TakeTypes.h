@@ -196,8 +196,8 @@ enum class ERecordedEventKind : uint8
 	Hit,
 	Blocked,
 	Cut,
-	// A gun going off, whether it hit anyone or not: the film wants its flash and its noise back.
-	Shot
+	// A strike thrown or a gun fired, whether it hit anyone or not: the film wants its whoosh, its flash and its noise back.
+	Swing
 };
 
 // One UTakeEvents event as it happened during a take. Fields the kind does not use keep their defaults.

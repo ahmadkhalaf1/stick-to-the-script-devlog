@@ -52,6 +52,12 @@ public:
 	// Ends the film now.
 	void Skip();
 
+	// The film opens on a title card and ends on a slate over its last frame. The HUD draws both.
+	bool IsOnTitleCard() const { return Phase == EPhase::Titles; }
+	bool IsOnEndSlate() const { return Phase == EPhase::HoldingLastFrame; }
+	// How long the film itself ran, known once it is over.
+	float GetRunningSeconds() const { return RunningSeconds; }
+
 	UPROPERTY()
 	TObjectPtr<AFightRecorder> Recorder;
 
@@ -60,9 +66,11 @@ private:
 	{
 		Idle,
 		Ready,
+		Titles,
 		Playing,
 		HoldingLastFrame
 	};
+	static constexpr float TitleCardSeconds = 2.2f;
 
 	enum ECamera
 	{
@@ -105,6 +113,8 @@ private:
 	TArray<FShot> Shots;
 	EPhase Phase = EPhase::Idle;
 	float PhaseSecondsLeft = 0.f;
+	double PlayingSinceRealSeconds = 0.;
+	float RunningSeconds = 0.f;
 	float ReplaySeconds = 0.f;
 	int32 FrameCursor = 0;
 	int32 NextEvent = 0;

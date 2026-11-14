@@ -129,10 +129,10 @@ void AFightRecorder::HandleHit(AActor* Attacker, AActor* Victim, EMove Move)
 
 void AFightRecorder::HandleSwing(AActor* Attacker, EMove Move)
 {
-	// Of all the swings only a gun going off is kept: its flash and its noise happen whether or not it hits anyone.
-	if (bRecording && (Move == EMove::Shot || Move == EMove::Blast))
+	// Kept whether or not it lands: the whoosh of a strike, and the flash and noise of a gun, happen either way.
+	if (bRecording)
 	{
-		FRecordedEvent& Event = AddEvent(ERecordedEventKind::Shot);
+		FRecordedEvent& Event = AddEvent(ERecordedEventKind::Swing);
 		Event.AttackerIndex = IndexOf(Attacker);
 		Event.VictimIndex = Event.AttackerIndex;
 		Event.Move = Move;

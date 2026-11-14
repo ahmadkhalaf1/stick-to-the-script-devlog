@@ -61,7 +61,8 @@ namespace
 			}
 		}
 	}
-	const float HoldLastFrameSeconds = 1.2f;
+	// The film holds its last frame this long, under the slate.
+	const float EndSlateSeconds = 2.6f;
 
 	// A close-up starts just before its strike lands and stays a moment after.
 	const float CutBeforeImpactSeconds = 0.35f;
@@ -90,6 +91,15 @@ void AFinalCut::Tick(float DeltaSeconds)
 
 	switch (Phase)
 	{
+	case EPhase::Titles:
+		PhaseSecondsLeft -= DeltaSeconds;
+		if (PhaseSecondsLeft <= 0.f)
+		{
+			Phase = EPhase::Playing;
+			PlayingSinceRealSeconds = GetWorld()->GetRealTimeSeconds();
+		}
+		break;
+
 	case EPhase::Playing:
 		ReplaySeconds += DeltaSeconds * PlaybackRate(ReplaySeconds);
 		if (ReplaySeconds >= Clips[ClipIndex].EndSeconds)
@@ -98,7 +108,9 @@ void AFinalCut::Tick(float DeltaSeconds)
 			{
 				ShowMoment(Clips[ClipIndex].EndSeconds);
 				Phase = EPhase::HoldingLastFrame;
-				PhaseSecondsLeft = HoldLastFrameSeconds;
+				PhaseSecondsLeft = EndSlateSeconds;
+				// By the clock on the wall: the frozen frames and the slow motion are part of what was watched.
+				RunningSeconds = static_cast<float>(GetWorld()->GetRealTimeSeconds() - PlayingSinceRealSeconds);
 				break;
 			}
 
@@ -206,7 +218,9 @@ void AFinalCut::StartReplay()
 		++NextEvent;
 	}
 
-	Phase = EPhase::Playing;
+	Phase = EPhase::Titles;
+	PhaseSecondsLeft = TitleCardSeconds;
+	RunningSeconds = 0.f;
 	GetWorld()->GetSubsystem<UTakeEvents>()->OnFinalCutStarted.Broadcast(Take);
 	ShowMoment(ReplaySeconds);
 }
@@ -378,7 +392,7 @@ void AFinalCut::ReplayEvent(const FRecordedEvent& Event)
 	}
 
 	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
-	if (Event.Kind == ERecordedEventKind::Shot)
+	if (Event.Kind == ERecordedEventKind::Swing)
 	{
 		Events->OnSwing.Broadcast(Attacker, Event.Move);
 	}
@@ -434,7 +448,7 @@ void AFinalCut::CutTo(const FShot& Shot)
 
 void AFinalCut::Skip()
 {
-	if (Phase == EPhase::Playing || Phase == EPhase::HoldingLastFrame)
+	if (Phase == EPhase::Titles || Phase == EPhase::Playing || Phase == EPhase::HoldingLastFrame)
 	{
 		FinishReplay();
 	}
