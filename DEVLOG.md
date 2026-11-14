@@ -1090,6 +1090,21 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The strip in four moments: plain with a prop in reach, duck held, a pistol in the hands, and in the air](Docs/devlog/72-keys-that-stay.jpg)
 
+### 12:38 · The parts nobody had seen
+
+- **Developer said:** "Ok what else to improve at the list", and then, to the agent's list, which put checking the never-seen parts first: "Go with ur pick".
+- **Agent did:** gave the editor build a test key, F7, that holds the opponents all but still, so a check is not undone by the fight; it is bound in editor builds only and is not in the packaged game. Added three log lines: who picks up what, where a gunman's pistol falls, and a shot coming off a wall. Wrote a driver that plays one session in steps, so a picture can be looked at before the next step, and a helper that photographs the window fourteen times in a quarter of a second, because the line of a shot shows for 0.07 s. Then went through the list on the rooftop, in the bar and in the warehouse.
+- **Result:** nothing was found broken. Seen, each in a picture and most in the log as well:
+  - the gunman's pistol: one rifle shot put him down, the log says "SM_Pistol falls from the hand of StuntPartner_1 at 882, 45", it lay there, the key strip said "Pick up" beside it, and it was picked up with 8 rounds and fired;
+  - a ricochet: fired at the rooftop's left end wall from a metre and a half, the line stops at the wall in sparks and a thinner one comes back over the shooter's shoulder; the log has the shot coming off the wall at x -500;
+  - the rifle, from the set and bought in the shop for $600: at the feet in the next scene, shouldered, 5 rounds, one shot for one opponent;
+  - the key strip on a bar ("Swing kick", "Swing kick", "Let go"), with a bat ("Swing"), with a pan ("Throw" three times) and with a rifle ("Fire");
+  - a pan held up in one hand.
+- **Went wrong:** the developer was using the PC, and the agent did not look first. Its helpers that hold a real key or click the real mouse bring the play window to the front. For about ten minutes they took the keyboard away from what the developer was doing, and the developer's key presses landed in the test instead: a duck key the agent never pressed lit up on the strip, and the fighter went on fighting between two steps. That is how it was noticed. The agent stopped sending real keys and did the rest (the shop, the rifle, the bat) through the editor's own key presses, which need no window in front; the driver now refuses a real key while another program is in front. Two smaller things: in the first session the game's own player picked up the rifle and fired in the fifth of a second before it was switched off, and a test cut short by a careless pipe left a play session running, which was stopped.
+- **Not verified:** a bottle in one hand (the pan was; the walk to a bottle needs a held key). In the packaged game, the pointer hidden during a take and the mouse in the shop, the wardrobe and the choice of cut: they need the real mouse and wait until the PC is free. The packaged build and the zip are from before the three log lines.
+
+![Six moments: the gunman's pistol at the fighter's feet with "Pick up" on the strip, the same pistol in the hands, a shot coming back off the end wall, the strip while hanging from a bar, the rifle from the shop, the bat from the shop](Docs/devlog/73-the-unseen-parts.jpg)
+
 ---
 
 ## Asset and tool register

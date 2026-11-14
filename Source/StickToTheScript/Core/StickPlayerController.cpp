@@ -264,6 +264,15 @@ void AStickPlayerController::ToggleSlowFighters()
 	}
 }
 
+void AStickPlayerController::ToggleOpponentsHeld()
+{
+	bOpponentsHeld = !bOpponentsHeld;
+	for (TActorIterator<AStuntPartner> It(GetWorld()); It; ++It)
+	{
+		It->CustomTimeDilation = bOpponentsHeld ? 0.02f : 1.f;
+	}
+}
+
 void AStickPlayerController::JumpToScene(int32 Index)
 {
 	UStickGameInstance* Game = GetGameInstance<UStickGameInstance>();
@@ -426,6 +435,9 @@ void AStickPlayerController::SetupInputComponent()
 	Input->BindAction(MakeAction({ EKeys::F9 }), ETriggerEvent::Started, this, &AStickPlayerController::SetAutoplay, true);
 	Input->BindAction(MakeAction({ EKeys::F10 }), ETriggerEvent::Started, this, &AStickPlayerController::SetAutoplay, false);
 	Input->BindAction(MakeAction({ EKeys::F8 }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleSlowFighters);
+#if WITH_EDITOR
+	Input->BindAction(MakeAction({ EKeys::F7 }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleOpponentsHeld);
+#endif
 	Input->BindAction(MakeAction({ EKeys::One }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 0);
 	Input->BindAction(MakeAction({ EKeys::Two }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 1);
 	Input->BindAction(MakeAction({ EKeys::Three }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 2);

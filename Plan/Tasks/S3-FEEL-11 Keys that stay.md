@@ -29,6 +29,7 @@ A meaning that differs from the plain one is in gold. A key that is down lights 
 - [x] The strip shows for the whole take and not in the film or over a card: seen in the editor
 - [x] Its words change with duck held, with a pistol in the hands, in the air and with a prop in reach: seen, with the duck key really held
 - [x] The packaged build has it
+- [x] Its words on a bar ("Swing kick", "Let go"), with a bat ("Swing"), with a pan ("Throw") and with a rifle ("Fire"): seen in the editor on Nov 14
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: feel

@@ -31,6 +31,9 @@ public:
 	// For looking at a move: every fighter moves at a fifth of its speed, or at full speed again.
 	void ToggleSlowFighters();
 
+	// For tests in the editor: the opponents all but stand still, so a check is not undone by the fight.
+	void ToggleOpponentsHeld();
+
 	// For tests and demos: with autoplay on, the keys 1, 2 and 3 go straight to that scene.
 	void JumpToScene(int32 Index);
 
@@ -73,4 +76,5 @@ private:
 	bool bWasDefending = false;
 	void AskFor(EMove Move);
 	bool bSlowFighters = false;
+	bool bOpponentsHeld = false;
 };

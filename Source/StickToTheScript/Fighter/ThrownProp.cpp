@@ -372,6 +372,7 @@ void AThrownProp::Tick(float DeltaSeconds)
 
 void AThrownProp::PickUp(AStickFighter* NewHolder)
 {
+	UE_LOG(LogThrownProp, Log, TEXT("%s picks up %s"), *GetNameSafe(NewHolder), Looks[static_cast<int32>(Kind)].Mesh);
 	Holder = NewHolder;
 	State = EState::Held;
 	// It is placed between the carrier's hands as they are this tick, not as they were last tick.
@@ -537,6 +538,7 @@ void AThrownProp::HandleFighterDown(AActor* Fighter, bool bPlayer)
 			bInReserve = false;
 			Holder = nullptr;
 			Release(FVector::ZeroVector);
+			UE_LOG(LogThrownProp, Log, TEXT("%s falls from the hand of %s at %.0f, %.0f"), Looks[static_cast<int32>(Kind)].Mesh, *GetNameSafe(Fighter), GetActorLocation().X, GetActorLocation().Y);
 		}
 		return;
 	}

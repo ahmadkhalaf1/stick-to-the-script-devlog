@@ -22,7 +22,7 @@ Asked for by the developer in the night of Nov 13 to 14, in one message before g
 
 **Done when:**
 - [x] The rifle is shouldered and the pistol held in two hands, seen in play (03:48)
-- [ ] A bottle is held in one hand and a crate in two, seen in play. In the code; the test pictures caught neither being carried
+- [ ] A bottle is held in one hand and a crate in two, seen in play. On Nov 14 a pan from the counter was seen held up in one hand, which is the same hold; a bottle itself has still not been seen carried
 - [ ] The film shows the same
 - [ ] The developer has seen it
 

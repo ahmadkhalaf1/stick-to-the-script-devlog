@@ -39,8 +39,9 @@ Asked for by the developer in the night of Nov 13 to 14. First as a question: wh
 - [x] The packaged build has them: eleven shots in a minute of self-play, nothing missing
 - [x] Realistic military models, as the developer asked: a service pistol and a bolt-action rifle, scanned, from Poly Haven. The rifle is now what its model is, five slow heavy rounds. The blaster is off the sets and out of the shop: no scan of a shotgun was found
 - [x] The shop sells them and the next scene has what was bought. Tried on Nov 14 in the editor: the pistol bought with a click, $350 off the bank, "waiting for your next scene" on its row, the scene card saying it is at your feet, and it was there and picked up with 8 rounds
-- [ ] The gunman's pistol falls where he does and can be picked up. In the code, not seen
-- [ ] A ricochet has been seen. In the code; the test pictures did not catch one
+- [x] The gunman's pistol falls where he does and can be picked up. Seen on Nov 14 on the rooftop: one rifle shot put him down, the log has "SM_Pistol falls from the hand of StuntPartner_1 at 882, 45", it lay there, the key strip offered "Pick up" beside it, and it was picked up with 8 rounds and fired
+- [x] A ricochet has been seen. On Nov 14, fired at the rooftop's left end wall from a metre and a half: the line stops at the wall in sparks and a thinner one comes back over the shooter's shoulder. The log has the shot coming off the wall at x -500. It shows for 0.07 s, so it took fourteen pictures in a quarter of a second to catch
+- [x] The rifle bought in the shop ($600) is at the feet in the next scene, shouldered, with 5 rounds: seen on Nov 14
 - [ ] The developer has played it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight

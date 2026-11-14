@@ -2265,6 +2265,7 @@ bool AStickFighter::FireGun()
 			Direction.X = -Direction.X;
 			Range -= ToWall;
 			Damage *= 0.5f;
+			UE_LOG(LogStickFighter, Verbose, TEXT("%s: a shot comes off the wall at x %.0f with %.0f cm left to fly"), *GetName(), From.X, Range);
 		}
 	}
 
