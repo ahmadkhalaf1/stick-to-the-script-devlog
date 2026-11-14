@@ -1250,6 +1250,21 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The bar's film as the long take: one camera from the side, start to slate](Docs/devlog/81-the-long-take.jpg)
 
+### 18:30 · A new gameplay video from the evening's build, and the Start menu that got into it
+
+- **Developer said:** "Yes, PC is yours".
+- **Agent did:**
+  - `Tools/record_run.ps1 -Seconds 300` let the evening's packaged game play itself in a window and recorded its picture and its own sound. The run: all three scenes won in their first take, the films shown as the action cut, the slow-motion cut and the long take in turn, then the closing card. Over four takes 87 blows with hands and feet, 11 things thrown, 9 shots that hit, 26 blows taken.
+  - `node Tools/cut_video.mjs` then refused: "No film's black bars were found in the picture". It puts the picture in step with the log by measuring how long the top of the frame is black, and expected that to be as long as a film. Since the title card and the slate were added the bars go up with the card that offers the choice of cut and come down with a card after the film, so every stretch was ten to fourteen seconds too long. The script now looks for a stretch that starts at that card and ends on one of the cards after the film; it found film 3 to within 11 milliseconds.
+  - The first cut was looked at one frame every two seconds, and one frame was wrong: the Windows Start menu lay over the game, with the names of files on the developer's PC in it. In the recording it is up for about one second, as the first choice of cut appears; the other two choices are clean. Why it opened is not known. The piece that shows the choice now starts 1.3 seconds into the card instead of 0.5, which is past it in this run and as good in any other.
+  - Two more changes to the cut while it was open. The films of scenes 2 and 3 used to start with the last 0.7 seconds of their title card, a black flash too short to read; they now start after it. And the video now shows the slate of the last film, "CUT. PRINT IT.", before the closing card; it is left out when outtakes follow the slate.
+  - The second cut was looked at two frames a second, 116 frames: nothing lies over the picture. Eight pictures for the store page were taken from it into `Docs/store`, the eighth being the slate.
+- **Result:** `Saved/Release/StickToTheScript_gameplay.mp4`, 58 seconds, 1920 by 1080, with sound (mean -22 dB, peak -1.5 dB). The cut before it is kept beside it as `StickToTheScript_gameplay_before.mp4`.
+- **Went wrong:** the Start menu, told above; a frame every two seconds caught it, and only just, since it was up for one second. The raw recording still has it and stays on the developer's disk.
+- **Not verified:** nobody has listened to the video; its sound was measured, not heard. Nobody has watched it at speed. It is not uploaded: the link on the store page and for the jam's form is still the video of Nov 13, and the page still shows that day's pictures and the build of 13:31.
+
+![The new video, two frames a second: title, wardrobe, three fights, three films in three cuts, the slate](Docs/devlog/82-the-new-gameplay-video.jpg)
+
 ---
 
 ## Asset and tool register

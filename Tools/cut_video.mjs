@@ -17,6 +17,8 @@ const LONGEST = 59;
 const WORTH = { SwingKick: 10, Throw: 8, Roundhouse: 7, Uppercut: 7, Sweep: 5, Chop: 4, Kick: 2, Punch: 1 };
 const KNOCKOUT = 5;
 const HIGHLIGHTS = [4, 3, 3];
+// As long as the film shows them: TitleCardSeconds and EndSlateSeconds in Cam/FinalCut.cpp.
+const TITLE_CARD = 2.2, END_SLATE = 2.6;
 
 // Every line of the log starts with the moment it was written, to the millisecond.
 const log = readFileSync(`${DIR}run.log`, 'utf8').split('\n').map(line => {
@@ -29,19 +31,24 @@ const all = text => log.filter(line => line.text.includes(text));
 const soundStarted = first('Sound recording started');
 if (!soundStarted) throw new Error('The log has no "Sound recording started": the game was not run with -RecordSound');
 
-// Films, as the log saw them, and as the picture shows them: the top of the frame goes black for exactly as long.
+// Films, as the log saw them, and as the picture shows them: the top of the frame is black while the bars are up.
 const films = all('OnFinalCutStarted').map(start => ({ from: start.at, to: (log.find(line => line.at > start.at && line.text.includes('OnFinalCutFinished')) ?? {}).at }))
   .filter(film => film.to);
 if (films.length === 0) throw new Error('No film was finished in this run. Record a longer one.');
 const seen = spawnSync('ffmpeg', ['-hide_banner', '-i', `${DIR}run.mp4`, '-vf', 'crop=600:50:1250:45,blackdetect=d=2:pic_th=0.97:pix_th=0.08', '-an', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
 const blacks = [...seen.matchAll(/black_start:([\d.]+) black_end:([\d.]+)/g)].map(found => ({ from: Number(found[1]), to: Number(found[2]) }));
-// A film is matched to the stretch of black that lasts as long as it did. Any film will do, and the best fit is taken:
-// a film that ends in a dark corner of a set runs on into the card after it, and its stretch comes out too long.
-const match = films.flatMap((film, number) => blacks.map(black => ({ film, number, black, off: Math.abs(black.to - black.from - (film.to - film.from)) })))
-  .sort((a, b) => a.off - b.off)[0];
-if (!match || match.off > 0.6) throw new Error(`No film's black bars were found in the picture (films of ${films.map(film => (film.to - film.from).toFixed(1)).join(', ')} s)`);
-const pictureStarted = match.film.from - match.black.from;
-console.log(`picture in step with the log: film ${match.number + 1} is ${(match.film.to - match.film.from).toFixed(2)} s in the log, ${(match.black.to - match.black.from).toFixed(2)} s in the picture`);
+// The bars go up with the card that offers the choice of cut and come down with one of the cards after the film.
+// A stretch of black that starts at the first and ends on one of the others is that film. Any film will do, and the
+// best fit is taken: a take that ends in a dark corner of a set is black before its card, and fits none.
+const cards = all('OnCard: ');
+const match = films.flatMap((film, number) => {
+  const choice = [...log].reverse().find(line => line.at < film.from && line.text.includes('OnCard: "DIRECTOR\'S CUT"'));
+  const after = cards.filter(card => card.at > film.to && card.at < film.to + 15);
+  return choice && after.length ? blacks.map(black => ({ film, number, black, choice, off: Math.min(...after.map(card => Math.abs(card.at - choice.at - (black.to - black.from)))) })) : [];
+}).sort((a, b) => a.off - b.off)[0];
+if (!match || match.off > 0.15) throw new Error(`No film's black bars were found in the picture (stretches of ${blacks.map(black => (black.to - black.from).toFixed(1)).join(', ')} s)`);
+const pictureStarted = match.choice.at - match.black.from;
+console.log(`picture in step with the log: the bars of film ${match.number + 1} last ${(match.black.to - match.black.from).toFixed(2)} s in the picture and end ${Math.round(match.off * 1000)} ms from a card in the log`);
 
 // The sound file does not keep the log's time. It starts a little after the log says it did, and it loses a little
 // more whenever a level loads and the game stops making sound for a moment. So it is measured where it can be: a
@@ -104,9 +111,13 @@ scenes.forEach((scene, number) => {
   if (number === 0) {
     add(won.at - 0.3, 1.7, 'wrap');
     const choice = log.find(line => line.at > won.at && line.text.includes('OnCard: "DIRECTOR\'S CUT"'));
-    if (choice) add(choice.at + 0.5, 2.0, 'choice of cut');
+    if (choice) add(choice.at + 1.3, 2.0, 'choice of cut');
   }
-  if (film) add(film.from + (number === 0 ? 0.8 : 1.5), Math.min(number === 0 ? 5.7 : 4, film.to - film.from - 2), `film ${number + 1}`);
+  // The first film is shown from its title card. The others start after theirs: a card seen for half a second is a flash.
+  if (film) add(film.from + (number === 0 ? 0.8 : TITLE_CARD + 0.1), Math.min(number === 0 ? 5.7 : 4, film.to - film.from - END_SLATE - TITLE_CARD), `film ${number + 1}`);
+  // The slate is the film's last picture only when no outtakes follow it.
+  const outtakes = film && log.some(line => line.at > film.from && line.at < film.to && line.text.includes('OnOuttake'));
+  if (film && !outtakes && number === scenes.length - 1) add(film.to - END_SLATE + 0.3, 2.0, 'slate');
 });
 const picture = first('OnCard: "THAT\'S THE PICTURE"');
 if (picture) add(picture.at + 0.5, 2.5, 'the end');

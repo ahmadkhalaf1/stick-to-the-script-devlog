@@ -75,9 +75,9 @@ The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stic
 - [x] Cover, screenshots and the zip uploaded to the draft, on Fri Nov 13. The zip there is replaced whenever the game changes, last on Sat Nov 14 at 13:31. The page's upload buttons open a file chooser; `Toolschoose_file.ps1` fills it in
 
 - [x] Team name: Page Twelve. The zip is `PageTwelve_StickToTheScript.zip`, made by `Tools\release.ps1 -Team PageTwelve`
-- [ ] Screenshots taken from the packaged game. Seven are in `Docs/store`, captured from the game's own window at 1920 by 1080 during a self-played run on Fri Nov 13, after the sets got their surfaces. The strip along the top, where a tool on the developer's PC draws its frame counter, is cut off. The developer has not chosen among them
+- [ ] Screenshots taken from the packaged game. Eight are in `Docs/store`, taken at 1920 by 1080 from the gameplay video of the self-played run of Sat Nov 14, 18:15, the eighth being the slate that ends a film. The strip along the top, where a tool on the developer's PC draws its frame counter, is cut off. The draft page still shows the pictures of Fri Nov 13. The developer has not chosen among them
 - [x] A cover image, 630 by 500: `Docs/store/cover.png`
-- [x] The link to the 30 to 60 second gameplay video: https://www.youtube.com/watch?v=zvQRRTC56iA (56 seconds, a self-played run, uploaded by the developer on Fri Nov 13). It is on the draft page too. It shows that day's build and is made again if the game changes much
+- [x] The link to the 30 to 60 second gameplay video: https://www.youtube.com/watch?v=zvQRRTC56iA (56 seconds, a self-played run, uploaded by the developer on Fri Nov 13). It is on the draft page too. It shows that day's build. A new one, 58 seconds, was cut on Sat Nov 14 at 18:28 from that evening's build and lies in `Saved/Release/StickToTheScript_gameplay.mp4`; it is not uploaded, so the link above is still the old video
 - [x] A public link for the dev log: https://github.com/ahmadkhalaf1/stick-to-the-script-devlog. It is a copy of this repository without the binary assets and without the history, refreshed by `Tools\publish_devlog.ps1`
 - [x] The gamepad column: no gamepad has been tried, so the page on itch.io lists keyboard and mouse only
 - [ ] The developer has read this text and agrees with it
