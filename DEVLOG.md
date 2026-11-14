@@ -938,6 +938,66 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The blaster in the bar's film, and the rifle on the rooftop with its flash and its line](Docs/devlog/60-guns.jpg)
 
+### 03:14–03:43 · Real things: scanned guns, scanned props
+
+- **Developer said:** on the engine's gun models: "i want realistic military guns no kids guns". Then: "also try to use realistic real life assets for throwable items and shop items", "also try to fix the style and graphic of the scene to make it more modern and 2026 like. but always keep in mind the game rules and make it fit for the competition". Later still, a list for after this: the mouse in the menus, key combinations that do not block each other, and a better way of holding what is thrown and what is fired. And twice: sleep the PC when the limit is reached.
+- **Agent did:**
+  - Looked on the PC for realistic weapon models before looking outside it: the launcher's vault held one unrelated pack.
+  - Chose Poly Haven: scanned models, every one CC0, downloadable without an account. That is the jam's rule met, as long as each is listed. Wrote `Tools/fetch_scans.mjs`, which lists what it would fetch and how big before it fetches anything, and fetched thirteen models, 49 MB: Service Pistol (`service_pistol`), Bolt Action Rifle 7.62 (`bolt_action_rifle_7_62`), Baseball Bat (`baseball_bat`), Crowbar 01 (`crowbar_01`), Sledgehammer 01 (`sledgehammer_01`), Ornate War Hammer (`ornate_war_hammer`), Antique Katana 01 (`antique_katana_01`), Wooden Crate 02 (`wooden_crate_02`), Brass Pan 01 (`brass_pan_01`), Wet Floor Sign 01 (`WetFloorSign_01`), Bar Chair Round 01 (`bar_chair_round_01`), Wine Bottles 01 (`wine_bottles_01`), Stick Grenade (`stick_grenade`).
+  - Wrote `Tools/build_scans.py`: it imports each model's pictures and pieces, makes one material for all scans, and puts a prop together from the pieces named for it, turned to lie the way the game holds things, sized and re-centred, under the name the game already loads. The game's code did not have to learn that anything changed.
+  - Replaced the guns and every throwable and shop weapon. Made the rifle what its model is, a bolt-action: five rounds, a second apart, one enough for most opponents. Took the blaster off the sets and out of the shop, because Poly Haven has no shotgun.
+  - Removed the engine's toy-like weapon models from the project again.
+- **Result:** in the warehouse, side by side: a worn wooden crate, a brass pan, a yellow wet-floor sign with its lettering, a bar stool, a wine bottle, a sledgehammer, a rifle with its scope. The first run of the import made all thirteen.
+- **Went wrong:**
+  - The first download was the wrong form of the models, and the cleanup of it was refused by a safety check on deleting with a wildcard. The agent left the files where they are, outside the repository, and did not go round the check.
+  - Poly Haven has no traffic cone, no melon and no fish. The cone is a wet-floor sign now, the melon a bar stool, the golden fish a golden katana. The scenes still call them by their old names.
+  - The pistol and the rifle are held as the boxes before them were: both arms straight out. With a real rifle that looks wrong, and it is next.
+- **Not verified:** the scanned guns in the film; the packaged build with any of this; the size of the build. Which end of the bat, the hammers and the crowbar is in the hand: they were turned by their longest side, and nobody has looked.
+
+![One of everything on the warehouse floor, and the rifle on the rooftop](Docs/devlog/61-real-things.jpg)
+
+### 03:48 · A rifle at the shoulder, a pistol in two hands
+
+- **Developer said:** "fix how character hold throwable items and it should look nicer", "the way holding the guns as well need to feel better".
+- **Agent did:** gave each prop a way of being held, worked out from what it is: a long gun is shouldered, the right hand at the grip by the chest and the left forward under the barrel; a pistol is held in both hands with the elbows bent; a small thing like a bottle or a pan in one hand, raised by the shoulder; a crate, a stool or a sign overhead in both, as before. A gun now sits in the hand by its grip and not by its middle.
+- **Result:** the rifle on the rooftop and the pistol in the warehouse and the bar, in the picture.
+- **Went wrong:** one more name that was already taken in the same file.
+- **Not verified:** the one-handed hold of a bottle and a pan: the test never caught one being carried. How any of it looks in the film.
+
+![The rifle shouldered, the pistol in two hands, a pistol lying in the bar, and one being fired there](Docs/devlog/62-holding-things.jpg)
+
+### 03:54 · The mouse works the menus
+
+- **Developer said:** "allow mouse to control the menu and game shop and customization etc."
+- **Agent did:** over a card or the wardrobe the pointer now shows. The row it moves onto becomes the chosen row, and the click that was already "go" takes it. In the wardrobe a click on a colour, a hat or a build wears it, and a click anywhere else says the fighter is ready. A pointer lying still leaves the keys alone, so W and S work as before.
+- **Result:** with the real pointer: moved onto the pause menu, the row under it lit; clicked on "Back to the menu", the title menu came; clicked on a swatch, the fighter changed colour and the wardrobe stayed.
+- **Went wrong:** the first test hovered through the editor's own tool, and nothing lit. That tool moves no real pointer, so the test had proved nothing either way. A small script now moves the Windows pointer into the play window and clicks.
+- **Not verified:** the shop and the choice of cut with the mouse; a hat and a build by click; the pointer hiding again in a take.
+
+![The row under the pointer lit in the pause menu, the title menu after a click on a row, and another row pointed at](Docs/devlog/63-mouse-in-the-menus.jpg)
+
+### 04:06 · Keys that do not block
+
+- **Developer said:** "fix the keys combination , need to be smooth for example if i am kicking and clicking and jump to kick it should work without me letting go other keys etc."
+- **Agent did:** found the cause first: a key pressed while a move was still going was thrown away, and after a kick nothing was accepted for 0.45 s. Now up to three presses are kept in the order they were made, each for three quarters of a second, and each comes out the moment the fighter can act. A jump is kept the same way and may start out of the tail of a strike. The wait after a kick is 0.3 s.
+- **Result:** by the log, in the editor, with presses 30 ms apart: kick, jump, kick gave a kick, a jump and a kick in the air; punch, kick, punch gave all three in order; jump, kick gave both. Then the same with the A key really held down on the keyboard: kick, jump, kick came out while the fighter walked left.
+- **Went wrong:** the first version kept one press only. Punch, kick, punch came out as punch, punch, because the third press had overwritten the second. It also kept a press for 0.32 s, which is less than a kick takes, so kick, jump, kick gave one kick. The first test of the second version was spoiled by the opponent, who kicked the fighter in the middle of it. The test now presses before the opponent arrives and reports a blow taken.
+- **Not verified:** a human hand on the keys. A press made more than three quarters of a second before the fighter is free is still dropped, on purpose, so a blow that stuns for longer loses it. Holding a strike key down does not repeat the strike.
+
+![A kick in the air that was asked for during the kick before it, and the same with the walk key held down](Docs/devlog/64-keys-that-do-not-block.jpg)
+
+### 04:50 · Real surfaces, a real sky and scanned set pieces
+
+- **Developer said:** "also try to fix the style and graphic of the scene to make it more modern and 2026 like. but always keep in mind the game rules and make it fit for the competition"
+- **Agent did:** every painted surface of the three sets is now a photographed one from Poly Haven: concrete, brick, floorboards, plaster, tarred gravel, planks, corrugated iron, rusty steel. A new script fetches them and packs colour and roughness into the picture the sets' material already read, so no material and no layout changed for it; only the tints did. Twenty-eight more scanned models dress the sets. The warehouse has shelving, army crates, cartons, drums, a generator, a fuse box and hanging lamps. The bar has a back bar, stools, tables, armchairs, casks, ceiling fans, and bottles with the shape of a bottle. The roof has air-conditioning units, gas bottles, switchgear, barriers and a bin. The roof also has a sky: a photograph of moonlit cloud, laid inside a ball and found by the way the eye looks, so it stays put while the camera travels.
+- **Result:** all three scenes played by themselves in the editor after the rebuild, with no errors in the log. Packaged afterwards: 825 MB as a folder, where it was 663 MB. The packaged game then played itself for three and a half minutes, through all three scenes and their films, at a median of 96, 106 and 104 frames a second and never under 89.
+- **Went wrong:** five things. The first sky was a photographed city skyline. It looked the part, and it put a famous real tower, lit company signs and the people on a promenade behind the fight. It was changed for a sky with nothing but sky in it before anything was committed. The bar's bulbs now hang under their lights, and laid round shadows two metres wide on the floor until they were told to cast none. Armchairs in front of the fight line hid the fighters at the ends of the bar, so the tables moved behind it. One chair model came out 29 cm wide and was swapped; a sofa stood in a corner no light reaches and was taken out. And under a real sky the city's box towers looked like toys: their light is turned down, so they are dark shapes with lit windows.
+- **Not verified:** the frame rate against the old sets, which was never measured the same way; the film on the new sets; the tyres and the television, which stand in dim corners; whether the tints suit the developer, who has seen none of it.
+
+![The three sets in play, and closer: goods in the warehouse, a table at the end of the bar, the stair house under the new sky](Docs/devlog/65-real-sets.jpg)
+
+![The packaged game on the new sets: the warehouse in the action cut, the bar in play and in the slow-motion cut, the rooftop in the long take](Docs/devlog/66-real-sets-packaged.jpg)
+
 ---
 
 ## Asset and tool register
@@ -961,10 +1021,13 @@ Kept current for the submission form.
 | Block, duck, kick, flinch, broken arm, blood | Made by the team: computed in code | No animation or effect assets beyond the engine mannequin |
 | Things to throw and hold (crate, bottle, watermelon, traffic cone, frying pan, bats, hammers, iron bar, golden fish) | Made by the team: meshes generated by `Tools/build_props.py` with the engine's Geometry Script, which turns profiles like a lathe and joins boxes and rods. One material, also made by that script | Props and weapons |
 | Geometry Script plugin | Engine (editor only, switched on from the command line for that one script) | Builds the prop meshes; not in the game |
-| Stage levels and their materials | Made by the team: generated by `Tools/build_stage01.py`, `build_stage02.py` and `build_stage03.py` from engine cubes and cylinders | The sets |
-| Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Walls, floors, crates, containers |
+| Stage levels and their materials | Made by the team: generated by `Tools/build_stage01.py`, `build_stage02.py` and `build_stage03.py` from engine cubes and cylinders, and dressed with the scanned models below | The sets |
+| Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Replaced on Sat Nov 14 by the photographed surfaces below. Still what a surface falls back to when it is not fetched |
 | Lettering on the sets | The engine's own font (Roboto) | The neon sign in the bar, the bay number in the warehouse |
 | Scene scripts | Made by the team: text files in `Content/Scripts` | The fights |
-| Three gun models: a pistol, a rifle and a launcher, with their materials and textures | Unreal Engine 5.8, from its own `Templates/TemplateResources/Standard/Weapons`, copied into `Content/Weapons` | The guns, until realistic ones replace them |
+| Thirteen scanned models with their textures: Service Pistol (`service_pistol`), Bolt Action Rifle 7.62 (`bolt_action_rifle_7_62`), Baseball Bat (`baseball_bat`), Crowbar 01 (`crowbar_01`), Sledgehammer 01 (`sledgehammer_01`), Ornate War Hammer (`ornate_war_hammer`), Antique Katana 01 (`antique_katana_01`), Wooden Crate 02 (`wooden_crate_02`), Brass Pan 01 (`brass_pan_01`), Wet Floor Sign 01 (`WetFloorSign_01`), Bar Chair Round 01 (`bar_chair_round_01`), Wine Bottles 01 (`wine_bottles_01`), Stick Grenade (`stick_grenade`) | Poly Haven (polyhaven.com), CC0, fetched on Sat Nov 14 by `Tools/fetch_scans.mjs` | The pistol, the rifle and every throwable and shop weapon. The stick grenade is fetched and not used |
+| Twenty-eight scanned models with their textures, as set dressing: Barrel 01 (`Barrel_01`), Barrel 03 (`barrel_03`), Old Military Crate (`old_military_crate`), Wooden Military Crate (`wooden_military_crate`), Cardboard Box 01 (`cardboard_box_01`), Steel Frame Shelves 01 (`steel_frame_shelves_01`), Old Tyre (`old_tyre`), Metal Tool Chest (`metal_tool_chest`), Korean Fire Extinguisher 01 (`korean_fire_extinguisher_01`), Utility Box 01 (`utility_box_01`), Utility Box 02 (`utility_box_02`), Power Box 01 (`power_box_01`), Hanging Industrial Lamp (`hanging_industrial_lamp`), Portable Generator (`portable_generator`), Plastic Crate 02 (`plastic_crate_02`), Round Wooden Table 01 (`round_wooden_table_01`), Green Chair 01 (`GreenChair_01`), Vintage Cabinet 01 (`vintage_cabinet_01`), Ceiling Fan (`ceiling_fan`), Television 02 (`television_02`), Standing Chalkboard 01 (`standing_chalkboard_01`), Wine Barrel 01 (`wine_barrel_01`), Exterior Aircon Unit (`exterior_aircon_unit`), Propane Tank (`propane_tank`), Security Camera 01 (`security_camera_01`), Industrial Wall Lamp (`industrial_wall_lamp`), Metal Trash Can (`metal_trash_can`), Concrete Road Barrier (`concrete_road_barrier`) | Poly Haven (polyhaven.com), CC0, fetched on Sat Nov 14 by `Tools/fetch_scans.mjs` | Shelving, crates, drums, lamps, furniture and roof machinery on the three sets. Three of the thirteen above dress the sets as well: the crate, the bar stool and the bottle |
+| Nine photographed surfaces, each with its bumps and its roughness: Concrete Floor Worn 001 (`concrete_floor_worn_001`), Factory Brick (`factory_brick`), Wood Floor Worn (`wood_floor_worn`), Decrepit Wallpaper (`decrepit_wallpaper`), Tarred Gravel (`tarred_gravel`), Wooden Planks (`wooden_planks`), Dark Wooden Planks (`dark_wooden_planks`), Corrugated Iron 02 (`corrugated_iron_02`), Rusty Metal 04 (`rusty_metal_04`) | Poly Haven (polyhaven.com), CC0, fetched on Sat Nov 14 by `Tools/fetch_surfaces.mjs` | Floors, walls, ceilings, crates, containers, the roof and its machinery |
+| One photographed night sky: Kloppenheim 07 (Pure Sky) (`kloppenheim_07_puresky`) | Poly Haven (polyhaven.com), CC0, fetched on Sat Nov 14 by `Tools/fetch_surfaces.mjs` | The sky over the rooftop |
 | The fighters' body: the "X Bot" model, skin and skeleton | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. It came inside the FBX files of the clips below, downloaded on Fri Nov 13 | What every fighter is seen as, since the night of Nov 13 to 14 |
 | Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; nine of them in the game since that evening | The punch, the kicks, the uppercut, the sweep, the hook, the stance and the blows taken |

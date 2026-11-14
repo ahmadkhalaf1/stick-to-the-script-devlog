@@ -56,6 +56,10 @@ public:
 	// While the wardrobe is open: moves one choice on or back. Row 0 is the colour, 1 the hat, 2 the build.
 	// On a menu, the hat's keys walk the cursor.
 	void ChangeLook(int32 Row, int32 Direction);
+	// The pointer is over this row of the menu that is showing: it becomes the chosen row, as if W or S had moved to it.
+	void PointAtRow(int32 Row);
+	// The pointer is over this choice in the wardrobe, or over none of them (INDEX_NONE). The next click takes it.
+	void PointAtLook(int32 Row, int32 Index);
 
 	// Stops a take or its film with a short menu over it, or takes that menu away again.
 	void TogglePause();
@@ -110,6 +114,8 @@ private:
 
 	void Enter(EStep NewStep, float Seconds = 0.f);
 	void Continue();
+	int32 PointedLookRow = INDEX_NONE;
+	int32 PointedLookIndex = INDEX_NONE;
 	void ShowCard(const FString& Headline, const FString& Detail);
 	void OpenStage(const FString& StagePackage);
 	int32 PayAfter(int32 Takes) const;

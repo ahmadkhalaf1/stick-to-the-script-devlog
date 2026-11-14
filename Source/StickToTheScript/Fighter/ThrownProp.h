@@ -11,6 +11,17 @@ class UMaterialInterface;
 class UStaticMesh;
 class UStaticMeshComponent;
 
+// How a carrier holds a prop: a crate overhead in both hands, a bottle in one, a bat ready to swing, a pistol in two
+// hands out in front, a rifle at the shoulder.
+enum class EPropHold : uint8
+{
+	Overhead,
+	OneHand,
+	Swung,
+	Pistol,
+	LongGun
+};
+
 // Something loose on the set that a fighter can pick up and throw: a crate, a bottle.
 UCLASS()
 class AThrownProp : public AActor
@@ -51,6 +62,7 @@ public:
 	bool SpendUse();
 	// A gun: the punch fires it while it has rounds left.
 	bool IsGun() const;
+	EPropHold GetHold() const;
 	int32 GetShotsLeft() const { return RoundsLeft; }
 	const TCHAR* GetGunName() const;
 	// One pull of the trigger. False when it is empty or was fired a moment ago; otherwise what came out of it.

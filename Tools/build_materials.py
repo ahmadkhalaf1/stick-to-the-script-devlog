@@ -1,5 +1,6 @@
 # Builds the materials the sets and the figures are made of, in Content/Materials:
-#   T_<Surface>_C and T_<Surface>_N   the textures painted by Tools/build_textures.mjs
+#   T_<Surface>_C and T_<Surface>_N   the surfaces fetched by Tools/fetch_surfaces.mjs, or painted by Tools/build_textures.mjs
+#   M_Sky                              a photograph of the sky all round, seen from inside a ball
 #   M_Surface                          lays a texture on a block by its place in the world, so a stretched block does not stretch it
 #   M_Figure                           what a stick figure is made of: smooth, with a light edge that lifts it off the set
 #   M_Light                            a window, a bulb or a neon tube: one colour that gives light and is not shaded
@@ -7,7 +8,7 @@
 # All of it is generated, so this script and build_textures.mjs are the source. A material that exists is left alone:
 # to change one, delete its .uasset and run this again.
 #
-# Run with the editor closed, after `node Tools/build_textures.mjs`:
+# Run with the editor closed, after `node Tools/build_textures.mjs` and `node Tools/fetch_surfaces.mjs --go`:
 #   UnrealEditor-Cmd.exe <path to StickToTheScript.uproject> -ExecutePythonScript=<path to this file> -unattended -nosplash -nullrhi -stdout
 # Then run the stage scripts again: their materials take their textures from here.
 
@@ -17,7 +18,7 @@ import unreal
 
 FOLDER = "/Game/Materials"
 SOURCE = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()) + "Textures"
-SURFACES = ("Concrete", "Brick", "Planks", "Wallpaper", "Roofing", "Metal")
+SURFACES = ("Concrete", "Brick", "Planks", "Wallpaper", "Roofing", "Metal", "Floorboards", "DarkWood", "Steel")
 
 assets = unreal.EditorAssetLibrary
 library = unreal.MaterialEditingLibrary
@@ -53,10 +54,21 @@ return normalize(FromX * Weight.x + FromY * Weight.y + FromZ * Weight.z);
 """
 
 
-def bring_in(name, is_normal):
-    source = f"{SOURCE}/{name}.png"
+# The picture is found by the way the eye looks, so the sky stays where it is however the camera moves. Only the half
+# above the horizon is in the picture, and below it is dark.
+SKY_CODE = """
+float3 D = normalize(Spot - Eye);
+float Round = atan2(D.y, D.x) / 6.2831853 + Turn / 360.0;
+float Up = asin(clamp(D.z, -1.0, 1.0)) + Drop * 0.01745329;
+float2 Place = float2(frac(Round), 1.0 - saturate(Up / 1.5707963));
+return Texture2DSampleLevel(Tex, TexSampler, Place, 0).rgb * smoothstep(0.0, 0.02, Up);
+"""
+
+
+def bring_in(name, is_normal, kind="png"):
+    source = f"{SOURCE}/{name}.{kind}"
     if not os.path.exists(source):
-        raise RuntimeError(f"{source} is missing. Run `node Tools/build_textures.mjs` first.")
+        raise RuntimeError(f"{source} is missing. Run `node Tools/build_textures.mjs` and `node Tools/fetch_surfaces.mjs --go` first.")
     task = unreal.AssetImportTask()
     task.filename = source
     task.destination_path = FOLDER
@@ -140,6 +152,35 @@ def make_surface(colour_texture, normal_texture):
     assets.save_asset(f"{FOLDER}/M_Surface")
 
 
+def make_sky(texture):
+    # Read at one size only, so the seam where the picture meets itself does not show: it needs no smaller copies.
+    texture.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+    texture.set_editor_property("never_stream", True)
+    assets.save_asset(f"{FOLDER}/T_NightSky")
+    material = started("M_Sky")
+    if not material:
+        return
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("two_sided", True)
+    picture = node(material, unreal.MaterialExpressionTextureObjectParameter, -1100, -250, parameter_name="Sky", texture=texture,
+                   sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    inputs = {
+        "Tex": picture,
+        "Spot": node(material, unreal.MaterialExpressionWorldPosition, -1100, 0),
+        "Eye": node(material, unreal.MaterialExpressionCameraPositionWS, -1100, 150),
+        "Turn": node(material, unreal.MaterialExpressionScalarParameter, -1100, 300, parameter_name="Turn", default_value=0.0),
+        "Drop": node(material, unreal.MaterialExpressionScalarParameter, -1100, 450, parameter_name="Drop", default_value=0.0),
+    }
+    seen = custom(material, SKY_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT3, inputs, -750, 0)
+    strength = node(material, unreal.MaterialExpressionScalarParameter, -750, 300, parameter_name="Strength", default_value=6.0)
+    lit = node(material, unreal.MaterialExpressionMultiply, -450, 100)
+    library.connect_material_expressions(seen, "", lit, "A")
+    library.connect_material_expressions(strength, "", lit, "B")
+    library.connect_material_property(lit, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    library.recompile_material(material)
+    assets.save_asset(f"{FOLDER}/M_Sky")
+
+
 def make_figure():
     material = started("M_Figure")
     if not material:
@@ -212,8 +253,9 @@ def make_sign():
 assets.make_directory(FOLDER)
 textures = {name: (bring_in(f"T_{name}_C", False), bring_in(f"T_{name}_N", True)) for name in SURFACES}
 make_surface(*textures["Concrete"])
+make_sky(bring_in("T_NightSky", False, "jpg"))
 make_figure()
 make_light()
 make_sign()
-unreal.log_warning(f"MATERIALS built: {len(textures)} surfaces, M_Surface, M_Figure, M_Light, M_Sign")
+unreal.log_warning(f"MATERIALS built: {len(textures)} surfaces, M_Surface, M_Sky, M_Figure, M_Light, M_Sign")
 unreal.SystemLibrary.quit_editor()

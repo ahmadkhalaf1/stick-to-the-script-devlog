@@ -4,6 +4,7 @@
 import unreal
 
 MATERIALS = "/Game/Materials"
+PROPS = "/Game/Props"
 
 level_editor = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -58,7 +59,7 @@ def material(name, red, green, blue):
 
 
 def surface(name, kind, tint=(1.0, 1.0, 1.0), tile=200.0, bump=1.0):
-    """A real surface: one of the textures of Tools/build_materials.py (Concrete, Brick, Planks, Wallpaper, Roofing, Metal).
+    """A real surface: one of the textures of Tools/build_materials.py (its SURFACES).
     One copy of it covers tile centimetres, however the block is stretched. The tint multiplies its colour."""
     library = unreal.MaterialEditingLibrary
     instance = _instance(name, unreal.load_asset(f"{MATERIALS}/M_Surface"))
@@ -90,6 +91,37 @@ def block(label, mesh, look, location, scale, yaw=0.0, pitch=0.0):
     actor.static_mesh_component.set_static_mesh(mesh)
     actor.static_mesh_component.set_material(0, look)
     return actor
+
+
+def dress(label, name, location, yaw=0.0, scale=1.0, shadows=True):
+    """A scanned set piece, one of SET_PIECES in Tools/build_scans.py, wearing its own materials. location is the point
+    it stands on, or hangs from. A lamp with a light inside it must cast no shadow, or it shuts its own light in."""
+    mesh = unreal.load_asset(f"{PROPS}/SM_Set{name}")
+    if not mesh:
+        raise RuntimeError(f"No set piece {name}. Run Tools/build_scans.py first.")
+    actor = actors.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(*location), unreal.Rotator(pitch=0.0, yaw=yaw, roll=0.0))
+    actor.set_actor_label(label)
+    actor.set_actor_scale3d(unreal.Vector(scale, scale, scale))
+    actor.static_mesh_component.set_static_mesh(mesh)
+    if not shadows:
+        actor.static_mesh_component.set_cast_shadow(False)
+    return actor
+
+
+def sky(name, center, strength, turn=0.0, drop=0.0):
+    """The night sky all round the set, as a photograph on the inside of a great ball. turn says which part of it is
+    behind the set, in degrees, and drop lets its horizon down by that many. It lights nothing: the set has its own lamps."""
+    library = unreal.MaterialEditingLibrary
+    instance = _instance(name, unreal.load_asset(f"{MATERIALS}/M_Sky"))
+    for parameter, value in (("Strength", strength), ("Turn", turn), ("Drop", drop)):
+        library.set_material_instance_scalar_parameter_value(instance, parameter, value)
+    assets.save_asset(f"{MATERIALS}/{name}")
+    ball = block("Sky", SPHERE, instance, center, (140.0, 140.0, 140.0))
+    ball.static_mesh_component.set_cast_shadow(False)
+    ball.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    cosmetic(ball.static_mesh_component, "affect_dynamic_indirect_lighting", False)
+    cosmetic(ball.static_mesh_component, "affect_distance_field_lighting", False)
+    return ball
 
 
 def room(center, size, floor_look, wall_look, ceiling_look=None):
@@ -188,12 +220,14 @@ def fill_light(location, candelas, size, color=(1.0, 1.0, 1.0)):
     fill.light_component.set_attenuation_radius(1500.0)
 
 
-def haze(density):
-    """A little fog, so the spots show as beams."""
+def haze(density, clear_beyond=0.0):
+    """A little fog, so the spots show as beams. Under a sky it stops at clear_beyond centimetres, or it would hide it."""
     fog = actors.spawn_actor_from_class(unreal.ExponentialHeightFog, unreal.Vector(0, 0, 0))
     fog.set_actor_label("Haze")
     cosmetic(fog.component, "fog_density", density)
     cosmetic(fog.component, "enable_volumetric_fog", True)
+    if clear_beyond:
+        cosmetic(fog.component, "fog_cutoff_distance", clear_beyond)
 
 
 def grade(exposure, vignette):

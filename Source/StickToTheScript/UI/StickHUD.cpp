@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "StickToTheScript/Cam/FinalCut.h"
+#include "StickToTheScript/Core/GameFlow.h"
 #include "StickToTheScript/Core/StickGameInstance.h"
 #include "StickToTheScript/Core/TakeDirector.h"
 #include "StickToTheScript/Core/TakeEvents.h"
@@ -80,6 +81,33 @@ void AStickHUD::DrawHUD()
 	const float Now = GetWorld()->GetTimeSeconds();
 	UFont* Font = GEngine->GetLargeFont();
 
+	// The pointer shows over a card or the wardrobe, where it chooses. Anywhere else the game has the mouse to itself.
+	const bool bPointerWanted = Slate == ESlate::Card || Slate == ESlate::Wardrobe;
+	if (PlayerOwner && bPointerWanted != PlayerOwner->bShowMouseCursor)
+	{
+		PlayerOwner->bShowMouseCursor = bPointerWanted;
+		if (bPointerWanted)
+		{
+			FInputModeGameAndUI Mode;
+			Mode.SetHideCursorDuringCapture(false);
+			Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			PlayerOwner->SetInputMode(Mode);
+		}
+		else
+		{
+			PlayerOwner->SetInputMode(FInputModeGameOnly());
+		}
+	}
+	float PointerX = -1.f;
+	float PointerY = -1.f;
+	Pointer = bPointerWanted && PlayerOwner && PlayerOwner->GetMousePosition(PointerX, PointerY) ? FVector2D(PointerX, PointerY - Top) : FVector2D(-1., -1.);
+	bPointerMoved = !Pointer.Equals(LastPointer, 0.5);
+	LastPointer = Pointer;
+	if (!Flow.IsValid())
+	{
+		Flow = Cast<AGameFlow>(UGameplayStatics::GetActorOfClass(this, AGameFlow::StaticClass()));
+	}
+
 	if (Slate == ESlate::Film)
 	{
 		// The film is letterboxed and carries no game interface: it is the result, not the shoot.
@@ -121,6 +149,7 @@ void AStickHUD::DrawHUD()
 		// A long card closes its lines up, so the last one stays on the screen.
 		const float LineStep = FMath::Min(62.f, 560.f / FMath::Max(CardLines.Num() - 1, 1));
 		const float LineSize = 2.4f * FMath::Sqrt(LineStep / 62.f);
+		int32 MenuRow = 0;
 		for (int32 Line = 0; Line < CardLines.Num(); ++Line)
 		{
 			const FString& Text = CardLines[Line];
@@ -129,6 +158,12 @@ void AStickHUD::DrawHUD()
 			if (bChosen || Text.StartsWith(TEXT("\t")))
 			{
 				DrawMenuRow(Text.RightChop(bChosen ? 2 : 1), bChosen, Y, LineStep * Unit, LineSize * Unit, Unit);
+				// The row the pointer has just moved onto becomes the chosen one. A pointer lying still leaves the keys alone.
+				if (bPointerMoved && Flow.IsValid() && IsPointerIn((Width - MenuRowWidth * Unit) * 0.5f, Y - 4.f * Unit, MenuRowWidth * Unit, LineStep * Unit))
+				{
+					Flow->PointAtRow(MenuRow);
+				}
+				++MenuRow;
 			}
 			else
 			{
@@ -394,6 +429,11 @@ void AStickHUD::DrawMenuRow(const FString& Text, bool bChosen, float Y, float He
 	Write(State, Ink, X + BarWidth - 28.f * Unit - StateWidth, TextY, Font, Scale);
 }
 
+bool AStickHUD::IsPointerIn(float X, float Y, float Width, float Height) const
+{
+	return Pointer.X >= X && Pointer.X <= X + Width && Pointer.Y >= Y && Pointer.Y <= Y + Height;
+}
+
 void AStickHUD::DrawWardrobe(float Unit)
 {
 	const UStickGameInstance* Game = GetGameInstance<UStickGameInstance>();
@@ -415,6 +455,8 @@ void AStickHUD::DrawWardrobe(float Unit)
 	const TCHAR* Titles[] = { TEXT("COLOUR"), TEXT("HAT"), TEXT("BUILD") };
 	const TCHAR* Keys[] = { TEXT("A   D"), TEXT("W   S"), TEXT("F") };
 	const FLinearColor Quiet(0.62f, 0.62f, 0.62f);
+	int32 PointedRow = INDEX_NONE;
+	int32 PointedIndex = INDEX_NONE;
 	for (int32 Row = 0; Row < 3; ++Row)
 	{
 		float KeyWidth = 0.f;
@@ -432,6 +474,14 @@ void AStickHUD::DrawWardrobe(float Unit)
 			const float X = Left + Index * (Each + Gap);
 			// What has to be bought in the shop first is shown faint: it is there, and not yet yours.
 			const bool bOwned = Game->OwnsLook(Row, Index);
+			// A pip is thin, so the pointer is given some room above and below it.
+			const bool bPointed = bOwned && (Row == 0 ? IsPointerIn(X, Y, Each, Each) : IsPointerIn(X, Y - 14.f * Unit, Each, 37.f * Unit));
+			if (bPointed)
+			{
+				PointedRow = Row;
+				PointedIndex = Index;
+				DrawRect(FLinearColor(1.f, 1.f, 1.f, 0.35f), X - 3.f * Unit, Y - 3.f * Unit, Each + 6.f * Unit, (Row == 0 ? Each : 9.f * Unit) + 6.f * Unit);
+			}
 			if (Row == 0)
 			{
 				if (Index == Chosen[Row])
@@ -452,7 +502,11 @@ void AStickHUD::DrawWardrobe(float Unit)
 		Y += 96.f * Unit;
 	}
 
-	DrawCentered(TEXT("This is how you will look in the film.   Left click when you are ready."), 990.f * Unit, 1.9f * Unit, FLinearColor::White);
+	if (Flow.IsValid())
+	{
+		Flow->PointAtLook(PointedRow, PointedIndex);
+	}
+	DrawCentered(TEXT("Click a colour, a hat or a build to wear it.   Click anywhere else when you are ready."), 990.f * Unit, 1.9f * Unit, FLinearColor::White);
 }
 
 void AStickHUD::DrawCentered(const FString& Text, float Y, float Scale, const FLinearColor& Color)

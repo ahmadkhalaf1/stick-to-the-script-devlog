@@ -35,8 +35,7 @@ namespace
 		{ TEXT("Royal purple paint"), 300, INDEX_NONE, 0, 8 },
 		// New goods go at the end: a look that was bought is remembered by its place in this list.
 		{ TEXT("Pistol"), 350, static_cast<int32>(EPropKind::Pistol), INDEX_NONE, INDEX_NONE },
-		{ TEXT("Assault rifle"), 600, static_cast<int32>(EPropKind::Rifle), INDEX_NONE, INDEX_NONE },
-		{ TEXT("Blaster"), 700, static_cast<int32>(EPropKind::Blaster), INDEX_NONE, INDEX_NONE },
+		{ TEXT("Rifle"), 600, static_cast<int32>(EPropKind::Rifle), INDEX_NONE, INDEX_NONE },
 	};
 }
 

@@ -120,6 +120,8 @@ public:
 	// Takes off the forearm or the shin nearest to a point: a gun does that. Someone still on their feet keeps both legs.
 	void Sever(const FVector& Near);
 	FVector GetCarryPoint() const;
+	// 0 the left hand, 1 the right.
+	FVector GetHandPoint(int32 Side) const;
 
 	// A blow from anything, a strike or a thrown prop: it hurts, staggers or knocks out, and the take hears about it.
 	void SufferBlow(AStickFighter* Attacker, float Damage, const FVector& Point, const FVector& Direction, bool bHeavy, EMove Move);

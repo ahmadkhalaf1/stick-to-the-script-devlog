@@ -24,6 +24,9 @@ namespace
 	// The player's strikes arrive fast, so a press and its impact read as one moment.
 	const float PunchSeconds = 0.16f;
 	const float KickSeconds = 0.26f;
+	// Longer than the longest a fighter is held by its own move: a kick and its recovery.
+	const float AskedForKeptSeconds = 0.75f;
+	const int32 MostAskedFor = 3;
 
 	// A strike turns to face the nearest opponent inside this distance, so hits connect without careful aiming.
 	const double AimAssistDistance = 170.;
@@ -87,6 +90,31 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 		Fighter->FaceTowards(Fighter->GetActorLocation() + Right * (Sideways * 100.f));
 	}
 
+	// What was asked for too early is tried again every frame until it comes out or grows stale.
+	const float Now = GetWorld()->GetTimeSeconds();
+	while (!AskedFor.IsEmpty() && Now > AskedFor[0].Until)
+	{
+		AskedFor.RemoveAt(0);
+	}
+	if (!AskedFor.IsEmpty())
+	{
+		const EMove Next = AskedFor[0].Move;
+		bool bDone = false;
+		if (Next == EMove::None)
+		{
+			Fighter->Jump();
+			bDone = Fighter->IsAirborne();
+		}
+		else
+		{
+			bDone = Fighter->Strike(Next, Next == EMove::Kick ? KickSeconds : PunchSeconds);
+		}
+		if (bDone)
+		{
+			AskedFor.RemoveAt(0);
+		}
+	}
+
 	// A gun goes on firing for as long as the punch is held. The gun itself says how fast.
 	const AThrownProp* Gun = Fighter->GetCarried();
 	if (Gun && Gun->IsGun() && Gun->GetShotsLeft() > 0 && Held({ EKeys::LeftMouseButton, EKeys::J, EKeys::Gamepad_FaceButton_Left }))
@@ -114,7 +142,11 @@ void AStickPlayerController::SubmitMove(EMove Move)
 			{
 				Fighter->FaceTowards(Nearest->GetActorLocation());
 			}
-			Fighter->Strike(Move, Move == EMove::Kick ? KickSeconds : PunchSeconds);
+			// Behind anything already waiting, or it would jump the queue.
+			if (!AskedFor.IsEmpty() || !Fighter->Strike(Move, Move == EMove::Kick ? KickSeconds : PunchSeconds))
+			{
+				AskFor(Move);
+			}
 		}
 		return;
 	}
@@ -125,13 +157,29 @@ void AStickPlayerController::SubmitMove(EMove Move)
 	}
 }
 
+void AStickPlayerController::AskFor(EMove Move)
+{
+	if (AskedFor.Num() < MostAskedFor)
+	{
+		AskedFor.Add({ Move, static_cast<float>(GetWorld()->GetTimeSeconds()) + AskedForKeptSeconds });
+	}
+}
+
 void AStickPlayerController::JumpOrContinue()
 {
 	if (IsFighting())
 	{
 		if (!ATakeDirector::IsAutoplayOn())
 		{
-			Fighter->Jump();
+			const bool bWasUp = Fighter->IsAirborne() || Fighter->IsHanging();
+			if (AskedFor.IsEmpty())
+			{
+				Fighter->Jump();
+			}
+			if (!bWasUp && !Fighter->IsAirborne())
+			{
+				AskFor(EMove::None);
+			}
 		}
 	}
 	else if (AGameFlow* Flow = Cast<AGameFlow>(UGameplayStatics::GetActorOfClass(this, AGameFlow::StaticClass())))

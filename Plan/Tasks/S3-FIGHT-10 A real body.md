@@ -29,7 +29,7 @@ Asked for by the developer on Fri Nov 13, late: "i still feel like we need to im
 - [x] The film shows it, close-ups included
 - [x] Colours, a hat, the gunman's gun and the skeleton flash work with it. Seen: four colours and Lime in the wardrobe, a top hat. Not looked at: the other hats, a broken arm, the stout and slight builds
 - [x] The packaged build shows it, in colour
-- [ ] It costs no frame rate that matters. The packaged warehouse ran at a median of 89 frames a second where 110 was measured in the afternoon, but another game was running on the PC this time, so the two cannot be compared
+- [x] It costs no frame rate that matters. Measured again on Nov 14 at 04:45 with nothing else running, and with the scanned sets in as well: the packaged game played the warehouse at a median of 96 frames a second (lowest 89), the bar at 106 (lowest 103) and the rooftop at 104 (lowest 102). The 89 of the night before was the other game running beside it
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight

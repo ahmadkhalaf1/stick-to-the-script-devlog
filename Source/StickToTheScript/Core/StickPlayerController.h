@@ -61,5 +61,15 @@ private:
 
 	bool bFightLive = false;
 	int32 AutoplayStrikes = 0;
+	// Strikes and jumps asked for before the fighter could do them, in the order they were asked for. Each is done the
+	// instant it can be, so keys pressed during the move before are not lost, and grows stale if that takes too long.
+	struct FAskedFor
+	{
+		// None stands for a jump.
+		EMove Move = EMove::None;
+		float Until = 0.f;
+	};
+	TArray<FAskedFor> AskedFor;
+	void AskFor(EMove Move);
 	bool bSlowFighters = false;
 };

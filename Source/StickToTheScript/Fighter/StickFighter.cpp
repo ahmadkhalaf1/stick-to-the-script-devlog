@@ -288,7 +288,7 @@ namespace
 	const float CancelSeconds = 0.12f;
 	const float GuardHoldSeconds = 0.12f;
 	// A kick is strong, so its follow-through cannot be cut short as early as a punch's.
-	const float KickCancelSeconds = 0.45f;
+	const float KickCancelSeconds = 0.3f;
 	// The third quick blow in a row sends its victim flying. That ends the string and gives everyone room.
 	const int32 BlowsInAFinisher = 3;
 	const float BlowChainSeconds = 1.f;
@@ -1412,15 +1412,43 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 	if (CarryAlpha > 0.f && State != EFighterState::Busy)
 	{
 		// A crate is carried overhead. A weapon is held ready in front of the chest.
-		const bool bWeapon = Carried.IsValid() && Carried->IsSwung();
-		if (Carried.IsValid() && Carried->IsGun())
+		const EPropHold Hold = Carried.IsValid() ? Carried->GetHold() : EPropHold::Overhead;
+		const FVector Ahead = GetActorForwardVector();
+		if (Hold == EPropHold::LongGun || Hold == EPropHold::OneHand)
 		{
-			// A gun is held out in both hands, a little under the eye.
-			PoseArms(Joints, GetActorForwardVector(), CarryAlpha, 46., 3., -8.);
+			// Each arm has its own place here, so they are posed on a copy and eased in like the other holds.
+			TArray<FVector> Held = Joints;
+			const FLimbs Reach(Held);
+			const FVector Outward = FVector::UpVector ^ Ahead;
+			if (Hold == EPropHold::LongGun)
+			{
+				// Shouldered: the right hand at the grip by the chest, the left forward under the barrel.
+				const FVector Grip = Held[RightShoulder] + Ahead * 16. - FVector::UpVector * 15. - Outward * 5.;
+				ReachWithArm(Held, Reach, 1, Grip, Outward * 0.7 - FVector::UpVector);
+				ReachWithArm(Held, Reach, 0, Grip + Ahead * 36. + FVector::UpVector * 2., -Outward * 0.3 - FVector::UpVector);
+			}
+			else
+			{
+				// In one hand, raised beside the head, ready to throw. The other arm is left to the stance.
+				ReachWithArm(Held, Reach, 1, Held[RightShoulder] + Ahead * 4. + FVector::UpVector * 20. + Outward * 12., Outward * 0.5 - Ahead - FVector::UpVector * 0.5);
+			}
+			for (const int32 Joint : { LeftElbow, LeftHand, RightElbow, RightHand })
+			{
+				Joints[Joint] = FMath::Lerp(Joints[Joint], Held[Joint], static_cast<double>(CarryAlpha));
+			}
+		}
+		else if (Hold == EPropHold::Pistol)
+		{
+			// In both hands, out in front and a little under the eye, with the elbows bent.
+			PoseArms(Joints, Ahead, CarryAlpha, 38., 2.5, -12.);
+		}
+		else if (Hold == EPropHold::Swung)
+		{
+			PoseArms(Joints, Ahead, CarryAlpha, 24., 5., -20.);
 		}
 		else
 		{
-			PoseArms(Joints, GetActorForwardVector(), CarryAlpha, bWeapon ? 24. : 4., bWeapon ? 5. : 14., bWeapon ? -20. : 36.);
+			PoseArms(Joints, Ahead, CarryAlpha, 6., 15., 32.);
 		}
 	}
 
@@ -1756,12 +1784,18 @@ void AStickFighter::Jump()
 		return;
 	}
 
+	// A jump may come out of the tail of a strike, at the moment another strike could.
+	if (State == EFighterState::Busy && CanAct())
+	{
+		ReturnToIdle();
+	}
 	const bool bOnItsFeet = State == EFighterState::Idle || State == EFighterState::Moving;
 	if (!bFree || !bOnItsFeet || bMoving || JumpHeight > 0.f || StunSecondsLeft > 0.f)
 	{
 		return;
 	}
 
+	UE_LOG(LogStickFighter, Verbose, TEXT("%s jumps"), *GetName());
 	JumpSpeed = JumpLaunchSpeed;
 	bMayGrabABar = true;
 	JumpHeight = UE_KINDA_SMALL_NUMBER;
@@ -2310,6 +2344,11 @@ void AStickFighter::FlyLooseLimbs(float DeltaSeconds)
 		LooseLimbs[Limb * 2 + 1]->SetWorldLocation(Flying.Middle + Half);
 		LooseLimbs[Limb * 2 + 1]->SetWorldScale3D(FVector(Thickness * HandAndFootWidth / 100.f));
 	}
+}
+
+FVector AStickFighter::GetHandPoint(int32 Side) const
+{
+	return BuildJoints(true)[HandOfSide[Side]];
 }
 
 FVector AStickFighter::GetCarryPoint() const

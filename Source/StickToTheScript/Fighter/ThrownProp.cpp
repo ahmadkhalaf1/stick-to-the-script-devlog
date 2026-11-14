@@ -31,8 +31,9 @@ namespace
 	const FPropLook Looks[] = {
 		{ TEXT("SM_Crate"), 30.f, false, 0.f, 0, false, FLinearColor(0.55f, 0.38f, 0.2f) },
 		{ TEXT("SM_Bottle"), 22.f, true, 0.f, 0, false, FLinearColor(0.1f, 0.45f, 0.2f) },
-		{ TEXT("SM_Melon"), 26.f, true, 0.f, 0, false, FLinearColor(0.75f, 0.06f, 0.08f) },
-		{ TEXT("SM_Cone"), 18.f, false, 0.f, 0, false, FLinearColor(1.f, 0.35f, 0.02f) },
+		// The melon is a bar stool now and the cone a wet-floor sign: scans of real things, under the names the scenes use.
+		{ TEXT("SM_Melon"), 26.f, false, 0.f, 0, false, FLinearColor(0.35f, 0.22f, 0.12f) },
+		{ TEXT("SM_Cone"), 18.f, false, 0.f, 0, false, FLinearColor(0.95f, 0.75f, 0.05f) },
 		{ TEXT("SM_Pan"), 34.f, false, 0.f, 0, false, FLinearColor(0.2f, 0.2f, 0.22f) },
 		{ TEXT("SM_GoldHammer"), 999.f, false, 999.f, 3, true, FLinearColor(1.f, 0.75f, 0.15f) },
 		{ TEXT("SM_GoldBat"), 999.f, false, 999.f, 3, true, FLinearColor(1.f, 0.75f, 0.15f) },
@@ -41,7 +42,8 @@ namespace
 		{ TEXT("SM_IronBar"), 30.f, false, 30.f, 12, false, FLinearColor(0.3f, 0.3f, 0.33f) },
 		{ TEXT("SM_Sledge"), 40.f, false, 45.f, 6, false, FLinearColor(0.5f, 0.33f, 0.18f) },
 		{ TEXT("SM_Pistol"), 16.f, false, 0.f, 0, false, FLinearColor(0.08f, 0.08f, 0.09f) },
-		{ TEXT("SM_Launcher"), 28.f, false, 0.f, 0, false, FLinearColor(0.12f, 0.12f, 0.14f) },
+		// No scan of a shotgun has been found. Until one is, the blaster is on no set and in no shop, and borrows the rifle's shape.
+		{ TEXT("SM_Rifle"), 28.f, false, 0.f, 0, false, FLinearColor(0.12f, 0.12f, 0.14f) },
 		{ TEXT("SM_Rifle"), 24.f, false, 0.f, 0, false, FLinearColor(0.1f, 0.1f, 0.11f) },
 	};
 
@@ -59,12 +61,15 @@ namespace
 		// How hard whoever is hit is thrown back.
 		float KnockSpeed;
 		EMove Move;
+		// The model is kept by its middle and held by its grip: how far the middle is ahead of the grip, and above it.
+		float GripToMiddle;
+		float GripUnderMiddle;
 	};
 	const FGunLook Guns[] = {
-		{ EPropKind::Pistol, TEXT("PISTOL"), 8, 1, 26.f, 0.26f, 1.2f, 420.f, EMove::Shot },
-		// Held down it empties itself in three seconds.
-		{ EPropKind::Rifle, TEXT("RIFLE"), 30, 1, 12.f, 0.1f, 2.4f, 230.f, EMove::Shot },
-		{ EPropKind::Blaster, TEXT("BLASTER"), 4, 7, 13.f, 0.7f, 8.f, 950.f, EMove::Blast },
+		{ EPropKind::Pistol, TEXT("PISTOL"), 8, 1, 26.f, 0.26f, 1.2f, 420.f, EMove::Shot, 7.f, 3.5f },
+		// A bolt-action rifle: one round a second, and one is enough for most.
+		{ EPropKind::Rifle, TEXT("RIFLE"), 5, 1, 70.f, 0.95f, 0.4f, 760.f, EMove::Shot, 27.f, 4.f },
+		{ EPropKind::Blaster, TEXT("BLASTER"), 4, 7, 13.f, 0.7f, 8.f, 950.f, EMove::Blast, 27.f, 4.f },
 	};
 
 	const FGunLook* FindGun(EPropKind Kind)
@@ -83,6 +88,9 @@ namespace
 	const float GunKickSeconds = 0.16f;
 	const double GunKickDegrees = 24.;
 	const double GunmanDropHeight = 110.;
+	// A gun longer than twice this is shouldered. Anything else smaller than twice the second is held in one hand.
+	const double LongGunOverHalfLength = 30.;
+	const double OneHandUnderHalfSize = 26.;
 
 	const float LegendaryGlow = 1.6f;
 	// A weapon in the hands points up and ahead, and is held near its handle end.
@@ -172,6 +180,19 @@ void AThrownProp::HoldInReserveFor(AActor* Fighter)
 	Home = GetActorTransform();
 }
 
+EPropHold AThrownProp::GetHold() const
+{
+	if (IsGun())
+	{
+		return HalfLength > LongGunOverHalfLength ? EPropHold::LongGun : EPropHold::Pistol;
+	}
+	if (IsSwung())
+	{
+		return EPropHold::Swung;
+	}
+	return FMath::Max(HalfLength, HalfHeight) < OneHandUnderHalfSize ? EPropHold::OneHand : EPropHold::Overhead;
+}
+
 bool AThrownProp::IsSwung() const
 {
 	return Looks[static_cast<int32>(Kind)].SwingDamage > 0.f;
@@ -248,12 +269,19 @@ void AThrownProp::Tick(float DeltaSeconds)
 				const FRotator Raised(HeldPitchDegrees, Carrier->GetActorRotation().Yaw, 0.);
 				SetActorLocationAndRotation(Carrier->GetCarryPoint() + Raised.Vector() * (HalfLength * HeldAtShareOfLength), Raised);
 			}
-			else if (IsGun())
+			else if (const FGunLook* Gun = FindGun(Kind))
 			{
-				// A gun points where its carrier faces, and kicks up as it fires.
+				// A gun points where its carrier faces, and kicks up as it fires. It sits in the hand by its grip: the right
+				// hand for one that is shouldered, between the two hands for a pistol.
 				const double Kick = GunKickDegrees * FMath::Clamp(1. - (GetWorld()->GetTimeSeconds() - LastShotSeconds) / GunKickSeconds, 0., 1.);
 				const FRotator Aimed(Kick, Carrier->GetActorRotation().Yaw, 0.);
-				SetActorLocationAndRotation(Carrier->GetCarryPoint() + Aimed.Vector() * (HalfLength * 0.35), Aimed);
+				const FVector Grip = GetHold() == EPropHold::LongGun ? Carrier->GetHandPoint(1) : Carrier->GetCarryPoint();
+				SetActorLocationAndRotation(Grip + Aimed.Vector() * Gun->GripToMiddle + FVector(0., 0., Gun->GripUnderMiddle), Aimed);
+			}
+			else if (GetHold() == EPropHold::OneHand)
+			{
+				// In the right hand, by its lower end.
+				SetActorLocationAndRotation(Carrier->GetHandPoint(1) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
 			}
 			else
 			{

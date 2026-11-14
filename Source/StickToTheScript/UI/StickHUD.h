@@ -68,6 +68,14 @@ private:
 	// The wardrobe's panel: every colour as a swatch, every hat and build as a pip, what is chosen named large.
 	void DrawWardrobe(float Unit);
 
+	// Where the mouse pointer is, in the layout's own coordinates, or off it at (-1, -1). It works the menus and the
+	// wardrobe; in a take it is hidden and the click is a punch.
+	FVector2D Pointer = FVector2D(-1., -1.);
+	FVector2D LastPointer = FVector2D(-1., -1.);
+	bool bPointerMoved = false;
+	bool IsPointerIn(float X, float Y, float Width, float Height) const;
+	TWeakObjectPtr<class AGameFlow> Flow;
+
 	// Text drawn from the engine's outline font at the size asked for. The bitmap font blurs when it is scaled up,
 	// and the cards are mostly text. They take the same arguments as AHUD's DrawText and GetTextSize, font included.
 	void Write(const FString& Text, const FLinearColor& Color, float X, float Y, UFont* Unused, float Scale);
