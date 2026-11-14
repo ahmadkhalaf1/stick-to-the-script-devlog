@@ -26,6 +26,8 @@ namespace StickJoint
 	};
 }
 
+class UDummyBody;
+
 UCLASS()
 class AStickFighter : public AActor
 {
@@ -259,6 +261,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UAnimSequenceBase> Playing;
+
+	// The body the fighter is seen as. Without its model in the project, the fighter is drawn from plain shapes instead.
+	UPROPERTY()
+	TObjectPtr<UDummyBody> Model;
 
 	// Drawn for one frame behind a hand or foot that moves very fast, like a smear frame in hand-drawn animation.
 	UPROPERTY()

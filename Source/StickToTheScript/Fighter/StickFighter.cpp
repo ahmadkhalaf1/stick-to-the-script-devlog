@@ -11,6 +11,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "StickToTheScript/Core/TakeEvents.h"
+#include "StickToTheScript/Fighter/DummyBody.h"
 #include "StickToTheScript/Fighter/SwingBar.h"
 #include "StickToTheScript/Fighter/ThrownProp.h"
 #include "UObject/ConstructorHelpers.h"
@@ -147,6 +148,10 @@ namespace
 		GirdleWidth, 1.5f, 1.1f,
 	};
 	const float JointBallWidth = 1.3f;
+	// The build the model is made for. A stouter or slighter one swells or thins it, within what still looks like a body.
+	const float UsualThickness = 7.f;
+	const float SlightestGirth = 0.85f;
+	const float StoutestGirth = 1.3f;
 	const float HandAndFootWidth = 1.6f;
 	const int32 FirstBallJoint = LeftShoulder;
 
@@ -663,6 +668,8 @@ AStickFighter::AStickFighter()
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Game/Materials/M_Figure"));
 
 	Body->SetSkeletalMeshAsset(Mannequin.Object);
+	Model = CreateDefaultSubobject<UDummyBody>("Model");
+	Model->SetupAttachment(RootComponent);
 	IdleAnimation = Idle.Object;
 	PunchAnimations = { Punch1.Object, Punch2.Object, Punch3.Object };
 	// shortcut: the engine ships no kick, so the charged punch stands in, S2-FIGHT-01 replaces it.
@@ -1464,8 +1471,17 @@ void AStickFighter::MarkStruck(const FVector& ImpactPoint, bool bKnockedOut)
 void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 {
 	const bool bBones = FlashSecondsLeft > 0.f;
+	// With a model for a body, the plain shapes are only the skeleton that shows through it at a blow.
+	const bool bModel = Model->HasBody();
+	const bool bShapes = bBones || !bModel;
+	Model->SetVisibility(bModel && !bBones);
+	if (bModel && !bBones)
+	{
+		Model->PoseOn(Joints, FloorHeight, FMath::Clamp(Thickness / UsualThickness, SlightestGirth, StoutestGirth));
+	}
 	for (int32 i = 0; i < Limbs.Num(); ++i)
 	{
+		Limbs[i]->SetVisibility(bShapes);
 		PlaceLimb(Limbs[i], Joints[LimbJoints[i][0]], Joints[LimbJoints[i][1]], Thickness * (bBones ? BoneWidth : LimbWidths[i]));
 	}
 
@@ -1493,12 +1509,13 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	}
 	for (UStaticMeshComponent* Part : BodyParts)
 	{
-		Part->SetVisibility(!bBones);
+		Part->SetVisibility(!bBones && !bModel);
 	}
 	for (int32 Ball = 0; Ball < JointBalls.Num(); ++Ball)
 	{
 		const int32 Joint = FirstBallJoint + Ball;
 		const bool bEnd = Joint == LeftHand || Joint == RightHand || Joint == LeftFoot || Joint == RightFoot;
+		JointBalls[Ball]->SetVisibility(bShapes);
 		JointBalls[Ball]->SetWorldLocation(Joints[Joint]);
 		JointBalls[Ball]->SetWorldScale3D(FVector(Thickness * (bBones ? BoneJointWidth : bEnd ? HandAndFootWidth : JointBallWidth) / 100.f));
 	}
@@ -1524,7 +1541,7 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 
 		// Set every time, not only on a change: a knocked-out fighter stops reporting its breaks, and what was
 		// showing a moment ago must not be left hanging in the air.
-		Stump->SetVisibility(bBroken);
+		Stump->SetVisibility(bBroken && bShapes);
 		BreakParts[Side * 2]->SetVisibility(bBroken);
 		BreakParts[Side * 2 + 1]->SetVisibility(bBroken);
 
@@ -1587,6 +1604,7 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	LastDrawnSeconds = Now;
 
 	const FVector Up = (Joints[SkullJoint] - Joints[NeckJoint]).GetSafeNormal();
+	Head->SetVisibility(bShapes);
 	Head->SetWorldLocation(Joints[SkullJoint] + Up * HeadRadius);
 	Head->SetWorldScale3D(FVector(HeadRadius / 50.f));
 
@@ -1596,6 +1614,7 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	const FVector Across = Up ^ Ahead;
 	for (int32 Eye = 0; Eye < Eyes.Num(); ++Eye)
 	{
+		Eyes[Eye]->SetVisibility(bShapes);
 		Eyes[Eye]->SetWorldLocation(Middle + (Ahead * 0.86 + Across * (Eye == 0 ? -0.36 : 0.36) + Up * 0.1) * HeadRadius);
 		// In the skeleton flash the eyes are the skull's sockets.
 		Eyes[Eye]->SetWorldScale3D(FVector(HeadRadius * (bBones ? 0.62 : 0.32) / 100.));
@@ -1613,8 +1632,8 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	{
 		PlaceDisc(Marks[Mark * 2], MarkAt[Mark], MarkFaces[Mark], MarkRadius[Mark]);
 		PlaceDisc(Marks[Mark * 2 + 1], MarkAt[Mark] + MarkFaces[Mark] * 0.3, MarkFaces[Mark], MarkRadius[Mark] * 0.5);
-		Marks[Mark * 2]->SetVisibility(!bBones);
-		Marks[Mark * 2 + 1]->SetVisibility(!bBones);
+		Marks[Mark * 2]->SetVisibility(!bBones && !bModel);
+		Marks[Mark * 2 + 1]->SetVisibility(!bBones && !bModel);
 	}
 
 	if (Hat != 0)
@@ -2185,7 +2204,9 @@ void AStickFighter::SnapToWantedFacing()
 // It says what it knows the moment that happens, so the cause does not have to be guessed from a picture.
 void AStickFighter::WatchForFloating(const TArray<FVector>& Joints, float DeltaSeconds, const TCHAR* When)
 {
-	if (!bFree || Joints.Num() != JointCount)
+	// At a few frames a second a whole jump fits inside one frame, and its landing reads as floating. Seen with another
+	// game holding the processor; it says nothing about this one.
+	if (!bFree || Joints.Num() != JointCount || DeltaSeconds > 0.1f)
 	{
 		return;
 	}
@@ -2194,8 +2215,9 @@ void AStickFighter::WatchForFloating(const TArray<FVector>& Joints, float DeltaS
 	FloatingSeconds = FeetAbove > 30. ? FloatingSeconds + DeltaSeconds : FMath::Min(FloatingSeconds, 0.f);
 	if (FloatingSeconds > 0.3f)
 	{
-		UE_LOG(LogStickFighter, Warning, TEXT("Floating %s: %s has both feet %.0f cm above the floor. Actor z %.0f, floor %.0f, pelvis z %.0f, body offset %s, state %d, jump %.0f"),
-			When, *GetName(), FeetAbove, GetActorLocation().Z, FloorHeight, Joints[PelvisJoint].Z, *Body->GetRelativeLocation().ToCompactString(), static_cast<int32>(State), JumpHeight);
+		UE_LOG(LogStickFighter, Warning, TEXT("Floating %s: %s has both feet %.0f cm above the floor. Actor z %.0f, floor %.0f, pelvis z %.0f, body offset %s, state %d, jump %.0f, playing %s, stunned %.2f s"),
+			When, *GetName(), FeetAbove, GetActorLocation().Z, FloorHeight, Joints[PelvisJoint].Z, *Body->GetRelativeLocation().ToCompactString(), static_cast<int32>(State), JumpHeight,
+			Playing ? *Playing->GetName() : TEXT("nothing"), StunSecondsLeft);
 		// Once a second is enough.
 		FloatingSeconds = -1.f;
 	}
@@ -2247,6 +2269,7 @@ void AStickFighter::TintBody(const FLinearColor& Tint)
 		BodyParts[Part]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Part >= LeftBoot ? Rubber : Tint);
 	}
 	Head->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
+	Model->Paint(Tint, Rubber);
 	const bool bDarkEyes = !Tint.Equals(Color) || Color.GetLuminance() > 0.25f;
 	for (UStaticMeshComponent* Eye : Eyes)
 	{

@@ -144,6 +144,8 @@ def make_figure():
     material = started("M_Figure")
     if not material:
         return
+    # The fighters' body is a skinned model. A material not marked for one is swapped for plain grey in the game.
+    material.set_editor_property("used_with_skeletal_mesh", True)
     # The game sets "Color" on every part of a figure, as it did on the plain material this replaces.
     colour = node(material, unreal.MaterialExpressionVectorParameter, -700, 0, parameter_name="Color", default_value=unreal.LinearColor(1, 1, 1, 1))
     library.connect_material_property(colour, "", unreal.MaterialProperty.MP_BASE_COLOR)

@@ -877,6 +877,23 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Developer said:** asked to play the build packaged at 19:25 with the sound on and say whether a punch now feels like a hit: "Feels like a hit".
 - **Result:** the burst, the longer freeze and the layered sound stay. The developer's play was that build's first run. Nothing was said about the sound on its own, so the mix as a whole (the director's voice, the music against the blows) is still unjudged.
 
+### 01:31–02:15 · The fighters get a real body
+
+- **Developer said:** "i still feel like we need to improve graphic and character alot to fit a game in 2026". Asked whether the work left could be finished from the normal reset of the usage limit, and shown a "Fable reset" button on the plan's own page, asked what it would do. The agent read out what the card said: free, no extra credit, refills this model's allowance and gives back its share of the week. The developer used it: "Reset done, go". Later, seeing the result come up: "which 3d character is that? is it the default from unreal?"
+- **Agent did:**
+  - Agreed the character was the largest gap, and said plainly that replacing it was the riskiest job left: every pose in the game is worked out on sixteen joints, and a skinned model would have to follow them bone by bone.
+  - Brought in the model that came with the fight clips, Adobe's "X Bot", by a script. Wrote the part that puts its bones on the joints every frame: the trunk, arms and legs with their elbows and knees, feet that lie flat under a standing leg, fingers closed into fists.
+  - Left the game itself alone. The joints are still the truth and the model only dresses them, so the film, the hang on the bar and the broken arms needed nothing. The old plain shapes stay as the skeleton flash and as the fallback.
+  - Answered the developer: not Unreal's default, Mixamo's stock model, which some judges will know.
+- **Result:** it stood in the fighting stance in the first picture after the first compile. All three scenes, the film with its close-ups, the wardrobe with a hat, and the packaged build show it. The picture says the rest.
+- **Went wrong:**
+  - Every fighter came out the same grey. The figures' material was made for plain shapes; on a skinned model the engine swaps an unmarked material for plain grey and says so once in the log. The model's script now marks it.
+  - Packaging failed. Setting the model on the component the short way trips a check in the engine that play in the editor forgives and the cook does not. Found only because the build is packaged before a milestone is called done.
+  - Six warnings of a fighter "floating" after a blow sent the agent looking for a bug in the day's changes for twenty minutes, through two rounds of extra logging. The log's own frame numbers had the answer: the editor was running at three to five frames a second, because another game was running on the PC, and at that rate a whole jump fits inside one frame. The watch now ignores frames that slow.
+- **Not verified:** the frame rate, for the same reason: 89 a second in the packaged warehouse against 110 in the afternoon means nothing with another game running. A broken arm, the other hats and the stout and slight builds on the new body. Nobody but the agent has seen it move.
+
+![The new body in a fight, in a film close-up, and in the wardrobe with a top hat](Docs/devlog/57-a-real-body.jpg)
+
 ---
 
 ## Asset and tool register
@@ -904,4 +921,5 @@ Kept current for the submission form.
 | Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Walls, floors, crates, containers |
 | Lettering on the sets | The engine's own font (Roboto) | The neon sign in the bar, the bay number in the warehouse |
 | Scene scripts | Made by the team: text files in `Content/Scripts` | The fights |
+| The fighters' body: the "X Bot" model, skin and skeleton | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. It came inside the FBX files of the clips below, downloaded on Fri Nov 13 | What every fighter is seen as, since the night of Nov 13 to 14 |
 | Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; nine of them in the game since that evening | The punch, the kicks, the uppercut, the sweep, the hook, the stance and the blows taken |
