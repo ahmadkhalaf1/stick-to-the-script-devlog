@@ -51,12 +51,13 @@ namespace
 		ShowSweep,
 		ShowRoundhouse,
 		ShowChop,
-		ShowBarKick
+		ShowBarKick,
+		ShowShot
 	};
 	// Indexed by EShowKind. A guard is paid for in its own place.
-	const int32 KindPays[] = { PunchPays, KickPays, ThrowPays, AirPays, GuardPays, 12, 8, 15, 8, 40 };
+	const int32 KindPays[] = { PunchPays, KickPays, ThrowPays, AirPays, GuardPays, 12, 8, 15, 8, 40, 6 };
 	const TCHAR* KindNames[] = { TEXT("punch"), TEXT("kick"), TEXT("thrown"), TEXT("from the air"), TEXT("guard"),
-		TEXT("uppercut"), TEXT("sweep"), TEXT("roundhouse"), TEXT("hook"), TEXT("off the bar") };
+		TEXT("uppercut"), TEXT("sweep"), TEXT("roundhouse"), TEXT("hook"), TEXT("off the bar"), TEXT("shot") };
 
 	uint8 ShowKindOf(EMove Move, bool bFromTheAir)
 	{
@@ -64,6 +65,9 @@ namespace
 		{
 		case EMove::SwingKick:
 			return ShowBarKick;
+		case EMove::Shot:
+		case EMove::Blast:
+			return ShowShot;
 		case EMove::Throw:
 			return ShowThrow;
 		case EMove::Uppercut:
@@ -575,7 +579,7 @@ void AGameFlow::ShowMenu()
 	}
 	if (bPaused)
 	{
-		Detail += TEXT("\nLeft click: punch      Right click: guard      F: kick      Ctrl: duck      Space: jump      E: grab, throw\nDuck and punch: uppercut      Duck and kick: sweep      Guard and punch: hook      Guard and kick: roundhouse\nJump under a red bar to hang from it, then kick\n");
+		Detail += TEXT("\nLeft click: punch      Right click: guard      F: kick      Ctrl: duck      Space: jump      E: grab, throw\nDuck and punch: uppercut      Duck and kick: sweep      Guard and punch: hook      Guard and kick: roundhouse\nJump under a red bar to hang from it, then kick      A gun in your hands: left click fires it\n");
 	}
 	Detail += bShop ? TEXT("\nW / S: choose      Left click: buy")
 		: bPaused || bCutting ? TEXT("\nW / S: choose      Left click: go")

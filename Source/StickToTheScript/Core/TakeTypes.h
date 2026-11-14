@@ -20,7 +20,9 @@ enum class EMove : uint8
 	Sweep,
 	Roundhouse,
 	Chop,
-	SwingKick
+	SwingKick,
+	// The blaster going off: a spread of pellets. A pistol, a rifle or the gunman's gun is Shot.
+	Blast
 };
 
 // A blow with the weight of the body behind it. It staggers further, and looks and sounds heavier.
@@ -87,7 +89,11 @@ enum class EPropKind : uint8
 	// Bought in the shop for one scene. Held and swung like the golden ones, without the knockout in one blow.
 	WoodBat,
 	IronBar,
-	Sledge
+	Sledge,
+	// Guns: the punch fires one while it has rounds left, and after that it is thrown like anything else.
+	Pistol,
+	Blaster,
+	Rifle
 };
 
 // Something loose on the set that a fighter can pick up and throw.
@@ -189,7 +195,9 @@ enum class ERecordedEventKind : uint8
 {
 	Hit,
 	Blocked,
-	Cut
+	Cut,
+	// A gun going off, whether it hit anyone or not: the film wants its flash and its noise back.
+	Shot
 };
 
 // One UTakeEvents event as it happened during a take. Fields the kind does not use keep their defaults.

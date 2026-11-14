@@ -36,6 +36,7 @@ namespace
 
 	const uint8 TurnGiven = 1;
 	const uint8 PlaceGiven = 2;
+	const uint8 GoneGiven = 4;
 
 	// A turn that has its X along a bone and its Z as near as it can be to the axis the bone's joint bends about.
 	FQuat DummyFrame(const FVector& Along, const FVector& Hinge)
@@ -135,7 +136,7 @@ bool UDummyBody::LearnRest()
 	return true;
 }
 
-void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth)
+void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed)
 {
 	if (Joints.Num() != JointCount || !LearnRest() || BoneSpaceTransforms.Num() != Rest.Num())
 	{
@@ -234,12 +235,31 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 		Put(Thigh + 2, FQuat::Slerp(ShinTurn, FlatTurn, Flat), Ankle);
 	}
 
+	// A limb shot away is closed down to nothing at its joint, and the skin that hung on it gathers there into a stump.
+	const int32 CanGo[] = { DummyLeftForeArm, DummyRightForeArm, DummyLeftLeg, DummyRightLeg };
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		if (Severed & (1 << Limb))
+		{
+			Given[Placed[CanGo[Limb]]] = GoneGiven;
+		}
+	}
+
 	// Every bone in turn, parents first. One that was given nothing keeps its place on its parent, which is how the
 	// collar bones, the toes and the top of the head come along.
 	for (int32 Bone = 0; Bone < Rest.Num(); ++Bone)
 	{
 		const int32 Parent = Parents[Bone];
+		// Whatever hangs from a bone that is gone goes with it, wherever its own joint says it should be.
+		if (Parent != INDEX_NONE && (Given[Parent] & GoneGiven))
+		{
+			Given[Bone] = GoneGiven;
+		}
 		FTransform Now = Parent == INDEX_NONE ? RestLocal[Bone] : RestLocal[Bone] * Posed[Parent];
+		if (Given[Bone] & GoneGiven)
+		{
+			Now.SetScale3D(FVector(0.001));
+		}
 		if (Given[Bone] & TurnGiven)
 		{
 			Now.SetRotation((Turns[Bone] * Rest[Bone].GetRotation()).GetNormalized());

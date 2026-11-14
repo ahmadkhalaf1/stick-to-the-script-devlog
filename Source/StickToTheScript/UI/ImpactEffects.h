@@ -108,6 +108,18 @@ private:
 	FVector BurstAt = FVector::ZeroVector;
 	float BurstRealSecondsLeft = 0.f;
 	float BurstSize = 0.f;
+
+	// A gun going off: a flash at its muzzle and a line for every pellet, for an instant, with one bounce off an end wall.
+	void ShowShot(AActor* Shooter, bool bBlast);
+	void DrawShotLine(const FVector& From, const FVector& To, double Thickness);
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> ShotLineMesh;
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> ShotLines;
+	UPROPERTY()
+	TObjectPtr<UStaticMeshComponent> MuzzleFlash;
+	int32 NextShotLine = 0;
+	float ShotRealSecondsLeft = 0.f;
 	void PlaceBurst();
 	// The film does not replay a swing, only what landed, so a shot that lands there has to bring its own bang.
 	bool bFilm = false;

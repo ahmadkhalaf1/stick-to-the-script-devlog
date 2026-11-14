@@ -38,6 +38,7 @@ You were hired to lose. The script says the gang beats you in the warehouse, in 
 | Duck (hold) | Ctrl, or C | Right trigger |
 | Jump | Space | A |
 | Grab and throw | E | B |
+| Fire a gun in your hands (hold) | Left mouse button, or J | X |
 | Change the view | V | |
 | Pause | Esc, or P | Start |
 | Uppercut, sweep | hold duck, then punch or kick | |

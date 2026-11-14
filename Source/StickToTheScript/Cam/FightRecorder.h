@@ -45,6 +45,9 @@ private:
 	void HandleBlocked(AActor* Attacker, AActor* Defender);
 
 	UFUNCTION()
+	void HandleSwing(AActor* Attacker, EMove Move);
+
+	UFUNCTION()
 	void HandleCut(ECutReason Reason);
 
 	UFUNCTION()

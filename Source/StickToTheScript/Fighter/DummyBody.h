@@ -20,7 +20,8 @@ public:
 	bool HasBody() const { return GetSkinnedAsset() != nullptr; }
 
 	// Joints as AStickFighter::GetJointPositions gives them. Girth is how stout the body is, 1 for the usual build.
-	void PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth);
+	// Severed has a bit for each limb that is gone: the left and right forearm, then the left and right shin.
+	void PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed = 0);
 	void Paint(const FLinearColor& Skin, const FLinearColor& Rubber);
 
 private:

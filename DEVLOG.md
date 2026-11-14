@@ -918,6 +918,26 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The wardrobe's new panel, the title menu and the shop](Docs/devlog/59-wardrobe-and-shop.jpg)
 
+### 03:02–03:30 · Guns
+
+- **Developer said:** "Yes, add guns". While the agent built them: "use real guns models assets no stupid graphic". On seeing the engine's models in their place: "i want realistic military guns no kids guns". And before going to sleep: "keep running until the limit is finished full but dont use extra credit", "dont wait for my decision each step u finish u take the next one", "once u hit limit set pc to sleep".
+- **Agent did:**
+  - Read what was already there before adding to it: a gunman who aims and shoots, weapons picked up from the floor, a shop, the effects at a blow, and since this night a body made of parts and a prop that breaks into pieces.
+  - Made a gun a prop that the punch fires: a pistol, a rifle that keeps firing while the button is held, and a blaster with a spread of pellets. Every shot is a straight line that stops in the first opponent or comes off an end wall once.
+  - Made guns take limbs off: the model closes to a stump, the forearm or shin flies and lies where it lands.
+  - Gave shots a flash at the muzzle, a line for every pellet, sparks, and a place in the recorded take, so the film fires them again.
+  - Put a gun in each scene, three in the shop, the gunman's own pistol on the floor where he falls, and the rounds left on the screen.
+  - Built the first two models out of boxes. Replaced them with the engine's own pistol, rifle and launcher when the developer called the boxes stupid, which they were.
+- **Result:** self-play picks the pistol up off its mark in the warehouse and uses it; the rifle on the rooftop empties in a burst; in the bar's film the blaster throws a blue opponent backwards off his feet with a stump where his forearm was.
+- **Went wrong:**
+  - Self-play ignored the first pistol for two minutes: it grabs the nearest thing as the take starts, and that was a crate. The guns now lie nearest the player's mark.
+  - A test asserted that the last thing in the shop is a look. The guns had to go last, so that a look already bought keeps its place in the list, and the test now asks for a look anywhere.
+  - Two names the agent chose were already taken in the same file, which stops the build here.
+  - The models were wrong twice in the developer's eyes: boxes, then the engine's white ones. The shooting does not depend on them, so nothing else has to change when they are replaced.
+- **Not verified:** buying a gun in the shop and finding it in the next scene; the gunman's pistol falling and being picked up; a ricochet. All three are in the code and none was seen. The sound: one recorded gunshot for all three guns, ten times a second for the rifle, which the agent cannot hear. The packaged build ran at a median of 60 frames a second with another game running on the PC.
+
+![The blaster in the bar's film, and the rifle on the rooftop with its flash and its line](Docs/devlog/60-guns.jpg)
+
 ---
 
 ## Asset and tool register
@@ -945,5 +965,6 @@ Kept current for the submission form.
 | Surface textures (concrete, brick, planks, wallpaper, roofing felt, corrugated metal) | Made by the team: painted by `Tools/build_textures.mjs` from noise and arithmetic, brought in by `Tools/build_materials.py` | Walls, floors, crates, containers |
 | Lettering on the sets | The engine's own font (Roboto) | The neon sign in the bar, the bay number in the warehouse |
 | Scene scripts | Made by the team: text files in `Content/Scripts` | The fights |
+| Three gun models: a pistol, a rifle and a launcher, with their materials and textures | Unreal Engine 5.8, from its own `Templates/TemplateResources/Standard/Weapons`, copied into `Content/Weapons` | The guns, until realistic ones replace them |
 | The fighters' body: the "X Bot" model, skin and skeleton | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. It came inside the FBX files of the clips below, downloaded on Fri Nov 13 | What every fighter is seen as, since the night of Nov 13 to 14 |
 | Fight animations (eleven clips: a stance, punches, kicks, a sweep, an uppercut, hanging, two hit reactions) | Mixamo (Adobe), free with an Adobe account, royalty-free inside a game. Downloaded on Fri Nov 13; nine of them in the game since that evening | The punch, the kicks, the uppercut, the sweep, the hook, the stance and the blows taken |

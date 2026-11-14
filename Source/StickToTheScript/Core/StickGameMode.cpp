@@ -161,6 +161,18 @@ void AStickGameMode::StartPlay()
 		Props.Add(Prop);
 	}
 
+	// A gunman's pistol outlives him. Like the legendary prop it is made now and hidden, and it drops where he falls.
+	for (AStickFighter* Fighter : FightersInOrder)
+	{
+		if (Fighter->bArmed)
+		{
+			AThrownProp* Pistol = World->SpawnActor<AThrownProp>(FVector(PlayerLocation.X, PlayerLocation.Y, FloorHeight), FRotator::ZeroRotator);
+			Pistol->SetUp(EPropKind::Pistol, FloorHeight, Script.ArenaMin, Script.ArenaMax);
+			Pistol->HoldInReserveFor(Fighter);
+			Props.Add(Pistol);
+		}
+	}
+
 	for (const FSceneBar& Placed : Script.Bars)
 	{
 		const double Depth = Script.ArenaMax.Y - Script.ArenaMin.Y;

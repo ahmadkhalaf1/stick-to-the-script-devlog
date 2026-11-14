@@ -23,6 +23,7 @@
   ],
   "Bars": [ {"X":520,"Height":250,"bOnAPost":true}, {"X":1420,"Height":250,"bOnAPost":true} ],
   "Props": [
+    { "Kind": "Rifle", "Location": { "X": 90, "Y": 70 }, "Height": 0 },
     { "Kind": "Cone", "Location": { "X": 560, "Y": 140 }, "Height": 0 },
     { "Kind": "Melon", "Location": { "X": 1050, "Y": 140 }, "Height": 0 },
     { "Kind": "Crate", "Location": { "X": 160, "Y": 110 }, "Height": 0 },

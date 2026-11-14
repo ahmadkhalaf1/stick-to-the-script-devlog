@@ -378,7 +378,11 @@ void AFinalCut::ReplayEvent(const FRecordedEvent& Event)
 	}
 
 	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
-	if (Event.Kind == ERecordedEventKind::Hit)
+	if (Event.Kind == ERecordedEventKind::Shot)
+	{
+		Events->OnSwing.Broadcast(Attacker, Event.Move);
+	}
+	else if (Event.Kind == ERecordedEventKind::Hit)
 	{
 		Victim->MarkStruck(Event.ImpactPoint, Event.bKnockout);
 		Events->OnHit.Broadcast(Attacker, Victim, Event.Move);

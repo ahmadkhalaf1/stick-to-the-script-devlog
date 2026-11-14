@@ -19,6 +19,7 @@
   "ArenaMax": { "X": 440, "Y": 170 },
   "Bars": [ {"X":180,"Height":250} ],
   "Props": [
+    { "Kind": "Blaster", "Location": { "X": -150, "Y": 70 }, "Height": 0 },
     { "Kind": "Pan", "Location": { "X": 150, "Y": -300 }, "Height": 116 },
     { "Kind": "Melon", "Location": { "X": -250, "Y": -300 }, "Height": 116 },
     { "Kind": "Bottle", "Location": { "X": -350, "Y": -300 }, "Height": 116 },

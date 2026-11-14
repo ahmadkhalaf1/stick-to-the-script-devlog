@@ -21,6 +21,7 @@ void AFightRecorder::BeginPlay()
 	Events->OnTakeStarted.AddDynamic(this, &AFightRecorder::HandleTakeStarted);
 	Events->OnHit.AddDynamic(this, &AFightRecorder::HandleHit);
 	Events->OnBlocked.AddDynamic(this, &AFightRecorder::HandleBlocked);
+	Events->OnSwing.AddDynamic(this, &AFightRecorder::HandleSwing);
 	Events->OnCut.AddDynamic(this, &AFightRecorder::HandleCut);
 	Events->OnTakeFinished.AddDynamic(this, &AFightRecorder::HandleTakeFinished);
 }
@@ -123,6 +124,18 @@ void AFightRecorder::HandleHit(AActor* Attacker, AActor* Victim, EMove Move)
 		Event.Move = Move;
 		Event.ImpactPoint = Struck->GetLastImpactPoint();
 		Event.bKnockout = Struck->IsDown();
+	}
+}
+
+void AFightRecorder::HandleSwing(AActor* Attacker, EMove Move)
+{
+	// Of all the swings only a gun going off is kept: its flash and its noise happen whether or not it hits anyone.
+	if (bRecording && (Move == EMove::Shot || Move == EMove::Blast))
+	{
+		FRecordedEvent& Event = AddEvent(ERecordedEventKind::Shot);
+		Event.AttackerIndex = IndexOf(Attacker);
+		Event.VictimIndex = Event.AttackerIndex;
+		Event.Move = Move;
 	}
 }
 

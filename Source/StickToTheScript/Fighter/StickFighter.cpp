@@ -47,6 +47,21 @@ namespace
 	const float BoneLength = 11.f;
 	const FLinearColor BloodiedColor(0.45f, 0.01f, 0.01f);
 	const FLinearColor BoneColor(0.92f, 0.9f, 0.82f);
+	const FLinearColor StumpRed(0.3f, 0.f, 0.f);
+	// A gun is aimed at the nearest opponent within this distance and this much of straight ahead, and reaches this far.
+	const double GunAimDistance = 1100.;
+	const double GunAimCosine = 0.5;
+	const double GunRange = 1700.;
+	const double GunMuzzleAhead = 40.;
+	// With nobody to aim at, a shot flies level at this height. A pellet hits whoever it passes this close to.
+	const double GunLevelHeight = 120.;
+	const double GunBodyRadius = 34.;
+	// The end walls a shot comes off stand this far outside where the fighters are held, as they do for a thrown prop.
+	const double GunWallBeyond = 150.;
+	// The shooter is pushed back with this share of what the shot does to whoever it hits.
+	const float GunKickBackShare = 0.2f;
+	const double LooseLimbGravity = 980.;
+	const double LooseLimbSpinDegrees = 420.;
 
 	void PlaceLimb(UStaticMeshComponent* Limb, const FVector& From, const FVector& To, float Thickness)
 	{
@@ -720,6 +735,16 @@ AStickFighter::AStickFighter()
 		return Part;
 	};
 
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		LooseLimbs.Add(MakePart(FString::Printf(TEXT("LooseLimb%d"), Limb), Cylinder.Object));
+		LooseLimbs.Add(MakePart(FString::Printf(TEXT("LooseLimbEnd%d"), Limb), Sphere.Object));
+		Stumps.Add(MakePart(FString::Printf(TEXT("Stump%d"), Limb), Sphere.Object));
+		LooseLimbs[Limb * 2]->SetVisibility(false);
+		LooseLimbs[Limb * 2 + 1]->SetVisibility(false);
+		Stumps[Limb]->SetVisibility(false);
+	}
+
 	for (int32 i = 0; i < UE_ARRAY_COUNT(LimbJoints); ++i)
 	{
 		Limbs.Add(MakePart(FString::Printf(TEXT("Limb%d"), i), Cylinder.Object));
@@ -802,6 +827,7 @@ void AStickFighter::Tick(float DeltaSeconds)
 		}
 	}
 
+	FlyLooseLimbs(DeltaSeconds);
 	if (bPuppet)
 	{
 		// A knocked-out body flies before it lands, and that is not a fault.
@@ -1126,6 +1152,7 @@ void AStickFighter::HandleTakeStarted(int32 TakeNumber)
 {
 	LooseArms[0].bBroken = false;
 	LooseArms[1].bBroken = false;
+	Severed = 0;
 	Health = MaxHealth;
 	StunSecondsLeft = 0.f;
 	KnockVelocity = FVector::ZeroVector;
@@ -1386,7 +1413,15 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 	{
 		// A crate is carried overhead. A weapon is held ready in front of the chest.
 		const bool bWeapon = Carried.IsValid() && Carried->IsSwung();
-		PoseArms(Joints, GetActorForwardVector(), CarryAlpha, bWeapon ? 24. : 4., bWeapon ? 5. : 14., bWeapon ? -20. : 36.);
+		if (Carried.IsValid() && Carried->IsGun())
+		{
+			// A gun is held out in both hands, a little under the eye.
+			PoseArms(Joints, GetActorForwardVector(), CarryAlpha, 46., 3., -8.);
+		}
+		else
+		{
+			PoseArms(Joints, GetActorForwardVector(), CarryAlpha, bWeapon ? 24. : 4., bWeapon ? 5. : 14., bWeapon ? -20. : 36.);
+		}
 	}
 
 	if (ThrowSecondsLeft > 0.f && State != EFighterState::Busy)
@@ -1444,11 +1479,13 @@ uint8 AStickFighter::GetBrokenArms() const
 	{
 		return PuppetPose.BrokenArms;
 	}
+	// What a gun took off stays off, on a body that is down too. The rest is only told of someone on their feet.
+	const uint8 Gone = static_cast<uint8>(Severed << 3);
 	if (State == EFighterState::Down)
 	{
-		return 0;
+		return Gone;
 	}
-	return (LooseArms[0].bBroken ? 1 : 0) | (LooseArms[1].bBroken ? 2 : 0) | (bArmed ? 4 : 0);
+	return static_cast<uint8>((LooseArms[0].bBroken ? 1 : 0) | (LooseArms[1].bBroken ? 2 : 0) | (bArmed ? 4 : 0) | Gone);
 }
 
 void AStickFighter::SetPuppetPose(const FFighterPose& Pose)
@@ -1474,13 +1511,55 @@ void AStickFighter::MarkStruck(const FVector& ImpactPoint, bool bKnockedOut)
 void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 {
 	const bool bBones = FlashSecondsLeft > 0.f;
+	// Limbs a gun took off. They ride in the same byte as the broken arms, so the film has them too.
+	const uint8 SeveredNow = static_cast<uint8>(BrokenArms >> 3);
+	const int32 SeveredJoints[4][2] = { { LeftElbow, LeftHand }, { RightElbow, RightHand }, { LeftKnee, LeftFoot }, { RightKnee, RightFoot } };
+	bool bJustLost = false;
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		const bool bGone = (SeveredNow & (1 << Limb)) != 0;
+		if (bGone != ((DrawnSevered & (1 << Limb)) != 0))
+		{
+			// It has just come off, or a new take or the film has put it back.
+			FFlyingLimb& Flying = FlyingLimbs[Limb];
+			Flying.bFlying = bGone;
+			LooseLimbs[Limb * 2]->SetVisibility(bGone);
+			LooseLimbs[Limb * 2 + 1]->SetVisibility(bGone);
+			if (bGone)
+			{
+				const FVector From = Joints[SeveredJoints[Limb][0]];
+				const FVector To = Joints[SeveredJoints[Limb][1]];
+				Flying.Middle = (From + To) * 0.5;
+				Flying.Along = (To - From).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
+				Flying.Length = FVector::Dist(From, To);
+				Flying.Velocity = FMath::VRand() * 160. + FVector(0., 0., 330.) + (Flying.Middle - Joints[PelvisJoint]).GetSafeNormal2D() * 260.;
+				LooseLimbs[Limb * 2]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+				LooseLimbs[Limb * 2 + 1]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", RubberFor(Color));
+				Stumps[Limb]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", StumpRed);
+				bJustLost = true;
+			}
+		}
+		Stumps[Limb]->SetVisibility(bGone);
+		if (bGone)
+		{
+			Stumps[Limb]->SetWorldLocation(Joints[SeveredJoints[Limb][0]]);
+			Stumps[Limb]->SetWorldScale3D(FVector(Thickness * 1.25f / 100.f));
+		}
+	}
+	DrawnSevered = SeveredNow;
+	if (bJustLost)
+	{
+		// Put where they start at once, not where they lay after the take before.
+		FlyLooseLimbs(0.f);
+	}
+
 	// With a model for a body, the plain shapes are only the skeleton that shows through it at a blow.
 	const bool bModel = Model->HasBody();
 	const bool bShapes = bBones || !bModel;
 	Model->SetVisibility(bModel && !bBones);
 	if (bModel && !bBones)
 	{
-		Model->PoseOn(Joints, FloorHeight, FMath::Clamp(Thickness / UsualThickness, SlightestGirth, StoutestGirth));
+		Model->PoseOn(Joints, FloorHeight, FMath::Clamp(Thickness / UsualThickness, SlightestGirth, StoutestGirth), SeveredNow);
 	}
 	for (int32 i = 0; i < Limbs.Num(); ++i)
 	{
@@ -1537,7 +1616,8 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 
 	for (int32 Side = 0; Side < 2; ++Side)
 	{
-		const bool bBroken = (BrokenArms & (1 << Side)) != 0;
+		// An arm that is gone has no break to show.
+		const bool bBroken = (BrokenArms & (1 << Side)) != 0 && (SeveredNow & (1 << Side)) == 0;
 		const bool bDrawnBroken = (TintedBrokenArms & (1 << Side)) != 0;
 		UStaticMeshComponent* Forearm = Limbs[ForearmLimbOfSide[Side]];
 		UStaticMeshComponent* Stump = ForearmStumps[Side];
@@ -1752,9 +1832,17 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 	{
 		return false;
 	}
-	// With something in its hands, a strike is a throw.
+	// A gun in the hands is fired by the punch. A kick with one in the hands is still a kick.
+	if (Carried.IsValid() && Carried->IsGun())
+	{
+		if (Move == EMove::Punch)
+		{
+			return FireGun();
+		}
+	}
+	// With anything else in its hands, a strike is a throw.
 	// A legendary prop is kept in the hands and swung. E still throws it.
-	if (Carried.IsValid() && !Carried->IsSwung())
+	else if (Carried.IsValid() && !Carried->IsSwung())
 	{
 		return GrabOrThrow();
 	}
@@ -2029,6 +2117,199 @@ bool AStickFighter::GrabOrThrow()
 	Found->PickUp(this);
 	Carried = Found;
 	return true;
+}
+
+// The punch, with a gun in the hands. Every pellet is a straight line: it stops in the first opponent it meets, or comes
+// off the end wall of the set once and tries again with half its sting.
+bool AStickFighter::FireGun()
+{
+	AThrownProp* Firearm = Carried.Get();
+	int32 Pellets = 0;
+	float PelletDamage = 0.f;
+	float SpreadDegrees = 0.f;
+	float ShotKnockSpeed = 0.f;
+	EMove Move = EMove::Shot;
+	if (!Firearm->TakeShot(Pellets, PelletDamage, SpreadDegrees, ShotKnockSpeed, Move))
+	{
+		// Empty, it is one more thing to throw. Between two shots it is nothing yet.
+		return Firearm->GetShotsLeft() <= 0 && GrabOrThrow();
+	}
+
+	// It is aimed like a throw: the way the fighter means to face, bent a little to find someone.
+	const FVector Facing = WantedForward();
+	FVector Aim = Facing;
+	double ChestHeight = GunLevelHeight;
+	double Nearest = GunAimDistance;
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		const FVector To = (It->GetActorLocation() - GetActorLocation()) * FVector(1., 1., 0.);
+		if (It->Team != Team && !It->IsDown() && To.Size() < Nearest && (To.GetSafeNormal() | Facing) > GunAimCosine)
+		{
+			Nearest = To.Size();
+			Aim = To.GetSafeNormal();
+			ChestHeight = It->GetActorLocation().Z - FloorHeight + (It->IsDucking() ? 70. : 120.);
+		}
+	}
+	FaceTowards(GetActorLocation() + Aim * 100.);
+	SnapToWantedFacing();
+
+	const FVector Muzzle = GetCarryPoint() + Aim * GunMuzzleAhead;
+	// Tilted so that the shot passes through the chest of whoever it was aimed at: standing, ducking or in the air.
+	const FVector Level = (Aim * Nearest + FVector(0., 0., FloorHeight + ChestHeight - Muzzle.Z)).GetSafeNormal();
+
+	struct FStruck
+	{
+		AStickFighter* Who;
+		float Damage;
+		FVector Point;
+		FVector Direction;
+	};
+	TArray<FStruck, TInlineAllocator<4>> StruckOnes;
+	for (int32 Pellet = 0; Pellet < Pellets; ++Pellet)
+	{
+		FVector From = Muzzle;
+		FVector Direction = (Level.RotateAngleAxis(FMath::FRandRange(-1.f, 1.f) * SpreadDegrees, FVector::UpVector)
+			+ FVector(0., 0., FMath::Tan(FMath::DegreesToRadians(FMath::FRandRange(-0.4f, 0.4f) * SpreadDegrees)))).GetSafeNormal();
+		float Damage = PelletDamage;
+		double Range = GunRange;
+		// Straight, and then once more off a wall.
+		for (int32 Flight = 0; Flight < 2; ++Flight)
+		{
+			AStickFighter* Hit = nullptr;
+			double HitAt = Range;
+			const FVector2D Flat(Direction);
+			for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+			{
+				AStickFighter* Other = *It;
+				if (Other == this || Other->Team == Team || Other->IsDown())
+				{
+					continue;
+				}
+				const FVector Feet = Other->GetActorLocation();
+				const double Along = (FVector2D(Feet - From) | Flat) / FMath::Max(Flat.SizeSquared(), UE_SMALL_NUMBER);
+				if (Along <= 0. || Along >= HitAt)
+				{
+					continue;
+				}
+				const FVector Passing = From + Direction * Along;
+				const double Height = Passing.Z - Feet.Z;
+				if (FVector::Dist2D(Passing, Feet) < GunBodyRadius && Height > 8. && Height < (Other->IsDucking() ? 105. : 185.))
+				{
+					Hit = Other;
+					HitAt = Along;
+				}
+			}
+			if (Hit)
+			{
+				FStruck* Known = StruckOnes.FindByPredicate([Hit](const FStruck& One) { return One.Who == Hit; });
+				if (Known)
+				{
+					Known->Damage += Damage;
+				}
+				else
+				{
+					StruckOnes.Add({ Hit, Damage, From + Direction * HitAt, Direction });
+				}
+				break;
+			}
+
+			const double Wall = Direction.X > 0. ? ArenaMax.X + GunWallBeyond : ArenaMin.X - GunWallBeyond;
+			const double ToWall = FMath::Abs(Direction.X) > 0.05 ? (Wall - From.X) / Direction.X : UE_BIG_NUMBER;
+			if (ToWall <= 0. || ToWall >= Range)
+			{
+				break;
+			}
+			From += Direction * ToWall;
+			Direction.X = -Direction.X;
+			Range -= ToWall;
+			Damage *= 0.5f;
+		}
+	}
+
+	// The noise and the flash first, then what it did.
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnSwing.Broadcast(this, Move);
+	const float FullBlast = PelletDamage * Pellets;
+	for (const FStruck& One : StruckOnes)
+	{
+		const FVector Away = One.Direction.GetSafeNormal2D();
+		One.Who->SufferBlow(this, One.Damage, One.Point, One.Direction, true, Move);
+		One.Who->KnockVelocity += Away * (ShotKnockSpeed * FMath::Min(One.Damage / FullBlast + 0.35f, 1.f));
+		if (One.Who->IsDown() && Move == EMove::Blast)
+		{
+			// A shotgun does not let a body fall where it stood.
+			One.Who->Body->SetAllPhysicsLinearVelocity(Away * 520. + FVector(0., 0., 260.));
+		}
+		// A gun takes something off whoever it puts down, and a shotgun off anyone it catches squarely.
+		if (One.Who->IsDown() || (Move == EMove::Blast && One.Damage >= FullBlast * 0.5f))
+		{
+			One.Who->Sever(One.Point);
+		}
+	}
+	KnockVelocity -= Aim * (ShotKnockSpeed * GunKickBackShare);
+	return true;
+}
+
+void AStickFighter::Sever(const FVector& Near)
+{
+	const TArray<FVector> Joints = BuildJoints(true);
+	const int32 Ends[4][2] = { { LeftElbow, LeftHand }, { RightElbow, RightHand }, { LeftKnee, LeftFoot }, { RightKnee, RightFoot } };
+	int32 Nearest = INDEX_NONE;
+	double NearestDistance = UE_BIG_NUMBER;
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		// Someone still standing keeps both legs: there is no way to fight on one.
+		if ((Severed & (1 << Limb)) || (Limb >= 2 && !IsDown()))
+		{
+			continue;
+		}
+		const double Distance = FVector::DistSquared((Joints[Ends[Limb][0]] + Joints[Ends[Limb][1]]) * 0.5, Near);
+		if (Distance < NearestDistance)
+		{
+			NearestDistance = Distance;
+			Nearest = Limb;
+		}
+	}
+	if (Nearest == INDEX_NONE)
+	{
+		return;
+	}
+
+	Severed |= static_cast<uint8>(1 << Nearest);
+	if (Nearest < 2 && !LooseArms[Nearest].bBroken)
+	{
+		// It throws no more punches, which is what a broken arm already means to the rest of the fighter.
+		LooseArms[Nearest].bBroken = true;
+		LooseArms[Nearest].Hand = Joints[HandOfSide[Nearest]];
+		LooseArms[Nearest].Velocity = FVector::ZeroVector;
+	}
+	UE_LOG(LogStickFighter, Verbose, TEXT("%s loses a limb: %d"), *GetName(), Nearest);
+}
+
+void AStickFighter::FlyLooseLimbs(float DeltaSeconds)
+{
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		FFlyingLimb& Flying = FlyingLimbs[Limb];
+		if (!Flying.bFlying)
+		{
+			continue;
+		}
+
+		Flying.Velocity.Z -= LooseLimbGravity * DeltaSeconds;
+		Flying.Middle += Flying.Velocity * DeltaSeconds;
+		Flying.Along = Flying.Along.RotateAngleAxis(LooseLimbSpinDegrees * DeltaSeconds, FVector::RightVector);
+		if (Flying.Middle.Z <= FloorHeight + Thickness)
+		{
+			// It lies where it lands, flat.
+			Flying.Middle.Z = FloorHeight + Thickness * 0.7;
+			Flying.Along = Flying.Along.GetSafeNormal2D(UE_SMALL_NUMBER, FVector::ForwardVector);
+			Flying.bFlying = false;
+		}
+		const FVector Half = Flying.Along * (Flying.Length * 0.5);
+		PlaceLimb(LooseLimbs[Limb * 2], Flying.Middle - Half, Flying.Middle + Half, Thickness * 1.1f);
+		LooseLimbs[Limb * 2 + 1]->SetWorldLocation(Flying.Middle + Half);
+		LooseLimbs[Limb * 2 + 1]->SetWorldScale3D(FVector(Thickness * HandAndFootWidth / 100.f));
+	}
 }
 
 FVector AStickFighter::GetCarryPoint() const

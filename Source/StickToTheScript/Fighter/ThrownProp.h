@@ -49,6 +49,14 @@ public:
 
 	// One blow landed with it. True when that was its last and it has broken.
 	bool SpendUse();
+	// A gun: the punch fires it while it has rounds left.
+	bool IsGun() const;
+	int32 GetShotsLeft() const { return RoundsLeft; }
+	const TCHAR* GetGunName() const;
+	// One pull of the trigger. False when it is empty or was fired a moment ago; otherwise what came out of it.
+	bool TakeShot(int32& OutPellets, float& OutPelletDamage, float& OutSpreadDegrees, float& OutKnockSpeed, EMove& OutMove);
+	// Kept out of sight until this fighter goes down, then dropped where he fell: a gunman's pistol.
+	void HoldInReserveFor(AActor* Fighter);
 
 	// The place kept in every scene for a weapon from the shop. It is made with the set and hidden, so the take
 	// recorder has it from the first frame, and it comes on as whatever was bought.
@@ -95,6 +103,9 @@ private:
 	bool bOffTheSet = false;
 	int32 KnockoutsSeen = 0;
 	int32 UsesLeft = 0;
+	int32 RoundsLeft = 0;
+	float LastShotSeconds = -10.f;
+	TWeakObjectPtr<AActor> ReservedFor;
 	FVector Velocity = FVector::ZeroVector;
 	double FloorHeight = 0.;
 	double HalfHeight = 0.;

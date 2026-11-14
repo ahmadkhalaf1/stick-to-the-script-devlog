@@ -216,3 +216,36 @@ save("SM_IronBar", [
     rod(STEEL, 1.9, 3, at(z=20)),
 ], lying=True)
 hammer("SM_Sledge", PALE_WOOD, STEEL, 78)
+
+
+def borrowed(name, source):
+    """A weapon model that comes with the engine: Content/Weapons is a copy of its Templates/TemplateResources/Standard/Weapons.
+    It is turned so that its barrel lies along X, as everything held here does, and its pivot goes to its middle."""
+    model = unreal.load_asset(source)
+    if not model:
+        raise RuntimeError(f"No {source}. Copy the engine's Templates/TemplateResources/Standard/Weapons/Content into Content/Weapons.")
+    whole = unreal.DynamicMesh()
+    unreal.GeometryScript_AssetUtils.copy_mesh_from_static_mesh(model, whole, unreal.GeometryScriptCopyMeshFromAssetOptions(), unreal.GeometryScriptMeshReadLOD())
+    unreal.GeometryScript_MeshTransforms.rotate_mesh(whole, unreal.Rotator(roll=0.0, pitch=0.0, yaw=-90.0), unreal.Vector(0, 0, 0))
+    box_of = unreal.GeometryScript_MeshQueries.get_mesh_bounding_box(whole)
+    middle = (box_of.min + box_of.max) * 0.5
+    unreal.GeometryScript_MeshTransforms.translate_mesh(whole, unreal.Vector(-middle.x, -middle.y, -middle.z))
+
+    path = f"{FOLDER}/{name}"
+    if assets.does_asset_exist(path):
+        assets.delete_asset(path)
+    options = unreal.GeometryScriptCreateNewStaticMeshAssetOptions()
+    options.enable_collision = False
+    options.enable_nanite = False
+    options.enable_recompute_normals = False
+    mesh, outcome = unreal.GeometryScript_NewAssetUtils.create_new_static_mesh_asset_from_mesh(whole, path, options)
+    mesh.set_material(0, model.get_material(0))
+    assets.save_asset(path)
+    size = box_of.max - box_of.min
+    unreal.log_warning(f"PROP {name}: {size.x:.0f} x {size.y:.0f} x {size.z:.0f} cm, borrowed, {outcome}")
+
+
+# The guns are the engine's own models, not shapes put together here.
+borrowed("SM_Pistol", "/Game/Weapons/Pistol/Meshes/SM_Pistol")
+borrowed("SM_Rifle", "/Game/Weapons/Rifle/Meshes/SM_Rifle")
+borrowed("SM_Launcher", "/Game/Weapons/GrenadeLauncher/Meshes/SM_GrenadeLauncher")

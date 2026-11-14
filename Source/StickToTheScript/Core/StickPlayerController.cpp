@@ -17,6 +17,7 @@
 #include "StickToTheScript/Fighter/StickFighter.h"
 #include "StickToTheScript/Fighter/StuntPartner.h"
 #include "StickToTheScript/Fighter/SwingBar.h"
+#include "StickToTheScript/Fighter/ThrownProp.h"
 
 namespace
 {
@@ -84,6 +85,13 @@ void AStickPlayerController::PlayerTick(float DeltaTime)
 	if (FMath::Abs(Sideways) > 0.2f && !Fighter->IsStriking())
 	{
 		Fighter->FaceTowards(Fighter->GetActorLocation() + Right * (Sideways * 100.f));
+	}
+
+	// A gun goes on firing for as long as the punch is held. The gun itself says how fast.
+	const AThrownProp* Gun = Fighter->GetCarried();
+	if (Gun && Gun->IsGun() && Gun->GetShotsLeft() > 0 && Held({ EKeys::LeftMouseButton, EKeys::J, EKeys::Gamepad_FaceButton_Left }))
+	{
+		Fighter->StrikeWith(EMove::Punch, 0.f);
 	}
 
 	if (Held({ EKeys::LeftControl, EKeys::RightControl, EKeys::C, EKeys::Gamepad_RightTrigger }))
@@ -303,7 +311,16 @@ void AStickPlayerController::PlayItself()
 	}
 	// It picks up whatever it passes, and throws it as soon as someone is lined up.
 	const double Distance = FVector::Dist2D(Mine, Theirs);
-	if (Fighter->IsCarrying() ? Distance < 380. && FMath::Abs(Mine.Y - Theirs.Y) < 45. : Distance > 220.)
+	const AThrownProp* Held = Fighter->GetCarried();
+	if (Held && Held->IsGun() && Held->GetShotsLeft() > 0)
+	{
+		// A gun with rounds in it is fired at whoever is lined up, not thrown.
+		if (Distance < 750. && FMath::Abs(Mine.Y - Theirs.Y) < 70. && Fighter->CanAct())
+		{
+			Fighter->StrikeWith(EMove::Punch, 0.f);
+		}
+	}
+	else if (Fighter->IsCarrying() ? Distance < 380. && FMath::Abs(Mine.Y - Theirs.Y) < 45. : Distance > 220.)
 	{
 		Fighter->GrabOrThrow();
 	}

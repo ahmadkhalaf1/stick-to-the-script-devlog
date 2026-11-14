@@ -36,6 +36,14 @@ namespace
 	// The recording is the crack of a blow. The sound made in code goes under it for its weight.
 	const float BlowVolume = 1.25f;
 	const float ThumpUnderABlow = 0.6f;
+	const float ThumpUnderABlast = 0.9f;
+	// A shot is seen for this long, in real time. Its lines reach this far, or to an end wall and a little way back off it.
+	const float ShotLineSeconds = 0.07f;
+	const double ShotLineLength = 1700.;
+	const double ShotRicochetLength = 260.;
+	const double ShotWallBeyond = 150.;
+	const double ShotMuzzleAhead = 40.;
+	const int32 ShotLineCount = 16;
 
 	const float FreezeDilation = 0.05f;
 	const float FreezeOnPunchSeconds = 0.09f;
@@ -69,9 +77,11 @@ AImpactEffects::AImpactEffects()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Engine/BasicShapes/BasicShapeMaterial"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Light(TEXT("/Game/Materials/M_Light"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder"));
 	DropletMesh = Sphere.Object;
 	DropletMaterial = Material.Object;
 	BurstMaterial = Light.Object;
+	ShotLineMesh = Cylinder.Object;
 }
 
 void AImpactEffects::BeginPlay()
@@ -118,6 +128,35 @@ void AImpactEffects::BeginPlay()
 	}
 	BurstRays.SetNum(BurstRayCount);
 
+	// The lines of a shot, and the flash at the muzzle: the same glow as the burst.
+	for (int32 Part = 0; Part <= ShotLineCount; ++Part)
+	{
+		UStaticMeshComponent* Mesh = NewObject<UStaticMeshComponent>(this);
+		Mesh->SetStaticMesh(Part < ShotLineCount ? ShotLineMesh.Get() : DropletMesh.Get());
+		Mesh->SetMaterial(0, BurstMaterial ? BurstMaterial.Get() : DropletMaterial.Get());
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Mesh->SetCastShadow(false);
+		Mesh->SetupAttachment(RootComponent);
+		Mesh->SetUsingAbsoluteLocation(true);
+		Mesh->SetUsingAbsoluteRotation(true);
+		Mesh->SetUsingAbsoluteScale(true);
+		Mesh->RegisterComponent();
+		Mesh->SetVisibility(false);
+		if (UMaterialInstanceDynamic* Glow = Mesh->CreateDynamicMaterialInstance(0))
+		{
+			Glow->SetVectorParameterValue("Color", BurstColor);
+			Glow->SetScalarParameterValue("Strength", BurstStrength);
+		}
+		if (Part < ShotLineCount)
+		{
+			ShotLines.Add(Mesh);
+		}
+		else
+		{
+			MuzzleFlash = Mesh;
+		}
+	}
+
 	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
 	Events->OnHit.AddDynamic(this, &AImpactEffects::HandleHit);
 	Events->OnBlocked.AddDynamic(this, &AImpactEffects::HandleBlocked);
@@ -153,6 +192,19 @@ void AImpactEffects::Tick(float DeltaSeconds)
 		if (SlowRealSecondsLeft <= 0.f)
 		{
 			UGameplayStatics::SetGlobalTimeDilation(this, 1.f);
+		}
+	}
+
+	if (ShotRealSecondsLeft > 0.f)
+	{
+		ShotRealSecondsLeft -= FApp::GetDeltaTime();
+		if (ShotRealSecondsLeft <= 0.f)
+		{
+			MuzzleFlash->SetVisibility(false);
+			for (UStaticMeshComponent* Line : ShotLines)
+			{
+				Line->SetVisibility(false);
+			}
 		}
 	}
 
@@ -203,13 +255,11 @@ void AImpactEffects::HandleHit(AActor* Attacker, AActor* Victim, EMove Move)
 	}
 
 	const bool bHeavy = IsHeavyMove(Move);
-	if (Move == EMove::Shot && bFilm)
-	{
-		Play(EImpactSound::Gunshot);
-	}
+	const bool bShot = Move == EMove::Shot || Move == EMove::Blast;
 	const bool bKnockedOut = Struck->IsDown();
 	const FVector Direction = (Victim->GetActorLocation() - Attacker->GetActorLocation()).GetSafeNormal2D();
-	const int32 Drops = bKnockedOut ? DropsOnKnockout : bHeavy ? DropsOnHeavyHit : DropsOnPunch;
+	// A gun makes twice the mess.
+	const int32 Drops = (bKnockedOut ? DropsOnKnockout : bHeavy ? DropsOnHeavyHit : DropsOnPunch) * (bShot ? 2 : 1);
 	Spray(Struck->GetLastImpactPoint(), Direction, Drops, BloodRed, true, Victim->GetActorLocation().Z);
 	Spray(Struck->GetLastImpactPoint(), -Direction, bHeavy || bKnockedOut ? SparksOnHeavyHit : SparksOnPunch, SparkYellow, false, Victim->GetActorLocation().Z);
 	BurstSize = bHeavy || bKnockedOut ? BurstSizeOnHeavyHit : BurstSizeOnPunch;
@@ -266,9 +316,15 @@ void AImpactEffects::HandleBarGrabbed(AActor* Fighter)
 
 void AImpactEffects::HandleSwing(AActor* Attacker, EMove Move)
 {
-	if (Move == EMove::Shot)
+	if (Move == EMove::Shot || Move == EMove::Blast)
 	{
-		Play(EImpactSound::Gunshot);
+		const bool bBlast = Move == EMove::Blast;
+		Play(EImpactSound::Gunshot, bBlast ? 1.3f : 1.f);
+		if (bBlast)
+		{
+			Synth->Trigger(EImpactSound::HeavyHit, ThumpUnderABlast);
+		}
+		ShowShot(Attacker, bBlast);
 		return;
 	}
 
@@ -384,6 +440,53 @@ void AImpactEffects::Spray(const FVector& From, const FVector& Direction, int32 
 		Mesh->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
 		Mesh->SetVisibility(true);
 	}
+}
+
+void AImpactEffects::ShowShot(AActor* Shooter, bool bBlast)
+{
+	const AStickFighter* Fighter = Cast<AStickFighter>(Shooter);
+	if (!Fighter)
+	{
+		return;
+	}
+
+	// From the joints and not from the actor: in the film the fighter is a puppet, and only its joints are where it was.
+	const TArray<FVector> Joints = Fighter->GetJointPositions();
+	const FVector Hands = (Joints[StickJoint::LeftHand] + Joints[StickJoint::RightHand]) * 0.5;
+	const FVector Aim = ((Hands - Joints[StickJoint::ChestJoint]) * FVector(1., 1., 0.)).GetSafeNormal(UE_SMALL_NUMBER, Shooter->GetActorForwardVector());
+	const FVector Muzzle = Hands + Aim * ShotMuzzleAhead;
+	const float Floor = Shooter->GetActorLocation().Z;
+	MuzzleFlash->SetWorldLocation(Muzzle);
+	MuzzleFlash->SetWorldScale3D(FVector(bBlast ? 0.42f : 0.26f));
+	MuzzleFlash->SetVisibility(true);
+	Spray(Muzzle, Aim, bBlast ? 12 : 5, SparkYellow, false, Floor);
+
+	const double Spread = bBlast ? 8. : 1.;
+	for (int32 Line = 0; Line < (bBlast ? 7 : 1); ++Line)
+	{
+		const FVector Direction = (Aim.RotateAngleAxis(FMath::FRandRange(-1.f, 1.f) * Spread, FVector::UpVector)
+			+ FVector(0., 0., FMath::FRandRange(-0.006f, 0.006f) * Spread)).GetSafeNormal();
+		const double Wall = Direction.X > 0. ? Fighter->GetArenaMax().X + ShotWallBeyond : Fighter->GetArenaMin().X - ShotWallBeyond;
+		const double ToWall = FMath::Abs(Direction.X) > 0.05 ? (Wall - Muzzle.X) / Direction.X : ShotLineLength;
+		const FVector End = Muzzle + Direction * FMath::Clamp(ToWall, 50., ShotLineLength);
+		DrawShotLine(Muzzle, End, bBlast ? 1.1 : 1.7);
+		if (ToWall > 0. && ToWall < ShotLineLength)
+		{
+			// It comes off the wall in sparks, and a little way back into the set.
+			const FVector Back(-Direction.X, Direction.Y, Direction.Z + 0.12);
+			Spray(End, Back, 4, SparkYellow, false, Floor);
+			DrawShotLine(End, End + Back.GetSafeNormal() * ShotRicochetLength, 0.8);
+		}
+	}
+	ShotRealSecondsLeft = ShotLineSeconds;
+}
+
+void AImpactEffects::DrawShotLine(const FVector& From, const FVector& To, double Thickness)
+{
+	UStaticMeshComponent* Line = ShotLines[NextShotLine++ % ShotLines.Num()];
+	Line->SetWorldLocationAndRotation((From + To) * 0.5, FRotationMatrix::MakeFromZ(To - From).Rotator());
+	Line->SetWorldScale3D(FVector(Thickness, Thickness, FVector::Dist(From, To)) / 100.);
+	Line->SetVisibility(true);
 }
 
 void AImpactEffects::PlaceBurst()

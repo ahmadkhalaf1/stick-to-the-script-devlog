@@ -33,6 +33,10 @@ namespace
 		{ TEXT("Halo"), 250, INDEX_NONE, 1, 5 },
 		{ TEXT("Crown"), 400, INDEX_NONE, 1, 6 },
 		{ TEXT("Royal purple paint"), 300, INDEX_NONE, 0, 8 },
+		// New goods go at the end: a look that was bought is remembered by its place in this list.
+		{ TEXT("Pistol"), 350, static_cast<int32>(EPropKind::Pistol), INDEX_NONE, INDEX_NONE },
+		{ TEXT("Assault rifle"), 600, static_cast<int32>(EPropKind::Rifle), INDEX_NONE, INDEX_NONE },
+		{ TEXT("Blaster"), 700, static_cast<int32>(EPropKind::Blaster), INDEX_NONE, INDEX_NONE },
 	};
 }
 
@@ -279,7 +283,13 @@ bool FShopTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The exact price buys"), UStickGameInstance::CanBuy(150, 150, false));
 	TestFalse(TEXT("A dollar short does not"), UStickGameInstance::CanBuy(149, 150, false));
 	TestFalse(TEXT("What is owned is not sold again"), UStickGameInstance::CanBuy(1000, 150, true));
-	TestTrue(TEXT("The shop has weapons and looks"), UStickGameInstance::IsWeapon(0) && !UStickGameInstance::IsWeapon(UStickGameInstance::ShopItemCount() - 1));
+	// Looks are no longer last in the list: the guns were added after them, so that a look keeps its place.
+	bool bSellsALook = false;
+	for (int32 Item = 0; Item < UStickGameInstance::ShopItemCount(); ++Item)
+	{
+		bSellsALook |= !UStickGameInstance::IsWeapon(Item);
+	}
+	TestTrue(TEXT("The shop has weapons and looks"), UStickGameInstance::IsWeapon(0) && bSellsALook);
 	return true;
 }
 

@@ -40,7 +40,49 @@ namespace
 		{ TEXT("SM_WoodBat"), 24.f, false, 22.f, 8, false, FLinearColor(0.5f, 0.33f, 0.18f) },
 		{ TEXT("SM_IronBar"), 30.f, false, 30.f, 12, false, FLinearColor(0.3f, 0.3f, 0.33f) },
 		{ TEXT("SM_Sledge"), 40.f, false, 45.f, 6, false, FLinearColor(0.5f, 0.33f, 0.18f) },
+		{ TEXT("SM_Pistol"), 16.f, false, 0.f, 0, false, FLinearColor(0.08f, 0.08f, 0.09f) },
+		{ TEXT("SM_Launcher"), 28.f, false, 0.f, 0, false, FLinearColor(0.12f, 0.12f, 0.14f) },
+		{ TEXT("SM_Rifle"), 24.f, false, 0.f, 0, false, FLinearColor(0.1f, 0.1f, 0.11f) },
 	};
+
+	// What makes a prop a gun. The punch fires it while it has rounds left; empty, it is thrown like anything else.
+	struct FGunLook
+	{
+		EPropKind Kind;
+		const TCHAR* Name;
+		int32 Rounds;
+		// The blaster sends several pellets with every shot, each doing this much.
+		int32 Pellets;
+		float PelletDamage;
+		float SecondsBetweenShots;
+		float SpreadDegrees;
+		// How hard whoever is hit is thrown back.
+		float KnockSpeed;
+		EMove Move;
+	};
+	const FGunLook Guns[] = {
+		{ EPropKind::Pistol, TEXT("PISTOL"), 8, 1, 26.f, 0.26f, 1.2f, 420.f, EMove::Shot },
+		// Held down it empties itself in three seconds.
+		{ EPropKind::Rifle, TEXT("RIFLE"), 30, 1, 12.f, 0.1f, 2.4f, 230.f, EMove::Shot },
+		{ EPropKind::Blaster, TEXT("BLASTER"), 4, 7, 13.f, 0.7f, 8.f, 950.f, EMove::Blast },
+	};
+
+	const FGunLook* FindGun(EPropKind Kind)
+	{
+		for (const FGunLook& Gun : Guns)
+		{
+			if (Gun.Kind == Kind)
+			{
+				return &Gun;
+			}
+		}
+		return nullptr;
+	}
+
+	// A gun kicks up as it fires and comes back down over this long.
+	const float GunKickSeconds = 0.16f;
+	const double GunKickDegrees = 24.;
+	const double GunmanDropHeight = 110.;
 
 	const float LegendaryGlow = 1.6f;
 	// A weapon in the hands points up and ahead, and is held near its handle end.
@@ -92,6 +134,44 @@ bool AThrownProp::IsLegendary() const
 	return Looks[static_cast<int32>(Kind)].bLegendary;
 }
 
+bool AThrownProp::IsGun() const
+{
+	return FindGun(Kind) != nullptr;
+}
+
+const TCHAR* AThrownProp::GetGunName() const
+{
+	const FGunLook* Gun = FindGun(Kind);
+	return Gun ? Gun->Name : TEXT("");
+}
+
+bool AThrownProp::TakeShot(int32& OutPellets, float& OutPelletDamage, float& OutSpreadDegrees, float& OutKnockSpeed, EMove& OutMove)
+{
+	const FGunLook* Gun = FindGun(Kind);
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (!Gun || RoundsLeft <= 0 || Now - LastShotSeconds < Gun->SecondsBetweenShots)
+	{
+		return false;
+	}
+
+	--RoundsLeft;
+	LastShotSeconds = Now;
+	OutPellets = Gun->Pellets;
+	OutPelletDamage = Gun->PelletDamage;
+	OutSpreadDegrees = Gun->SpreadDegrees;
+	OutKnockSpeed = Gun->KnockSpeed;
+	OutMove = Gun->Move;
+	return true;
+}
+
+void AThrownProp::HoldInReserveFor(AActor* Fighter)
+{
+	ReservedFor = Fighter;
+	bInReserve = true;
+	AddActorWorldOffset(FVector(0., 0., -ReserveDepth));
+	Home = GetActorTransform();
+}
+
 bool AThrownProp::IsSwung() const
 {
 	return Looks[static_cast<int32>(Kind)].SwingDamage > 0.f;
@@ -130,6 +210,7 @@ void AThrownProp::SetUp(EPropKind InKind, double InFloorHeight, const FVector2D&
 		Mesh->CreateDynamicMaterialInstance(0)->SetScalarParameterValue("Glow", LegendaryGlow);
 	}
 	UsesLeft = Look.Uses;
+	RoundsLeft = IsGun() ? FindGun(Kind)->Rounds : 0;
 	AddActorWorldOffset(FVector(0., 0., HalfHeight));
 	Home = GetActorTransform();
 }
@@ -166,6 +247,13 @@ void AThrownProp::Tick(float DeltaSeconds)
 			{
 				const FRotator Raised(HeldPitchDegrees, Carrier->GetActorRotation().Yaw, 0.);
 				SetActorLocationAndRotation(Carrier->GetCarryPoint() + Raised.Vector() * (HalfLength * HeldAtShareOfLength), Raised);
+			}
+			else if (IsGun())
+			{
+				// A gun points where its carrier faces, and kicks up as it fires.
+				const double Kick = GunKickDegrees * FMath::Clamp(1. - (GetWorld()->GetTimeSeconds() - LastShotSeconds) / GunKickSeconds, 0., 1.);
+				const FRotator Aimed(Kick, Carrier->GetActorRotation().Yaw, 0.);
+				SetActorLocationAndRotation(Carrier->GetCarryPoint() + Aimed.Vector() * (HalfLength * 0.35), Aimed);
 			}
 			else
 			{
@@ -372,8 +460,10 @@ void AThrownProp::HandleTakeStarted(int32 TakeNumber)
 	{
 		DropOnKnockout = FMath::RandRange(1, LatestKnockout);
 	}
-	bInReserve = DropOnKnockout > 0;
+	bInReserve = DropOnKnockout > 0 || ReservedFor.IsValid();
 	UsesLeft = Looks[static_cast<int32>(Kind)].Uses;
+	RoundsLeft = IsGun() ? FindGun(Kind)->Rounds : 0;
+	LastShotSeconds = -10.f;
 	bCanStillHit = false;
 	State = EState::Resting;
 	Holder = nullptr;
@@ -405,6 +495,20 @@ void AThrownProp::HoldInReserve(int32 LatestKnockoutToDropOn)
 
 void AThrownProp::HandleFighterDown(AActor* Fighter, bool bPlayer)
 {
+	if (ReservedFor.IsValid())
+	{
+		// A gunman's pistol falls from his hand where he goes down.
+		if (Fighter == ReservedFor.Get() && bInReserve)
+		{
+			const FVector Fallen = Fighter->GetActorLocation();
+			SetActorLocation(FVector(FMath::Clamp(Fallen.X, ArenaMin.X, ArenaMax.X), FMath::Clamp(Fallen.Y, ArenaMin.Y, ArenaMax.Y), FloorHeight + GunmanDropHeight));
+			bInReserve = false;
+			Holder = nullptr;
+			Release(FVector::ZeroVector);
+		}
+		return;
+	}
+
 	if (bPlayer || DropOnKnockout == 0 || !Fighter || ++KnockoutsSeen != DropOnKnockout)
 	{
 		return;

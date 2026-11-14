@@ -17,6 +17,7 @@
 #include "StickToTheScript/Core/TakeDirector.h"
 #include "StickToTheScript/Core/TakeEvents.h"
 #include "StickToTheScript/Fighter/StickFighter.h"
+#include "StickToTheScript/Fighter/ThrownProp.h"
 #include "StickToTheScript/UI/ImpactEffects.h"
 #include "Sound/SoundBase.h"
 
@@ -167,6 +168,11 @@ void AStickHUD::DrawHUD()
 			const float Health = Player->GetHealthFraction();
 			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.6f), 48.f * Unit, 98.f * Unit, 320.f * Unit, 18.f * Unit);
 			DrawRect(Health < 0.3f ? RecordingRed : FLinearColor::White, 51.f * Unit, 101.f * Unit, 314.f * Unit * Health, 12.f * Unit);
+			if (const AThrownProp* Held = Player->GetCarried(); Held && Held->IsGun())
+			{
+				// What is in the hands, and how many rounds are left in it. Empty, it is red: all it is good for is throwing.
+				Write(FString::Printf(TEXT("%s   %d"), Held->GetGunName(), Held->GetShotsLeft()), Held->GetShotsLeft() > 0 ? HighlightGold : RecordingRed, 48.f * Unit, 130.f * Unit, Font, 2.f * Unit);
+			}
 
 			if (Slate == ESlate::None && Now < ShoutUntilSeconds)
 			{
@@ -177,7 +183,7 @@ void AStickHUD::DrawHUD()
 			{
 				// shortcut: the keys are written here by hand, S2-FEEL-02 should read them from the input bindings.
 				DrawCentered(TEXT("W A S D move     Left click punch     Right click guard     F kick     Ctrl duck     Space jump     E grab, throw     Esc pause"), 950.f * Unit, 1.7f * Unit, FLinearColor::White);
-				DrawCentered(TEXT("Duck and punch: uppercut     Duck and kick: sweep     Guard and punch: hook     Guard and kick: roundhouse     Jump under a red bar, then kick"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+				DrawCentered(TEXT("Duck and punch: uppercut     Duck and kick: sweep     Guard and punch: hook     Guard and kick: roundhouse     Jump under a red bar, then kick     Holding a gun: left click fires"), 1000.f * Unit, 1.4f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
 			}
 		}
 	}

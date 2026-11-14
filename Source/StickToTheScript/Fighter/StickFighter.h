@@ -114,6 +114,11 @@ public:
 	// Picks up the nearest loose prop in reach, or throws the one it carries. False when there was nothing to do.
 	bool GrabOrThrow();
 	bool IsCarrying() const { return Carried.IsValid(); }
+	const AThrownProp* GetCarried() const { return Carried.Get(); }
+	FVector2D GetArenaMin() const { return ArenaMin; }
+	FVector2D GetArenaMax() const { return ArenaMax; }
+	// Takes off the forearm or the shin nearest to a point: a gun does that. Someone still on their feet keeps both legs.
+	void Sever(const FVector& Near);
 	FVector GetCarryPoint() const;
 
 	// A blow from anything, a strike or a thrown prop: it hurts, staggers or knocks out, and the take hears about it.
@@ -211,6 +216,27 @@ private:
 	// Lets go and flies off the way the swing was going.
 	void SwingOffBar();
 	bool StartSwingKick();
+	bool FireGun();
+	void FlyLooseLimbs(float DeltaSeconds);
+
+	// Bit 0 and 1: the left and the right forearm are gone. Bit 2 and 3: the left and the right shin.
+	uint8 Severed = 0;
+	uint8 DrawnSevered = 0;
+	// For each limb that can come off, a length of it and its hand or foot, to fly and lie where they land.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> LooseLimbs;
+	// The wound where each one was.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Stumps;
+	struct FFlyingLimb
+	{
+		FVector Middle = FVector::ZeroVector;
+		FVector Along = FVector::UpVector;
+		FVector Velocity = FVector::ZeroVector;
+		double Length = 0.;
+		bool bFlying = false;
+	};
+	FFlyingLimb FlyingLimbs[4];
 	void LandSwingKick();
 	FVector WantedForward() const;
 	void SnapToWantedFacing();
