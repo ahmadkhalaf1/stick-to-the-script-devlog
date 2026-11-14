@@ -2248,6 +2248,11 @@ int32 AStickFighter::LookCount(int32 Row)
 	return static_cast<int32>(Row == 0 ? UE_ARRAY_COUNT(LookColors) : Row == 1 ? UE_ARRAY_COUNT(HatNames) : UE_ARRAY_COUNT(LookBuilds));
 }
 
+FLinearColor AStickFighter::LookColor(int32 Index)
+{
+	return LookColors[FMath::Clamp(Index, 0, LookCount(0) - 1)].Color;
+}
+
 FString AStickFighter::LookName(int32 Row, int32 Index)
 {
 	Index = FMath::Clamp(Index, 0, LookCount(Row) - 1);

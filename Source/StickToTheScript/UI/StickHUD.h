@@ -63,6 +63,10 @@ private:
 	const AStickFighter* FindPlayerFighter();
 
 	void DrawCentered(const FString& Text, float Y, float Scale, const FLinearColor& Color);
+	// One row of a menu: a bar across the middle, gold under the chosen one. A row with a price or a state has it on the right.
+	void DrawMenuRow(const FString& Text, bool bChosen, float Y, float Height, float Scale, float Unit);
+	// The wardrobe's panel: every colour as a swatch, every hat and build as a pip, what is chosen named large.
+	void DrawWardrobe(float Unit);
 
 	// Text drawn from the engine's outline font at the size asked for. The bitmap font blurs when it is scaled up,
 	// and the cards are mostly text. They take the same arguments as AHUD's DrawText and GetTextSize, font included.

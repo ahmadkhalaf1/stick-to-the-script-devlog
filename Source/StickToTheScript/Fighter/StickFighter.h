@@ -68,6 +68,7 @@ public:
 	void ApplyLook(const FCharacterLook& Look);
 	static int32 LookCount(int32 Row);
 	static FString LookName(int32 Row, int32 Index);
+	static FLinearColor LookColor(int32 Index);
 
 	// The world positions the stick is drawn from, always in the same order. The take recorder stores these.
 	TArray<FVector> GetJointPositions() const { return BuildJoints(true); }

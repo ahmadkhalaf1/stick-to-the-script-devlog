@@ -25,6 +25,8 @@ namespace
 	const FLinearColor RecordingRed(0.9f, 0.05f, 0.05f);
 	const FLinearColor Dimmed(0.f, 0.f, 0.f, 0.55f);
 	const FLinearColor HighlightGold(1.f, 0.78f, 0.2f);
+	// How wide a menu's rows are, on a screen 1920 wide.
+	const float MenuRowWidth = 900.f;
 
 	// What a scale of 1 is in points of the outline font: chosen so text is about the size the bitmap font drew it.
 	const float PointsPerScale = 10.5f;
@@ -105,10 +107,8 @@ void AStickHUD::DrawHUD()
 	{
 		// No dark card here: the point is to see the fighter change.
 		DrawCentered(TEXT("WARDROBE"), 96.f * Unit, 5.f * Unit, FLinearColor::White);
-		for (int32 Line = 0; Line < WardrobeLines.Num(); ++Line)
-		{
-			DrawCentered(WardrobeLines[Line], (815.f + Line * 52.f) * Unit, 2.2f * Unit, FLinearColor::White);
-		}
+		DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, 212.f * Unit, 180.f * Unit, 6.f * Unit);
+		DrawWardrobe(Unit);
 		return;
 	}
 
@@ -122,8 +122,17 @@ void AStickHUD::DrawHUD()
 		const float LineSize = 2.4f * FMath::Sqrt(LineStep / 62.f);
 		for (int32 Line = 0; Line < CardLines.Num(); ++Line)
 		{
-			// A menu marks the row its cursor is on.
-			DrawCentered(CardLines[Line], (470.f + Line * LineStep) * Unit, LineSize * Unit, CardLines[Line].StartsWith(TEXT(">")) ? HighlightGold : FLinearColor::White);
+			const FString& Text = CardLines[Line];
+			const float Y = (470.f + Line * LineStep) * Unit;
+			const bool bChosen = Text.StartsWith(TEXT(">\t"));
+			if (bChosen || Text.StartsWith(TEXT("\t")))
+			{
+				DrawMenuRow(Text.RightChop(bChosen ? 2 : 1), bChosen, Y, LineStep * Unit, LineSize * Unit, Unit);
+			}
+			else
+			{
+				DrawCentered(Text, Y, LineSize * Unit, Text.StartsWith(TEXT("In the bank")) ? HighlightGold : FLinearColor::White);
+			}
 		}
 		return;
 	}
@@ -346,6 +355,98 @@ void AStickHUD::HandleCard(const FText& Headline, const FText& Detail)
 void AStickHUD::HandlePayChanged(int32 Pay)
 {
 	CurrentPay = Pay;
+}
+
+void AStickHUD::DrawMenuRow(const FString& Text, bool bChosen, float Y, float Height, float Scale, float Unit)
+{
+	UFont* Font = GEngine->GetLargeFont();
+	const float BarWidth = MenuRowWidth * Unit;
+	const float BarHeight = Height - 8.f * Unit;
+	const float X = (Canvas->SizeX - BarWidth) * 0.5f;
+	DrawRect(bChosen ? HighlightGold : FLinearColor(1.f, 1.f, 1.f, 0.07f), X, Y - 4.f * Unit, BarWidth, BarHeight);
+
+	// The shop writes a row as a name, a run of spaces, and what it costs or that it is owned.
+	FString Name = Text;
+	FString State;
+	Text.Split(TEXT("     "), &Name, &State);
+	Name.TrimStartAndEndInline();
+	State.TrimStartAndEndInline();
+
+	const FLinearColor Ink = bChosen ? FLinearColor::Black : FLinearColor::White;
+	float NameWidth = 0.f;
+	float TextHeight = 0.f;
+	Measure(Name, NameWidth, TextHeight, Font, Scale);
+	const float TextY = Y - 4.f * Unit + (BarHeight - TextHeight) * 0.5f;
+	if (State.IsEmpty())
+	{
+		Write(Name, Ink, (Canvas->SizeX - NameWidth) * 0.5f, TextY, Font, Scale);
+		return;
+	}
+	float StateWidth = 0.f;
+	Measure(State, StateWidth, TextHeight, Font, Scale);
+	Write(Name, Ink, X + 28.f * Unit, TextY, Font, Scale);
+	Write(State, Ink, X + BarWidth - 28.f * Unit - StateWidth, TextY, Font, Scale);
+}
+
+void AStickHUD::DrawWardrobe(float Unit)
+{
+	const UStickGameInstance* Game = GetGameInstance<UStickGameInstance>();
+	if (!Game)
+	{
+		return;
+	}
+
+	UFont* Font = GEngine->GetLargeFont();
+	// To the right of the fighter, who stands in the middle of the picture.
+	const float Left = Canvas->SizeX * 0.5f + 290.f * Unit;
+	const float PanelWidth = 590.f * Unit;
+	const float Margin = 34.f * Unit;
+	float Y = 300.f * Unit;
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.62f), Left - Margin, Y - Margin, PanelWidth + Margin * 2.f, 566.f * Unit);
+	DrawRect(HighlightGold, Left - Margin, Y - Margin, PanelWidth + Margin * 2.f, 5.f * Unit);
+
+	const int32 Chosen[] = { Game->Look.Color, Game->Look.Hat, Game->Look.Build };
+	const TCHAR* Titles[] = { TEXT("COLOUR"), TEXT("HAT"), TEXT("BUILD") };
+	const TCHAR* Keys[] = { TEXT("A   D"), TEXT("W   S"), TEXT("F") };
+	const FLinearColor Quiet(0.62f, 0.62f, 0.62f);
+	for (int32 Row = 0; Row < 3; ++Row)
+	{
+		float KeyWidth = 0.f;
+		float KeyHeight = 0.f;
+		Measure(Keys[Row], KeyWidth, KeyHeight, Font, 1.5f * Unit);
+		Write(Titles[Row], Quiet, Left, Y, Font, 1.5f * Unit);
+		Write(Keys[Row], HighlightGold, Left + PanelWidth - KeyWidth, Y, Font, 1.5f * Unit);
+		Y += 46.f * Unit;
+
+		const int32 Count = AStickFighter::LookCount(Row);
+		const float Gap = 9.f * Unit;
+		const float Each = (PanelWidth - Gap * (Count - 1)) / Count;
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			const float X = Left + Index * (Each + Gap);
+			// What has to be bought in the shop first is shown faint: it is there, and not yet yours.
+			const bool bOwned = Game->OwnsLook(Row, Index);
+			if (Row == 0)
+			{
+				if (Index == Chosen[Row])
+				{
+					DrawRect(FLinearColor::White, X - 4.f * Unit, Y - 4.f * Unit, Each + 8.f * Unit, Each + 8.f * Unit);
+				}
+				FLinearColor Swatch = AStickFighter::LookColor(Index);
+				Swatch.A = bOwned ? 1.f : 0.22f;
+				DrawRect(Swatch, X, Y, Each, Each);
+			}
+			else
+			{
+				DrawRect(Index == Chosen[Row] ? HighlightGold : FLinearColor(1.f, 1.f, 1.f, bOwned ? 0.4f : 0.1f), X, Y, Each, 9.f * Unit);
+			}
+		}
+		Y += (Row == 0 ? Each : 9.f * Unit) + 16.f * Unit;
+		Write(AStickFighter::LookName(Row, Chosen[Row]), FLinearColor::White, Left, Y, Font, 2.8f * Unit);
+		Y += 96.f * Unit;
+	}
+
+	DrawCentered(TEXT("This is how you will look in the film.   Left click when you are ready."), 990.f * Unit, 1.9f * Unit, FLinearColor::White);
 }
 
 void AStickHUD::DrawCentered(const FString& Text, float Y, float Scale, const FLinearColor& Color)

@@ -908,6 +908,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![A crate dropping onto the set as the take is called, and a throw with the whole body](Docs/devlog/58-props-that-behave.jpg)
 
+### 02:42–02:50 · A wardrobe and a shop that look like a game's
+
+- **Developer said:** "in game shop is old style and customization also old style need imprvments". No answer yet to the question about guns; the agent went on with what had been asked for either way.
+- **Agent did:** both were lines of centred text, the chosen one marked with arrows. Drew the wardrobe as a panel beside the fighter, with a swatch for every colour and pips for the hats and builds, and set the fighter turning slowly so the choice is seen from all round. Drew every menu's rows as bars with the chosen one in gold, and gave the shop a column for the name and one for the price.
+- **Result:** the picture. The same change reached the title menu, the pause menu and the choice of cut, which share the drawing.
+- **Went wrong:** the test that photographed the shop also bought a wooden bat in it, with the editor's test money: the tool's one click arrived as more than one. The developer's own progress lives with the packaged build and was not touched. The Windows build was packaged with it and has not been run: another game is in use on the PC, and the last check there showed nothing but that.
+- **Not verified:** the cut-choice menu and the results card with the new rows; they use the same drawing and were not looked at. The shop still only names what it sells.
+
+![The wardrobe's new panel, the title menu and the shop](Docs/devlog/59-wardrobe-and-shop.jpg)
+
 ---
 
 ## Asset and tool register

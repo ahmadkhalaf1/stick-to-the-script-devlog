@@ -20,6 +20,8 @@ namespace
 	const float WrapCardSeconds = 1.4f;
 	// The player is often still hitting keys when the last opponent falls, and must not pick a cut by accident.
 	const float CutChoiceGraceSeconds = 0.6f;
+	// In radians: once round in about nine seconds.
+	const float WardrobeTurnPerSecond = 0.7f;
 	const int32 TakesAtFullStrength = 3;
 	const float TiredPerTake = 0.15f;
 	const float MostTired = 0.4f;
@@ -200,6 +202,12 @@ void AGameFlow::Tick(float DeltaSeconds)
 	StepSeconds += DeltaSeconds;
 	if (WaitsForKey())
 	{
+		// In the wardrobe the fighter turns on the spot, so what is being chosen is seen from every side.
+		if (AStickFighter* Fighter = Step == EStep::Wardrobe ? FindPlayerFighter() : nullptr)
+		{
+			const float Angle = StepSeconds * WardrobeTurnPerSecond;
+			Fighter->FaceTowards(Fighter->GetActorLocation() + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.) * 100.);
+		}
 		if (ATakeDirector::IsAutoplayOn() && StepSeconds > AutoplayAnswersAfterSeconds)
 		{
 			Continue();
@@ -562,8 +570,8 @@ void AGameFlow::ShowMenu()
 
 	for (int32 Row = 0; Row < Rows.Num(); ++Row)
 	{
-		// The HUD picks out the row that starts with this mark.
-		Detail += (Row == MenuCursor ? TEXT(">   ") + Rows[Row] + TEXT("   <") : Rows[Row]) + TEXT("\n");
+		// The HUD draws a line that starts with a tab as a row to choose, and one with this mark before it as the chosen row.
+		Detail += (Row == MenuCursor ? TEXT(">\t") : TEXT("\t")) + Rows[Row] + TEXT("\n");
 	}
 	if (bPaused)
 	{
