@@ -63,6 +63,8 @@ namespace
 	}
 	// The film holds its last frame this long, under the slate.
 	const float EndSlateSeconds = 2.6f;
+	// An outtake stays on its last frame for a moment, under its "Cut!".
+	const float OuttakeHoldSeconds = 0.6f;
 
 	// A close-up starts just before its strike lands and stays a moment after.
 	const float CutBeforeImpactSeconds = 0.35f;
@@ -108,9 +110,12 @@ void AFinalCut::Tick(float DeltaSeconds)
 			{
 				ShowMoment(Clips[ClipIndex].EndSeconds);
 				Phase = EPhase::HoldingLastFrame;
-				PhaseSecondsLeft = EndSlateSeconds;
-				// By the clock on the wall: the frozen frames and the slow motion are part of what was watched.
-				RunningSeconds = static_cast<float>(GetWorld()->GetRealTimeSeconds() - PlayingSinceRealSeconds);
+				PhaseSecondsLeft = bOuttake ? OuttakeHoldSeconds : EndSlateSeconds;
+				if (!bOuttake)
+				{
+					// By the clock on the wall: the frozen frames and the slow motion are part of what was watched.
+					RunningSeconds = static_cast<float>(GetWorld()->GetRealTimeSeconds() - PlayingSinceRealSeconds);
+				}
 				break;
 			}
 
@@ -137,7 +142,7 @@ void AFinalCut::Tick(float DeltaSeconds)
 
 	case EPhase::HoldingLastFrame:
 		PhaseSecondsLeft -= DeltaSeconds;
-		if (PhaseSecondsLeft <= 0.f)
+		if (PhaseSecondsLeft <= 0.f && !StartOuttake())
 		{
 			FinishReplay();
 		}
@@ -189,6 +194,9 @@ void AFinalCut::StartReplay()
 	Clips = PlanClips(Take.Events, Take.Frames.Last().TimeSeconds, Cut);
 	ClipIndex = 0;
 	ReplaySeconds = Clips[0].StartSeconds;
+	Outtakes = Recorder->GetOuttakes();
+	NextOuttake = 0;
+	bOuttake = false;
 
 	BigMoments.Reset();
 	for (const FRecordedEvent& Event : Take.Events)
@@ -223,6 +231,36 @@ void AFinalCut::StartReplay()
 	RunningSeconds = 0.f;
 	GetWorld()->GetSubsystem<UTakeEvents>()->OnFinalCutStarted.Broadcast(Take);
 	ShowMoment(ReplaySeconds);
+}
+
+bool AFinalCut::StartOuttake()
+{
+	while (Outtakes.IsValidIndex(NextOuttake) && Outtakes[NextOuttake].Frames.Num() < 2)
+	{
+		++NextOuttake;
+	}
+	if (!Outtakes.IsValidIndex(NextOuttake))
+	{
+		return false;
+	}
+
+	// The same machinery as the film, on another take: all of what was kept of it, cut between the same cameras.
+	Take = Outtakes[NextOuttake++];
+	bOuttake = true;
+	Clips = { { Take.Frames[0].TimeSeconds, Take.Frames.Last().TimeSeconds } };
+	ClipIndex = 0;
+	ReplaySeconds = Clips[0].StartSeconds;
+	// At its own speed: a fall is funnier when it is not dwelt on.
+	BigMoments.Reset();
+	PlanShots();
+	FrameCursor = 0;
+	CurrentShot = INDEX_NONE;
+	NextEvent = 0;
+
+	Phase = EPhase::Playing;
+	GetWorld()->GetSubsystem<UTakeEvents>()->OnOuttake.Broadcast(Take.Number, false);
+	ShowMoment(ReplaySeconds);
+	return true;
 }
 
 void AFinalCut::FinishReplay()
@@ -384,6 +422,14 @@ void AFinalCut::ShowMoment(float Seconds)
 // Firing the same events again is what brings back the blood, the shake, the frozen frame and the sound.
 void AFinalCut::ReplayEvent(const FRecordedEvent& Event)
 {
+	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
+	if (Event.Kind == ERecordedEventKind::Cut)
+	{
+		// Only an outtake has one: it is where the director stopped the take.
+		Events->OnOuttake.Broadcast(Take.Number, true);
+		return;
+	}
+
 	AStickFighter* Attacker = Recorder->GetFighter(Event.AttackerIndex);
 	AStickFighter* Victim = Recorder->GetFighter(Event.VictimIndex);
 	if (!Attacker || !Victim)
@@ -391,7 +437,6 @@ void AFinalCut::ReplayEvent(const FRecordedEvent& Event)
 		return;
 	}
 
-	UTakeEvents* Events = GetWorld()->GetSubsystem<UTakeEvents>();
 	if (Event.Kind == ERecordedEventKind::Swing)
 	{
 		Events->OnSwing.Broadcast(Attacker, Event.Move);
@@ -456,6 +501,10 @@ void AFinalCut::Skip()
 
 float AFinalCut::PlaybackRate(float Seconds) const
 {
+	if (bOuttake)
+	{
+		return 1.f;
+	}
 	for (const FBigMoment& Moment : BigMoments)
 	{
 		const float Since = Seconds - Moment.Seconds;

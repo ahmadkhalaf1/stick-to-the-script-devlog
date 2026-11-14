@@ -165,6 +165,7 @@ void AImpactEffects::BeginPlay()
 	Events->OnTakeStarted.AddDynamic(this, &AImpactEffects::HandleTakeStarted);
 	Events->OnCut.AddDynamic(this, &AImpactEffects::HandleCut);
 	Events->OnFinalCutStarted.AddDynamic(this, &AImpactEffects::HandleFinalCutStarted);
+	Events->OnOuttake.AddDynamic(this, &AImpactEffects::HandleOuttake);
 	Events->OnAction.AddDynamic(this, &AImpactEffects::HandleAction);
 	Events->OnTakeFinished.AddDynamic(this, &AImpactEffects::HandleTakeFinished);
 
@@ -418,6 +419,18 @@ void AImpactEffects::HandleFinalCutStarted(const FTake& Take)
 		Droplets[Index].bFlying = false;
 		DropletMeshes[Index]->SetVisibility(false);
 	}
+}
+
+// An outtake is clapped in on a clean floor, like the take it was, and stopped by the same shout.
+void AImpactEffects::HandleOuttake(int32 TakeNumber, bool bCut)
+{
+	if (bCut)
+	{
+		HandleCut(ECutReason::KnockedOut);
+		return;
+	}
+	HandleFinalCutStarted(FTake());
+	Play(EImpactSound::Clapper);
 }
 
 void AImpactEffects::Spray(const FVector& From, const FVector& Direction, int32 Count, const FLinearColor& Color, bool bLeavesMarks, float FloorHeight)

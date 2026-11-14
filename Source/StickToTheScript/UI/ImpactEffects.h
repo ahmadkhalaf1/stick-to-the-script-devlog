@@ -62,6 +62,9 @@ private:
 	void HandleFinalCutStarted(const FTake& Take);
 
 	UFUNCTION()
+	void HandleOuttake(int32 TakeNumber, bool bCut);
+
+	UFUNCTION()
 	void HandleAction();
 
 	UFUNCTION()

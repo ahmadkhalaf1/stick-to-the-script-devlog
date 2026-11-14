@@ -54,7 +54,7 @@ public:
 
 	// The film opens on a title card and ends on a slate over its last frame. The HUD draws both.
 	bool IsOnTitleCard() const { return Phase == EPhase::Titles; }
-	bool IsOnEndSlate() const { return Phase == EPhase::HoldingLastFrame; }
+	bool IsOnEndSlate() const { return Phase == EPhase::HoldingLastFrame && !bOuttake; }
 	// How long the film itself ran, known once it is over.
 	float GetRunningSeconds() const { return RunningSeconds; }
 
@@ -91,6 +91,8 @@ private:
 	void HandleTakeFinished(const FTake& FinishedTake);
 
 	void StartReplay();
+	// After the slate, the takes that went wrong, one after another. False when there is none left to show.
+	bool StartOuttake();
 	void FinishReplay();
 	void FindOrPlaceCameras();
 	void PlanShots();
@@ -109,6 +111,9 @@ private:
 	TArray<TObjectPtr<AActor>> Cameras;
 
 	FTake Take;
+	TArray<FTake> Outtakes;
+	int32 NextOuttake = 0;
+	bool bOuttake = false;
 	EFilmCut Cut = EFilmCut::Action;
 	TArray<FShot> Shots;
 	EPhase Phase = EPhase::Idle;

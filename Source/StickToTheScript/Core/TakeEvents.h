@@ -20,6 +20,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FActionSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSwingSignature, AActor*, Attacker, EMove, Move);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFighterDownSignature, AActor*, Fighter, bool, bPlayer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBarGrabbedSignature, AActor*, Fighter);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOuttakeSignature, int32, TakeNumber, bool, bCut);
 
 UCLASS()
 class UTakeEvents : public UWorldSubsystem
@@ -81,6 +82,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Take")
 	FBarGrabbedSignature OnBarGrabbed;
 
+	// After the film, the end of a take that was cut is shown again. Said as it starts, and once more at its "Cut!".
+	UPROPERTY(BlueprintAssignable, Category = "Take")
+	FOuttakeSignature OnOuttake;
+
 private:
 	UFUNCTION()
 	void LogTakeStarted(int32 TakeNumber);
@@ -126,4 +131,7 @@ private:
 
 	UFUNCTION()
 	void LogBarGrabbed(AActor* Fighter);
+
+	UFUNCTION()
+	void LogOuttake(int32 TakeNumber, bool bCut);
 };

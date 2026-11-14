@@ -8,6 +8,14 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogFightRecorder, Log, All);
 
+namespace
+{
+	// An outtake is the end of a take that was cut: this long of the fight before the "Cut!", and this long of the fall after.
+	const float OuttakeBeforeCutSeconds = 2.f;
+	const float OuttakeAfterCutSeconds = 1.4f;
+	const int32 MostOuttakesKept = 3;
+}
+
 AFightRecorder::AFightRecorder()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -49,6 +57,11 @@ void AFightRecorder::Tick(float DeltaSeconds)
 	{
 		PropTransforms.Add(Prop->GetActorTransform());
 	}
+
+	if (StopAtSeconds >= 0.f && TakeSeconds() >= StopAtSeconds)
+	{
+		KeepOuttake();
+	}
 }
 
 void AFightRecorder::Watch(const TArray<AStickFighter*>& FightersInOrder)
@@ -65,6 +78,7 @@ void AFightRecorder::Watch(const TArray<AStickFighter*>& FightersInOrder)
 void AFightRecorder::BeginTake(int32 Number)
 {
 	Recording = FTake();
+	StopAtSeconds = -1.f;
 	Recording.Number = Number;
 	for (const AStickFighter* Fighter : Fighters)
 	{
@@ -107,8 +121,35 @@ AThrownProp* AFightRecorder::GetProp(int32 Index) const
 	return Props.IsValidIndex(Index) ? Props[Index].Get() : nullptr;
 }
 
+void AFightRecorder::KeepOuttake()
+{
+	StopAndReport();
+	StopAtSeconds = -1.f;
+	if (Recording.Frames.IsEmpty())
+	{
+		return;
+	}
+
+	const float From = Recording.Frames.Last().TimeSeconds - OuttakeBeforeCutSeconds - OuttakeAfterCutSeconds;
+	FTake Outtake;
+	Outtake.Number = Recording.Number;
+	Outtake.FighterColors = Recording.FighterColors;
+	Outtake.Frames = Recording.Frames.FilterByPredicate([From](const FTakeFrame& Frame) { return Frame.TimeSeconds >= From; });
+	Outtake.Events = Recording.Events.FilterByPredicate([From](const FRecordedEvent& Event) { return Event.TimeSeconds >= From; });
+	Outtakes.Add(MoveTemp(Outtake));
+	if (Outtakes.Num() > MostOuttakesKept)
+	{
+		Outtakes.RemoveAt(0);
+	}
+}
+
 void AFightRecorder::HandleTakeStarted(int32 TakeNumber)
 {
+	// The next take can be called before the fall of the last one has run out.
+	if (bRecording && StopAtSeconds >= 0.f)
+	{
+		KeepOuttake();
+	}
 	TakeStartSeconds = GetWorld()->GetTimeSeconds();
 	BeginTake(TakeNumber);
 }
@@ -156,7 +197,7 @@ void AFightRecorder::HandleCut(ECutReason Reason)
 	if (bRecording)
 	{
 		AddEvent(ERecordedEventKind::Cut).CutReason = Reason;
-		StopAndReport();
+		StopAtSeconds = TakeSeconds() + OuttakeAfterCutSeconds;
 	}
 }
 
@@ -245,6 +286,22 @@ bool FFightRecorderRoundTripTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("An arm is unbroken before frame 5"), static_cast<int32>(Take.Frames[4].Fighters[0].BrokenArms), 0);
 	TestEqual(TEXT("The right arm is broken from frame 5"), static_cast<int32>(Take.Frames[5].Fighters[0].BrokenArms), 2);
 	TestTrue(TEXT("The director's verdict is copied in"), Take.bClean && Take.Number == 7);
+
+	// Four takes of five seconds that were cut: an outtake is the last 3.4 s of one, and only the latest three are kept.
+	for (int32 Number = 1; Number <= 4; ++Number)
+	{
+		Recorder->BeginTake(Number);
+		for (int32 FrameIndex = 0; FrameIndex <= 20; ++FrameIndex)
+		{
+			Recorder->AddFrame(FrameIndex * 0.25f, {});
+		}
+		Recorder->KeepOuttake();
+	}
+	const TArray<FTake>& Outtakes = Recorder->GetOuttakes();
+	TestEqual(TEXT("Only the latest three outtakes are kept"), Outtakes.Num(), 3);
+	TestTrue(TEXT("They are in the order they were shot"), Outtakes.Num() == 3 && Outtakes[0].Number == 2 && Outtakes[2].Number == 4);
+	TestTrue(TEXT("An outtake is the end of its take"), Outtakes.Num() == 3 && Outtakes[0].Frames.Num() == 14
+		&& FMath::IsNearlyEqual(Outtakes[0].Frames[0].TimeSeconds, 1.75f, 0.01f) && FMath::IsNearlyEqual(Outtakes[0].Frames.Last().TimeSeconds, 5.f, 0.01f));
 
 	Recorder->Destroy();
 	return true;

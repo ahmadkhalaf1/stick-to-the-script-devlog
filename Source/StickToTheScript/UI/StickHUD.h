@@ -43,6 +43,9 @@ private:
 	void HandleFinalCutStarted(const FTake& Take);
 
 	UFUNCTION()
+	void HandleOuttake(int32 TakeNumber, bool bCut);
+
+	UFUNCTION()
 	void HandleCard(const FText& Headline, const FText& Detail);
 
 	UFUNCTION()
@@ -100,6 +103,9 @@ private:
 	FString FilmScene;
 	FString FilmTitle;
 	TWeakObjectPtr<const class AFinalCut> FilmShown;
+	// The take of the outtake on screen after the film, 0 during the film itself, and whether its "Cut!" has come.
+	int32 OuttakeTake = 0;
+	bool bOuttakeCut = false;
 	TArray<FString> CardLines;
 	int32 CurrentPay = INDEX_NONE;
 

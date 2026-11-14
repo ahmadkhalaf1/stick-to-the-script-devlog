@@ -26,6 +26,12 @@ void UTakeEvents::Initialize(FSubsystemCollectionBase& Collection)
 	OnSwing.AddDynamic(this, &UTakeEvents::LogSwing);
 	OnFighterDown.AddDynamic(this, &UTakeEvents::LogFighterDown);
 	OnBarGrabbed.AddDynamic(this, &UTakeEvents::LogBarGrabbed);
+	OnOuttake.AddDynamic(this, &UTakeEvents::LogOuttake);
+}
+
+void UTakeEvents::LogOuttake(int32 TakeNumber, bool bCut)
+{
+	UE_LOG(LogTakeEvents, Log, TEXT("OnOuttake: take %d%s"), TakeNumber, bCut ? TEXT(", cut") : TEXT(""));
 }
 
 void UTakeEvents::LogWardrobe(const FText& Choices)
@@ -149,9 +155,10 @@ bool FTakeEventsLogTest::RunTest(const FString& Parameters)
 	Events->OnFighterDown.Broadcast(nullptr, false);
 	Events->OnBarGrabbed.Broadcast(nullptr);
 	Events->OnWardrobe.Broadcast(FText());
+	Events->OnOuttake.Broadcast(1, false);
 	GLog->RemoveOutputDevice(&Counter);
 
-	return TestEqual(TEXT("Log lines printed by the thirteen events"), Counter.LineCount, 13);
+	return TestEqual(TEXT("Log lines printed by the fourteen events"), Counter.LineCount, 14);
 }
 
 #endif

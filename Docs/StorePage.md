@@ -20,7 +20,7 @@ You were hired to lose. The script says the gang beats you in the warehouse, in 
 
 - **No prompts and no cues.** Walk, punch, kick, duck, guard and jump. Duck and punch for an uppercut, duck and kick for a sweep, guard and punch for a hook, guard and kick for a spinning roundhouse. Jump under a red bar to hang from it, then kick off it. Throw whatever is lying on the set: crates, bottles, a watermelon, a traffic cone, a frying pan.
 - **Go down and it is "Cut!"** Back to one, and every retake comes out of your fee.
-- **Win and it is a wrap.** The take is played back as a film, and the cut is yours: the action cut, the slow-motion cut, or one long take.
+- **Win and it is a wrap.** The take is played back as a film, and the cut is yours: the action cut, the slow-motion cut, or one long take. After it come the outtakes: the takes you lost, as they were shot.
 - **The box office pays for a good show.** The same punch over and over earns nothing. Mix your moves.
 - **A director with a voice**, and different things to shout in every scene.
 - **Something golden** drops onto the set once in every take. Pick it up.

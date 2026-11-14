@@ -56,6 +56,7 @@ void AStickHUD::BeginPlay()
 	Events->OnCut.AddDynamic(this, &AStickHUD::HandleCut);
 	Events->OnTakeFinished.AddDynamic(this, &AStickHUD::HandleTakeFinished);
 	Events->OnFinalCutStarted.AddDynamic(this, &AStickHUD::HandleFinalCutStarted);
+	Events->OnOuttake.AddDynamic(this, &AStickHUD::HandleOuttake);
 	Events->OnCard.AddDynamic(this, &AStickHUD::HandleCard);
 	Events->OnPayChanged.AddDynamic(this, &AStickHUD::HandlePayChanged);
 	Events->OnAction.AddDynamic(this, &AStickHUD::HandleAction);
@@ -127,7 +128,19 @@ void AStickHUD::DrawHUD()
 		const float Bar = Height * 0.11f;
 		DrawRect(FLinearColor::Black, 0.f, 0.f, Width, Bar);
 		DrawRect(FLinearColor::Black, 0.f, Height - Bar, Width, Bar);
-		Write(FString::Printf(TEXT("DIRECTOR'S CUT: %s   TAKE %d"), *FilmCut, CurrentTake), FLinearColor::White, 48.f * Unit, Bar * 0.3f, Font, 2.f * Unit);
+		if (OuttakeTake > 0)
+		{
+			Write(FString::Printf(TEXT("OUTTAKES   TAKE %d"), OuttakeTake), HighlightGold, 48.f * Unit, Bar * 0.3f, Font, 2.f * Unit);
+			if (bOuttakeCut)
+			{
+				DrawCentered(TEXT("CUT!"), Top + 330.f * Unit, 10.f * Unit, RecordingRed);
+				DrawCentered(TEXT("Exactly as the script said."), Top + 560.f * Unit, 2.4f * Unit, FLinearColor::White);
+			}
+		}
+		else
+		{
+			Write(FString::Printf(TEXT("DIRECTOR'S CUT: %s   TAKE %d"), *FilmCut, CurrentTake), FLinearColor::White, 48.f * Unit, Bar * 0.3f, Font, 2.f * Unit);
+		}
 
 		const FString Skip = TEXT("Punch to skip");
 		float SkipWidth = 0.f;
@@ -472,6 +485,8 @@ void AStickHUD::HandleTakeFinished(const FTake& Take)
 
 void AStickHUD::HandleFinalCutStarted(const FTake& Take)
 {
+	OuttakeTake = 0;
+	bOuttakeCut = false;
 	FilmShown = Cast<AFinalCut>(UGameplayStatics::GetActorOfClass(this, AFinalCut::StaticClass()));
 	if (FilmShown.IsValid())
 	{
@@ -488,6 +503,12 @@ void AStickHUD::HandleFinalCutStarted(const FTake& Take)
 		}
 	}
 	Slate = ESlate::Film;
+}
+
+void AStickHUD::HandleOuttake(int32 TakeNumber, bool bCut)
+{
+	OuttakeTake = TakeNumber;
+	bOuttakeCut = bCut;
 }
 
 void AStickHUD::HandleCard(const FText& Headline, const FText& Detail)

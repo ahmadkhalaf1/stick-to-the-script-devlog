@@ -1133,6 +1133,19 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The title card, a frame of the film, and the slate over its last frame](Docs/devlog/75-title-card-and-slate.jpg)
 
+### 13:14 · The takes that went wrong come back as outtakes
+
+- **Developer said:** "Yes, blooper reel", to the agent's question whether to build it next. It was on the plan since the second sprint as a reel under the credits, and had been dropped on Nov 13 as never built.
+- **Agent did:** changed where it plays and built it. A take can only be played back on the set it was shot on, and each scene is its own level, so one reel under the credits would have needed all three sets at once. Each scene now has its own outtakes, straight after its film.
+  - The recorder stopped at "Cut!". It now runs 1.4 seconds longer, so the fall is in it, and keeps the last 3.4 seconds of that take. It keeps the latest three.
+  - After the slate the film plays each of them with what it plays the film with: the same puppets and props, the same three cameras cutting in on the blows, the blood, the sounds. At its own speed, with no slow motion.
+  - A new event, `OnOuttake`, says when one starts and when its "Cut!" comes. The sound claps it in and plays the director's "Cut!". The top bar reads "OUTTAKES   TAKE n" in gold, and from the cut the screen says "CUT!" and "Exactly as the script said."
+- **Result:** `Tools/check.ps1` passes, with two more checks in its tests: an outtake is the end of its take, and only the latest three are kept. In the editor, in the bar, the fighter was left standing still and was knocked out in takes 1 and 2; the game then played take 3 itself and won it. After the film the log has take 1, its cut, take 2, its cut, and then the end of the film, and the pictures below are from those seconds. Film and outtakes together ran 34 seconds. Then packaged (827 MB) and zipped (547 MB, 13:16). The packaged game, with no window and no sound, played itself for five minutes: five takes, four wraps, four films from card to slate, no errors, the 15 warnings every build has had today.
+- **Went wrong:** nothing that had to be mended. One flaw is to be expected from the code and was not looked for: a bottle that broke in the winning take would lie in pieces on the floor while an outtake shows the same bottle whole again.
+- **Not verified:** the outtakes in the packaged build: in those five minutes the game's own player was never knocked out, so there was no take to show. A reel of three; the outtakes after a slow-motion cut or a long take; how the director's "Cut!" sounds over the film's music, which the agent cannot hear (the editor ran silent, because the developer was using the PC).
+
+![Outtakes of takes 1 and 2 in the bar: the blows from the floor camera, "CUT!", and the fighter on the floor](Docs/devlog/76-outtakes.jpg)
+
 ---
 
 ## Asset and tool register
