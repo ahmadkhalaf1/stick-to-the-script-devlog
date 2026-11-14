@@ -66,6 +66,11 @@ private:
 	int32 AutoplayStrikes = 0;
 	// When the game's own player last had no loaded gun in its hands: it waits a moment after picking one up.
 	float AutoplayUnarmedSeconds = 0.f;
+	// What the game's own player has done in this take, and until when it is catching its breath.
+	int32 AutoplayStrikesThisTake = 0;
+	int32 AutoplayShotsThisTake = 0;
+	float AutoplayRestUntilSeconds = 0.f;
+	bool bAutoplayGuards = false;
 	// Strikes and jumps asked for before the fighter could do them, in the order they were asked for. Each is done the
 	// instant it can be, so keys pressed during the move before are not lost, and grows stale if that takes too long.
 	struct FAskedFor

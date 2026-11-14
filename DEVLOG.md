@@ -1176,6 +1176,34 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![With the pistol up, the camera holds both; two shots of the game playing itself; a shot in the film, from the wide camera](Docs/devlog/77-the-gun-and-its-target.jpg)
 
+### 14:32 · Fists before guns, and opponents who get to hit back
+
+- **Developer said:** watching the game play itself while the second video was being recorded: "i dont see them hitting back , and i am sure it wont show up in the vide", and "the video and play uses guns more than fist , it should balance".
+- **Agent did:** counted first. The recording's log had five takes, all won: 42 shots that hit against 60 blows with hands and feet, nothing blocked, and two blows taken in the whole five minutes. Two causes. Every scene had a gun lying at the player's starting mark, and the game's own player picked it up and emptied it before anyone reached it. And it struck without a pause, while every blow that lands costs an opponent its turn, so nobody finished a strike at it.
+  - The guns moved into the sets, in the scenes' text files: the warehouse's pistol past the third opponent, the bar's to the far end, the rooftop's rifle between the two gunmen. That is for a person playing as much as for the video.
+  - The game's own player fires a gun only after five strikes of its own in a take, and at most three times. After every five strikes it stands still for 1.9 seconds, and what comes at it then it blocks half the times and takes the rest.
+- **Result:** `Tools/check.ps1` passes. The three scenes once each in the editor, six takes: 3 shots that hit, 93 blows with hands and feet, 7 thrown props, 9 blows blocked, 39 taken.
+- **Went wrong:** it now loses. The warehouse and the rooftop were won on the first take, but the bar took four, the three lost ones with seven or eight blows taken each. That gives the video its "Cut!" and its outtakes, and it also makes the bar a minute and a half long. Not tuned further yet. And the second five-minute recording, made just before these messages, is the second one thrown away today.
+- **Not verified:** a person playing with the guns moved. Whether three shots a take reads as balance to the developer or as too few.
+
+### 15:13 · The film looked at picture by picture, and a guard that looks like one
+
+- **Developer said:** "i also noticed strange way of guard move , the animation and character position and hand position looks strange", and "also review how reply videos are made and pov , make sure nth is cutted in strange way or half finished or partially visible".
+- **Agent did:** photographed one film of the warehouse four times a second, 118 pictures, and looked at every one. The developer's three words were all there.
+  - *Partially visible:* a close shot was taken from 2.6 metres and aimed at the spot of the blow. Heads were cut off by the top of the picture, and whoever struck was often one arm at the edge.
+  - *Half finished:* the shot was aimed once and held. Whoever was hit was knocked out of it; three pictures in a row, most of a second, were a wall with blood on it. And the film left a knockout before the body was down.
+  - *Cut in a strange way:* twice the camera on the floor was put down behind the wet-floor sign, which then filled a third of the picture.
+  - So a close shot now follows its people, looking at the chest of whoever is hit, drawn towards whoever hit them; it is taken from 3.3 metres; a camera is not put down behind a prop if another place is free; a knockout is stayed with for 1.1 seconds; and something thrown, like a shot, is watched from the wide camera with both ends of it in the picture.
+  - The guard held both fists together above the forehead on a body standing straight. It is a boxer's guard now: fists by the chin, the lead hand further out, elbows down, knees soft.
+  - The game's own player was tuned again. With the first numbers it lost the bar four times running, so it now rests after six strikes for 1.6 seconds and blocks seven blows in ten. Then it fired no shot in three scenes, the guns being where it never went, so it now walks to a loaded gun within 3.8 metres once it may shoot.
+- **Result:** `Tools/check.ps1` passes after each step. The warehouse's film again, 96 pictures: both fighters and their heads in the close shots, the camera on whoever goes down, no empty picture, the sign out of the way. The bar's film, 150 pictures, sampled: the same, and the new guard is in it. The game playing all three scenes: four takes, three wraps and one "Cut!", 12 shots that hit, 70 blows with hands and feet, 8 thrown, 2 blocked, 18 taken. Then packaged (827 MB) and zipped (547 MB, 15:16). The packaged game, with no window and no sound, played itself for four minutes: three takes, two wraps and one "Cut!", 7 shots that hit against 74 blows with hands and feet, 21 blows taken, no errors. Its log has an outtake starting and reaching its "Cut!", which is the first time the outtakes ran in a packaged build. Nobody has looked at its picture, and the third recording of the day was not made: the developer was using the PC.
+- **Went wrong:** the developer could not be asked to leave the PC for a guard to be held with a real key, so the guard was photographed from the game's own player blocking, which took a new rule in that player first. A command that cleared the test's old pictures was refused by the session's guard against deleting by wildcard; the pictures are numbered by run instead and nothing is deleted.
+- **Not verified:** the rooftop's film, the slow-motion cut and the long take. A fighter who is not part of a blow can still stand between the camera and it, out of focus: seen twice in the bar and left. How the guard feels to a person holding the key.
+
+![Before, above: a close shot left looking at a wall, heads cut off, the sign in the way. After, below: the same kind of shots holding both fighters](Docs/devlog/79-the-film-reviewed.jpg)
+
+![The guard, as the game's own player holds it](Docs/devlog/78-a-guard-that-looks-like-one.jpg)
+
 ---
 
 ## Asset and tool register

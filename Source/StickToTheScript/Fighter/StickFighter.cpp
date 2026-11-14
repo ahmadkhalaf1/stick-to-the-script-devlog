@@ -109,6 +109,8 @@ namespace
 	const float PoseBlendPerSecond = 9.f;
 	const double DuckDrop = 45.;
 	const double DuckLeanDegrees = 30.;
+	// How much of a duck there is in a guard.
+	const double GuardCrouch = 0.22;
 
 	// A free strike lands when its fist or foot gets this close to the middle of a body.
 	const double BodyRadius = 18.;
@@ -364,6 +366,28 @@ namespace
 			const FVector Guard = Joints[SkullJoint] + Forward * Ahead + Outward * Out + FVector(0., 0., Up);
 			Joints[Hand] = FMath::Lerp(Joints[Hand], Guard, Alpha);
 			Joints[Elbow] = MiddleJoint(Joints[Shoulder], Joints[Hand], UpperLength, LowerLength, Outward * 0.5 - FVector::UpVector);
+		}
+	}
+
+	// A boxer's guard: the fists by the cheekbones, the lead hand a hand's width further out, the elbows down in front of
+	// the ribs so the forearms stand between the head and whatever is coming.
+	void PoseGuard(TArray<FVector>& Joints, const FVector& Forward, double Alpha)
+	{
+		const FVector Right = FVector::UpVector ^ Forward;
+		const int32 Arms[2][3] = { { LeftShoulder, LeftElbow, LeftHand }, { RightShoulder, RightElbow, RightHand } };
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			const int32 Shoulder = Arms[Side][0];
+			const int32 Elbow = Arms[Side][1];
+			const int32 Hand = Arms[Side][2];
+			const FVector Outward = Right * (Side == 0 ? -1. : 1.);
+			const double UpperLength = FVector::Dist(Joints[Shoulder], Joints[Elbow]);
+			const double LowerLength = FVector::Dist(Joints[Elbow], Joints[Hand]);
+
+			const bool bLead = Side == 0;
+			const FVector Fist = Joints[SkullJoint] + Forward * (bLead ? 22. : 15.) + Outward * 8. - FVector::UpVector * (bLead ? 9. : 5.);
+			Joints[Hand] = FMath::Lerp(Joints[Hand], Fist, Alpha);
+			Joints[Elbow] = MiddleJoint(Joints[Shoulder], Joints[Hand], UpperLength, LowerLength, Forward * 0.35 + Outward * 0.15 - FVector::UpVector);
 		}
 	}
 
@@ -1407,7 +1431,9 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		}
 		else
 		{
-			PoseArms(Joints, GetActorForwardVector(), PoseAlpha, 30., 10., 6.);
+			// Behind a guard nobody stands bolt upright: the knees give and the weight comes a little forward.
+			PoseDuck(Joints, GetActorForwardVector(), GuardCrouch * PoseAlpha);
+			PoseGuard(Joints, GetActorForwardVector(), PoseAlpha);
 		}
 	}
 

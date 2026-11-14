@@ -85,6 +85,9 @@ private:
 		float StartSeconds = 0.f;
 		int32 Camera = WideCamera;
 		FVector LookAt = FVector::ZeroVector;
+		// Who a close shot is of, by their place in the recording: the shot follows them.
+		int32 Attacker = INDEX_NONE;
+		int32 Victim = INDEX_NONE;
 	};
 
 	UFUNCTION()
@@ -99,6 +102,8 @@ private:
 	void ShowMoment(float Seconds);
 	void ReplayEvent(const FRecordedEvent& Event);
 	void CutTo(const FShot& Shot);
+	FVector FindSubject(const FShot& Shot) const;
+	bool IsHiddenByAProp(const FVector& From, const FVector& To) const;
 	float PlaybackRate(float Seconds) const;
 
 	struct FBigMoment

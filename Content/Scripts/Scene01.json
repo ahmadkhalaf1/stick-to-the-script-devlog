@@ -19,7 +19,7 @@
   "ArenaMax": { "X": 2200, "Y": 170 },
   "Bars": [ {"X":300,"Height":250}, {"X":1300,"Height":250} ],
   "Props": [
-    { "Kind": "Pistol", "Location": { "X": 75, "Y": -50 }, "Height": 0 },
+    { "Kind": "Pistol", "Location": { "X": 1180, "Y": 120 }, "Height": 0 },
     { "Kind": "Cone", "Location": { "X": 520, "Y": 140 }, "Height": 0 },
     { "Kind": "Pan", "Location": { "X": 1000, "Y": 140 }, "Height": 0 },
     { "Kind": "Crate", "Location": { "X": 120, "Y": 40 }, "Height": 0 },

@@ -34,6 +34,17 @@ namespace
 	const float StickDeadZone = 0.25f;
 	// The game's own player holds a gun this long before its first shot.
 	const float AutoplayDrawSeconds = 0.6f;
+	// It is there to show the fight, not to win it the quickest way. It fires a gun only once it has used its hands and
+	// feet this often in a take, and then only this many times.
+	const int32 AutoplayStrikesBeforeAGun = 5;
+	const int32 AutoplayShotsATake = 3;
+	const double AutoplayGunDetour = 380.;
+	// After every so many strikes it stands still this long, as someone out of breath would, and the opponents get their
+	// turn. What comes at it then is blocked this share of the times, and taken the rest. At five strikes, 1.9 s and a
+	// half it lost the bar four times running.
+	const int32 AutoplayStrikesBeforeARest = 6;
+	const float AutoplayRestSeconds = 1.6f;
+	const float AutoplayGuardShare = 0.7f;
 }
 
 void AStickPlayerController::BeginPlay()
@@ -293,6 +304,9 @@ void AStickPlayerController::JumpToScene(int32 Index)
 void AStickPlayerController::HandleAction()
 {
 	bFightLive = true;
+	AutoplayStrikesThisTake = 0;
+	AutoplayShotsThisTake = 0;
+	AutoplayRestUntilSeconds = 0.f;
 }
 
 void AStickPlayerController::HandleCut(ECutReason Reason)
@@ -367,6 +381,40 @@ void AStickPlayerController::PlayItself()
 			return;
 		}
 	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Now < AutoplayRestUntilSeconds)
+	{
+		Fighter->Walk(FVector2D::ZeroVector);
+		if (!Fighter->IsStriking())
+		{
+			Fighter->FaceTowards(Theirs);
+			if (bAutoplayGuards)
+			{
+				Fighter->Guard(EMove::Block);
+			}
+		}
+		return;
+	}
+
+	// Once it has fought by hand for a while, a loaded gun lying near enough is worth a detour.
+	const bool bMayShoot = AutoplayStrikesThisTake >= AutoplayStrikesBeforeAGun && AutoplayShotsThisTake < AutoplayShotsATake;
+	if (bMayShoot && !Fighter->IsCarrying())
+	{
+		for (TActorIterator<AThrownProp> It(GetWorld()); It; ++It)
+		{
+			const FVector2D ToGun(It->GetActorLocation() - Mine);
+			if (It->IsGun() && It->IsLoose() && It->GetShotsLeft() > 0 && ToGun.Size() < AutoplayGunDetour)
+			{
+				Fighter->Walk(ToGun.Size() > 40. ? ToGun.GetSafeNormal() : FVector2D::ZeroVector);
+				if (Fighter->FindPropInReach() == *It)
+				{
+					Fighter->GrabOrThrow();
+				}
+				return;
+			}
+		}
+	}
+
 	const double Side = Mine.X <= Theirs.X ? -1. : 1.;
 	const FVector2D Step = FVector2D(Theirs.X + Side * 90., Theirs.Y) - FVector2D(Mine);
 	// It stops well inside its striking distance. Stopping at the edge of it left it facing a cornered gunman for good:
@@ -380,19 +428,20 @@ void AStickPlayerController::PlayItself()
 	// It picks up whatever it passes, and throws it as soon as someone is lined up.
 	const double Distance = FVector::Dist2D(Mine, Theirs);
 	const AThrownProp* Held = Fighter->GetCarried();
-	const float Now = GetWorld()->GetTimeSeconds();
-	const bool bLoadedGun = Held && Held->IsGun() && Held->GetShotsLeft() > 0;
+	const bool bLoadedGun = bMayShoot && Held && Held->IsGun() && Held->GetShotsLeft() > 0;
 	if (!bLoadedGun)
 	{
 		AutoplayUnarmedSeconds = Now;
 	}
 	if (bLoadedGun)
 	{
-		// A gun with rounds in it is fired at whoever is lined up, not thrown. Not in the first moment it is held:
+		// A gun it may fire is fired at whoever is lined up, not thrown. Not in the first moment it is held:
 		// the camera needs that long to bring whoever it points at into the picture.
 		if (Now - AutoplayUnarmedSeconds > AutoplayDrawSeconds && Distance < 750. && FMath::Abs(Mine.Y - Theirs.Y) < 70. && Fighter->CanAct())
 		{
+			const int32 RoundsBefore = Held->GetShotsLeft();
 			Fighter->StrikeWith(EMove::Punch, 0.f);
+			AutoplayShotsThisTake += RoundsBefore - Held->GetShotsLeft();
 		}
 	}
 	else if (Fighter->IsCarrying() ? Distance < 380. && FMath::Abs(Mine.Y - Theirs.Y) < 45. : Distance > 220.)
@@ -404,7 +453,11 @@ void AStickPlayerController::PlayItself()
 		// It goes through everything it knows in turn, so a run that plays itself shows every move.
 		const EMove Moves[] = { EMove::Punch, EMove::Punch, EMove::Kick, EMove::Uppercut, EMove::Punch, EMove::Chop, EMove::Kick, EMove::Sweep, EMove::Punch, EMove::Roundhouse };
 		const EMove Move = Moves[AutoplayStrikes++ % UE_ARRAY_COUNT(Moves)];
-		Fighter->StrikeWith(Move, Move == EMove::Kick ? KickSeconds : Move == EMove::Punch ? PunchSeconds : 0.f);
+		if (Fighter->StrikeWith(Move, Move == EMove::Kick ? KickSeconds : Move == EMove::Punch ? PunchSeconds : 0.f) && ++AutoplayStrikesThisTake % AutoplayStrikesBeforeARest == 0)
+		{
+			AutoplayRestUntilSeconds = Now + AutoplayRestSeconds;
+			bAutoplayGuards = FMath::FRand() < AutoplayGuardShare;
+		}
 	}
 }
 

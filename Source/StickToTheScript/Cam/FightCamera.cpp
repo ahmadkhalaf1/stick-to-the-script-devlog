@@ -21,6 +21,8 @@ namespace
 	// A gun reaches three times as far as the picture is wide. These match how the fighter itself aims one: at the
 	// nearest opponent this close and roughly ahead.
 	const double AimedAtWithin = 950.;
+	// Something thrown does not go as far.
+	const double ThrownAtWithin = 600.;
 	const double AimedAtCosine = 0.5;
 	const double GunInHandWithin = 70.;
 	// As far back as the camera goes to hold both. The sets' walls and lamp stands are further back than this.
@@ -103,19 +105,25 @@ bool AFightCamera::FindAimedAt(FVector& OutPoint) const
 {
 	const TArray<FVector> Joints = Subject->GetJointPositions();
 	const FVector Hands = (Joints[StickJoint::LeftHand] + Joints[StickJoint::RightHand]) * 0.5;
-	bool bGunInHands = false;
-	for (TActorIterator<AThrownProp> It(GetWorld()); It && !bGunInHands; ++It)
+	// A gun, or something to throw: both are let go at someone a way off. A bat stays in the hands and needs no room.
+	const AThrownProp* InHands = nullptr;
+	for (TActorIterator<AThrownProp> It(GetWorld()); It && !InHands; ++It)
 	{
-		bGunInHands = It->IsGun() && FVector::Dist(It->GetActorLocation(), Hands) < GunInHandWithin;
+		if (!It->IsSwung() && FVector::Dist(It->GetActorLocation(), Hands) < GunInHandWithin)
+		{
+			InHands = *It;
+		}
 	}
-	if (!bGunInHands)
+	if (!InHands)
 	{
 		return false;
 	}
 
 	const FVector Pelvis = Joints[StickJoint::PelvisJoint];
-	const FVector Aim = ((Hands - Joints[StickJoint::ChestJoint]) * FVector(1., 1., 0.)).GetSafeNormal(UE_SMALL_NUMBER, Subject->GetActorForwardVector());
-	double Nearest = AimedAtWithin;
+	// Something carried overhead is right above the chest, which says nothing about where it will go: the way the body faces does.
+	const FVector Facing = InHands->IsGun() ? (Hands - Joints[StickJoint::ChestJoint]) * FVector(1., 1., 0.) : (FVector::UpVector ^ (Joints[StickJoint::RightShoulder] - Joints[StickJoint::LeftShoulder])) * -1.;
+	const FVector Aim = Facing.GetSafeNormal(UE_SMALL_NUMBER, Subject->GetActorForwardVector());
+	double Nearest = InHands->IsGun() ? AimedAtWithin : ThrownAtWithin;
 	bool bFound = false;
 	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
 	{

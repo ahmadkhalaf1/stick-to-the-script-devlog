@@ -29,7 +29,7 @@ It was planned as one reel under the credits. It became the outtakes of each sce
 - [x] The end of a take that was cut is kept, fall included, and only the latest three: by an automation test
 - [x] After the film the outtakes play, each with its take number and its "Cut!": seen in the editor in the bar, two takes lost standing still and the third won by the game playing itself
 - [ ] A reel of three failed takes has been seen (two were)
-- [ ] The packaged build shows them. It has the code, and five minutes of it playing itself showed four films and no errors, but its player was never knocked out, so no outtake came up
+- [x] The packaged build shows them: by its log on Sat Nov 14 at 15:20, one outtake started and reached its "Cut!" after a film, in a run with no window. Its picture has not been looked at
 - [ ] The developer has seen it
 
 Sprint: [[Sprint 2 - Three scenes]] · Stream: cam

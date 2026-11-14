@@ -15,7 +15,8 @@ namespace
 	// What the film keeps around each kind of moment.
 	const float OpeningSeconds = 1.2f;
 	const float BigBeforeSeconds = 0.9f;
-	const float BigAfterSeconds = 0.8f;
+	// Long enough after a knockout for the body to reach the floor: cut sooner, the fall is left half done.
+	const float BigAfterSeconds = 1.1f;
 	const float LastBigAfterSeconds = 2.2f;
 	const float MediumBeforeSeconds = 0.7f;
 	const float MediumAfterSeconds = 0.6f;
@@ -69,7 +70,13 @@ namespace
 	// A close-up starts just before its strike lands and stays a moment after.
 	const float CutBeforeImpactSeconds = 0.35f;
 	const float CutAfterShotSeconds = 0.25f;
-	const float StayAfterImpactSeconds = 0.8f;
+	// How far to the side a close shot is taken from: far enough for two fighters and their heads.
+	const double CloseUpDistance = 330.;
+	const double LowDistance = 300.;
+	const double CloseUpTowardsAttacker = 70.;
+	const float CloseUpFollowSpeed = 6.f;
+	const double PropHidesWithin = 55.;
+	const float StayAfterImpactSeconds = 1.f;
 	// In a long fight not every blow earns a cut. A knockout always does; the rest only after this long on other shots.
 	const float SecondsBetweenCloseUps = 2.5f;
 
@@ -132,6 +139,13 @@ void AFinalCut::Tick(float DeltaSeconds)
 		if (ShotCamera != WideCamera)
 		{
 			AActor* Camera = Cameras[ShotCamera];
+			// The shot stays on the people in it. Held on the spot of the blow, it was left looking at a wall as soon as
+			// someone was knocked across the room.
+			if (Shots.IsValidIndex(CurrentShot))
+			{
+				ShotLookAt = FMath::VInterpTo(ShotLookAt, FindSubject(Shots[CurrentShot]), DeltaSeconds, CloseUpFollowSpeed);
+				Camera->SetActorRotation((ShotLookAt - Camera->GetActorLocation()).Rotation());
+			}
 			Camera->AddActorWorldOffset((ShotLookAt - Camera->GetActorLocation()).GetSafeNormal() * PushInSpeed * DeltaSeconds);
 			// Only the two cameras the film carries about get a lens. The wide one also films the fight, which stays sharp.
 			if (AFightCamera* Lens = Cast<AFightCamera>(Camera))
@@ -340,7 +354,8 @@ void AFinalCut::PlanShots()
 		// A shot is watched from the wide camera, which holds the gun and whoever it points at in one picture: a
 		// close-up of someone hit from outside it says nothing about where the shot came from. Only when a shot puts
 		// someone down does the film cut in, and then after it has landed, to see the fall.
-		const bool bShot = Event.Kind == ERecordedEventKind::Hit && (Event.Move == EMove::Shot || Event.Move == EMove::Blast);
+		// The same goes for something thrown: it arrives from wherever the thrower stood.
+		const bool bShot = Event.Kind == ERecordedEventKind::Hit && (Event.Move == EMove::Shot || Event.Move == EMove::Blast || Event.Move == EMove::Throw);
 		if (bShot && !Event.bKnockout)
 		{
 			continue;
@@ -357,6 +372,8 @@ void AFinalCut::PlanShots()
 		const bool bBigMoment = Event.Kind == ERecordedEventKind::Hit && (Event.Move != EMove::Punch || Event.bKnockout);
 		CloseUp.Camera = bBigMoment ? LowCamera : CloseCamera;
 		CloseUp.LookAt = Event.ImpactPoint;
+		CloseUp.Attacker = Event.AttackerIndex;
+		CloseUp.Victim = Event.VictimIndex;
 
 		// Two strikes close together share one run of close-ups: the return to the wide shot between them is dropped.
 		if (Shots.Num() > 1 && Shots.Last().Camera == WideCamera && Shots.Last().StartSeconds > CloseUp.StartSeconds)
@@ -462,24 +479,76 @@ void AFinalCut::ReplayEvent(const FRecordedEvent& Event)
 	}
 }
 
+// What a close shot looks at: the chest of whoever is hit, drawn towards whoever hit them, so that one is more than an
+// arm at the edge of the picture. From the chest and not from the spot of the blow, which keeps heads in the picture.
+FVector AFinalCut::FindSubject(const FShot& Shot) const
+{
+	const AStickFighter* Victim = Recorder->GetFighter(Shot.Victim);
+	if (!Victim)
+	{
+		return Shot.LookAt;
+	}
+	const FVector Struck = Victim->GetJointPositions()[StickJoint::ChestJoint];
+	const AStickFighter* Attacker = Recorder->GetFighter(Shot.Attacker);
+	if (!Attacker || Attacker == Victim)
+	{
+		return Struck;
+	}
+	return Struck + ((Attacker->GetJointPositions()[StickJoint::ChestJoint] - Struck) * 0.5).GetClampedToMaxSize(CloseUpTowardsAttacker);
+}
+
+// A prop standing between a camera and what it films fills half the picture with its back.
+bool AFinalCut::IsHiddenByAProp(const FVector& From, const FVector& To) const
+{
+	const FVector Line = To - From;
+	const double LengthSquared = FMath::Max(Line.SizeSquared(), 1.);
+	for (int32 Index = 0; const AThrownProp* Prop = Recorder->GetProp(Index); ++Index)
+	{
+		const FVector At = Prop->GetActorLocation();
+		const double Along = ((At - From) | Line) / LengthSquared;
+		// What is at the far end is in somebody's hands or at their feet, and belongs in the shot.
+		if (Along > 0.05 && Along < 0.8 && FVector::Dist(At, From + Line * Along) < PropHidesWithin)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void AFinalCut::CutTo(const FShot& Shot)
 {
 	ShotCamera = Shot.Camera;
-	ShotLookAt = Shot.LookAt;
+	ShotLookAt = Shot.Camera == WideCamera ? Shot.LookAt : FindSubject(Shot);
 	AActor* Camera = Cameras[Shot.Camera];
 	if (Shot.Camera != WideCamera)
 	{
 		// The fight travels, so these two cameras are carried to each strike: on the wide camera's side of the fight,
-		// the close one level with the blow and the low one near the floor, a little behind the attacker.
+		// the close one level with the chest and the low one near the floor, a little behind the attacker. Far enough
+		// back for both fighters and their heads.
 		const AActor* Wide = Cameras[WideCamera];
 		const FVector Side = -Wide->GetActorForwardVector().GetSafeNormal2D();
 		const FVector Along = Wide->GetActorRightVector().GetSafeNormal2D();
 		const AStickFighter* Player = Recorder->GetFighter(0);
 		const double Floor = Player ? Player->GetActorLocation().Z : 0.;
 
-		FVector Place = Shot.Camera == CloseCamera
-			? Shot.LookAt + Side * 260. + FVector(0., 0., 10.)
-			: FVector(Shot.LookAt.X, Shot.LookAt.Y, Floor + 30.) + Side * 240. - Along * 90.;
+		const FVector OnTheFloor(ShotLookAt.X, ShotLookAt.Y, Floor + 30.);
+		const FVector Level = ShotLookAt + Side * CloseUpDistance + FVector(0., 0., 10.);
+		// The first place a prop does not stand in front of. The last is taken whatever stands there.
+		const FVector Places[] = {
+			Shot.Camera == CloseCamera ? Level : OnTheFloor + Side * LowDistance - Along * 90.,
+			Shot.Camera == CloseCamera ? Level + FVector(0., 0., 60.) : OnTheFloor + Side * LowDistance + Along * 90.,
+			Level + FVector(0., 0., 60.) - Along * 120.,
+			Level + FVector(0., 0., 60.) + Along * 120.,
+		};
+		FVector Place = Places[0];
+		for (const FVector& Tried : Places)
+		{
+			if (!IsHiddenByAProp(Tried, ShotLookAt))
+			{
+				Place = Tried;
+				break;
+			}
+		}
 		if (Shot.Camera == LowCamera && Player)
 		{
 			// Furniture stands beyond the ends of the arena, and a camera on the floor there films the underside of a table.
@@ -491,7 +560,7 @@ void AFinalCut::CutTo(const FShot& Shot)
 				Place.X = FMath::Clamp(Place.X, Left, Right);
 			}
 		}
-		Camera->SetActorLocationAndRotation(Place, (Shot.LookAt - Place).Rotation());
+		Camera->SetActorLocationAndRotation(Place, (ShotLookAt - Place).Rotation());
 	}
 
 	if (APlayerController* Player = GetWorld()->GetFirstPlayerController())
