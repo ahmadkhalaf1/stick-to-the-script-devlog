@@ -998,6 +998,14 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The packaged game on the new sets: the warehouse in the action cut, the bar in play and in the slow-motion cut, the rooftop in the long take](Docs/devlog/66-real-sets-packaged.jpg)
 
+### 05:00 · A new video and a new zip, made while nobody watched
+
+- **Developer said:** nothing new. Asleep, with the order from before to take the next step without asking.
+- **Agent did:** recorded the packaged game playing itself for five minutes with `Tools\record_run.ps1`, cut the video from it with `node Tools/cut_video.mjs`, and made the upload zip with `Tools\release.ps1`. The zip of Nov 13 is kept beside the new one under another name.
+- **Result:** a video of 56 seconds in 18 pieces: the title, the wardrobe, all three scenes on their new sets, the choice of cut, parts of three films and the end card. The zip is 547 MB, where it was 379 MB, and the jam allows 1 GB.
+- **Went wrong:** nothing in the making. The log of the recorded run has nine "floating in the film" warnings and no errors. The three of the run before were read one by one: a fighter hanging from the bar, and a body in the air after a blow. The check that prints them knows about neither in the film. The nine were counted, not read.
+- **Not verified:** nobody has watched the video or heard its sound; its sheet of frames was looked at, not the moving picture. Neither the video nor the zip has been uploaded: the store page still has the build and the video of Nov 13.
+
 ---
 
 ## Asset and tool register

@@ -48,7 +48,7 @@ Asked for by the developer in the night of Nov 13 to 14, in three messages: "i w
 - [x] The two guns are the scanned ones, in play: the pistol fired in the warehouse and the rifle on the rooftop, seen. Not looked at in the film yet
 - [x] Every throwable and every shop weapon is a scanned model: all thirteen seen side by side in the warehouse. The golden three keep their scanned shape and wear plain gold; the bottle wears plain green glass, because its scanned glass is see-through and has no pictures
 - [x] The sets use scanned surfaces and have scanned dressing: all three played by themselves in the editor and were photographed
-- [x] The packaged build has all of it and stays under 1 GB: Packaged afterwards: 825 MB as a folder, where it was 663 MB. The packaged game then played itself for three and a half minutes, through all three scenes and their films, at a median of 96, 106 and 104 frames a second and never under 89.
+- [x] The packaged build has all of it and stays under 1 GB: Packaged afterwards: 825 MB as a folder, where it was 663 MB. The packaged game then played itself for three and a half minutes, through all three scenes and their films, at a median of 96, 106 and 104 frames a second and never under 89. The upload zip made from it is 547 MB.
 - [x] Every model and texture is in the dev log's asset register and in the store page's list
 - [ ] The developer has seen it
 
