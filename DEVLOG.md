@@ -1146,6 +1146,14 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![Outtakes of takes 1 and 2 in the bar: the blows from the floor camera, "CUT!", and the fighter on the floor](Docs/devlog/76-outtakes.jpg)
 
+### 13:34 · The build with the key strip, the film's card and slate, and the outtakes goes on the store page draft
+
+- **Developer said:** "Yes, upload it", to the question whether this build should go on the store page draft now. And later, when the agent was stuck: "Tab is showing".
+- **Agent did:** opened the page's edit form in the developer's Chrome, pressed "Upload files", gave the file chooser the zip with `Tools\choose_file.ps1`, waited for the upload, saved the form, and read it again.
+- **Result:** the page has one file, `PageTwelve_StickToTheScript.zip`, 547 MB, uploaded at 13:31, marked for Windows, in the place of the morning's. The upload took about two minutes. The page is still a draft.
+- **Went wrong:** three tries before it worked. The first click went to the file's "More..." button, which the agent's page reader had named as the upload button; it opened a download dialog, which was closed without downloading. Then the right button was clicked twice, once in a second tab, and no file chooser came: Chrome only opens one for the tab it is showing, and a tab the agent opens sits behind the one the developer is looking at. The agent will not switch a person's tabs with the keyboard, so it asked, and the developer clicked the tab. That is now written into the project's notes for the next upload.
+- **Not verified:** the download from the page. The page's pictures, video and text are still those of Nov 13: they show neither the key strip nor the outtakes.
+
 ---
 
 ## Asset and tool register
