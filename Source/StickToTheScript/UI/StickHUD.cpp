@@ -4,7 +4,10 @@
 #include "CanvasTypes.h"
 #include "Engine/Canvas.h"
 #include "Engine/Font.h"
+#include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
+#include "TextureResource.h"
+#include "UnrealClient.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
@@ -55,6 +58,8 @@ namespace
 	// The small screen, on a layout 1920 wide.
 	const float FilmScreenWidth = 600.f;
 	const float FilmScreenTop = 180.f;
+	// How long after the wrap the take's still is read from the screen, by the game's own slowed clock.
+	const float TakeStillAfterSeconds = 0.22f;
 }
 
 AStickHUD::AStickHUD()
@@ -94,6 +99,13 @@ void AStickHUD::DrawHUD()
 	if (!Canvas)
 	{
 		return;
+	}
+
+	// Before anything is drawn: what is read back is then the scene alone.
+	if (TakeStillAtSeconds > 0.f && GetWorld()->GetTimeSeconds() >= TakeStillAtSeconds)
+	{
+		TakeStillAtSeconds = 0.f;
+		KeepTakeStill();
 	}
 
 	const float Width = Canvas->SizeX;
@@ -595,6 +607,38 @@ void AStickHUD::HandleCut(ECutReason Reason)
 void AStickHUD::HandleTakeFinished(const FTake& Take)
 {
 	Slate = ESlate::Wrap;
+	// Not this instant: the last opponent is white with the blow's flash, and has not left the floor yet.
+	TakeStillAtSeconds = GetWorld()->GetTimeSeconds() + TakeStillAfterSeconds;
+}
+
+void AStickHUD::KeepTakeStill()
+{
+	const UGameViewportClient* Client = GetWorld()->GetGameViewport();
+	FViewport* Screen = Client ? Client->Viewport : nullptr;
+	const FIntPoint Size = Screen ? Screen->GetSizeXY() : FIntPoint::ZeroValue;
+	TArray<FColor> Pixels;
+	if (Size.X <= 0 || Size.Y <= 0 || !Screen->ReadPixels(Pixels) || Pixels.Num() != Size.X * Size.Y)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("The take's still could not be read from the screen: the small screen shows the scene's card"));
+		return;
+	}
+	// The screen's own alpha is not kept up, and a picture drawn with none of it would not show.
+	for (FColor& Pixel : Pixels)
+	{
+		Pixel.A = 255;
+	}
+
+	UTexture2D* Still = UTexture2D::CreateTransient(Size.X, Size.Y, PF_B8G8R8A8);
+	if (!Still)
+	{
+		return;
+	}
+	FTexture2DMipMap& Mip = Still->GetPlatformData()->Mips[0];
+	FMemory::Memcpy(Mip.BulkData.Lock(LOCK_READ_WRITE), Pixels.GetData(), Pixels.Num() * sizeof(FColor));
+	Mip.BulkData.Unlock();
+	Still->UpdateResource();
+	TakeStill = Still;
+	UE_LOG(LogTemp, Log, TEXT("The take's still for the small screen: %d by %d"), Size.X, Size.Y);
 }
 
 void AStickHUD::HandleFinalCutStarted(const FTake& Take)
@@ -682,11 +726,15 @@ void AStickHUD::DrawFilmScreen(float Unit, float Down, float Grown)
 	DrawRect(FLinearColor(1.f, 1.f, 1.f, (1.f - Growth) * 0.9f), X - Edge, Y - Edge, ScreenWidth + Edge * 2.f, ScreenHeight + Edge * 2.f);
 	DrawRect(FLinearColor(0.f, 0.f, 0.f, Shown), X, Y, ScreenWidth, ScreenHeight);
 	const UStickGameInstance* Game = GetGameInstance<UStickGameInstance>();
-	if (Game && SceneCards.IsValidIndex(Game->SceneIndex) && SceneCards[Game->SceneIndex])
+	UTexture2D* Picture = TakeStill ? TakeStill.Get() : Game && SceneCards.IsValidIndex(Game->SceneIndex) ? SceneCards[Game->SceneIndex].Get() : nullptr;
+	if (Picture && Picture->GetSizeY() > 0)
 	{
-		// The picture is 16 by 9 and the film's frame is wider: as the screen widens, its top and bottom are left out.
-		const float Kept = FMath::Min(16.f / 9.f * ScreenHeight / ScreenWidth, 1.f);
-		DrawTexture(SceneCards[Game->SceneIndex], X, Y, ScreenWidth, ScreenHeight, 0.f, (1.f - Kept) * 0.5f, 1.f, Kept, FLinearColor(1.f, 1.f, 1.f, Shown));
+		// The film's frame is wider than the picture: as the screen widens, the picture's top and bottom are left out.
+		// A picture wider than the screen loses its sides instead.
+		const float Wider = (ScreenWidth / ScreenHeight) / (static_cast<float>(Picture->GetSizeX()) / Picture->GetSizeY());
+		const float KeptAcross = FMath::Min(Wider, 1.f);
+		const float KeptDown = FMath::Min(1.f / Wider, 1.f);
+		DrawTexture(Picture, X, Y, ScreenWidth, ScreenHeight, (1.f - KeptAcross) * 0.5f, (1.f - KeptDown) * 0.5f, KeptAcross, KeptDown, FLinearColor(1.f, 1.f, 1.f, Shown));
 	}
 
 	// The button is gone as soon as the screen starts to move: it has been pressed.

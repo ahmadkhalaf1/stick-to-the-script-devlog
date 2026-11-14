@@ -81,6 +81,13 @@ private:
 	// offers the cut, and opening out to the whole picture between the film's bars as the film begins. Grown is 0 for
 	// the small screen and 1 for the whole picture; Down is added to its place when nothing has moved the canvas.
 	void DrawFilmScreen(float Unit, float Down, float Grown);
+	// What the small screen shows: the picture as it was a moment after the last opponent of this take went down,
+	// read back from the screen before anything of the HUD is drawn on it. Until there is one, the scene's card.
+	UPROPERTY(Transient)
+	TObjectPtr<class UTexture2D> TakeStill;
+	// When to read it, by the game's clock, or 0 when none is wanted.
+	float TakeStillAtSeconds = 0.f;
+	void KeepTakeStill();
 	// A play button's triangle, pointing right, Size high.
 	void DrawPlayMark(float X, float Y, float Size, const FLinearColor& Color);
 	// The wardrobe's panel: every colour as a swatch, every hat and build as a pip, what is chosen named large.

@@ -1413,6 +1413,19 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The film on a screen, on the bar scene: the card with its play button, the screen opening out, the title card, and the film with its play mark and its line](Docs/devlog/90-the-film-on-a-screen.jpg)
 
+### 23:16 · The small screen shows the take just shot
+
+- **Developer said:** "Use my take", asked whether the small screen should show a still of the take just fought instead of the scene's stock picture. And, while the build cooked: "i still think we can improve character a bit more , its look boring now , no skin , no face , what do u thnk?"
+- **Agent did:**
+  - Read in the engine's source how it hands over a screenshot, and did not go that way: it is one request for the whole program, the editor's own windows answer it too, and it reads the screen with the HUD already drawn on it.
+  - Instead the HUD reads the screen back itself, as the first thing it does in a frame: the scene of that frame is there and nothing of the HUD is on it yet. It does so 0.22 s after the wrap by the game's own slowed clock, when the last opponent is no longer white with the blow's flash. That frame is kept in memory and the small screen shows it. If it cannot be read, the scene's card is shown, as before.
+  - Answered the question about the character: yes, the body is Mixamo's stock mannequin and it is in every picture. Laid out two ways, faces and gear on the body there is, or textured characters with faces from Mixamo, with what each costs and risks, and recommended the first. Nothing built for it yet: the choice is the developer's.
+- **Result:** `Tools/check.ps1` passes. In the editor the card's small screen shows the set as the fight left it, the hero standing and the last opponent on the floor, and it opens out into the title card as before. Packaged (829 MB, a 549 MB zip): the packaged game played itself through a scene and its film off screen with no errors, its log says "The take's still for the small screen: 1280 by 720", and the developer's saved progress was put back and compared.
+- **Went wrong:** the test asked for the warehouse and got the bar. With the game playing itself the first menu answered itself before the test's key, on the row under the developer's mouse. Nothing the test checks belongs to one scene, so its pictures were kept.
+- **Not verified:** nobody has seen it move. What reading a whole frame back costs on a large screen, once per wrap: at 2560 by 1440 it is 15 MB, and it was not timed.
+
+![The small screen with the take's own picture: the card, the screen opening out, the title card, the film](Docs/devlog/91-your-take-on-the-screen.jpg)
+
 ---
 
 ## Asset and tool register
