@@ -48,6 +48,13 @@ namespace
 	const float ShoutSeconds = 2.8f;
 	// How many scenes have a picture for the menu. A scene past these gets a plain card.
 	const int32 SceneCardCount = 3;
+	// How long the small screen takes to open out into the film, and the share of that in which it grows: for the
+	// rest it fades into the title card behind it.
+	const float FilmOpensOutSeconds = 0.6f;
+	const float FilmScreenGrowsShare = 0.75f;
+	// The small screen, on a layout 1920 wide.
+	const float FilmScreenWidth = 600.f;
+	const float FilmScreenTop = 180.f;
 }
 
 AStickHUD::AStickHUD()
@@ -132,11 +139,21 @@ void AStickHUD::DrawHUD()
 		{
 			// Black, as a film's own title card is. The band is already playing.
 			DrawRect(FLinearColor::Black, 0.f, 0.f, Width, Height);
-			DrawCentered(TEXT("A  PAGE  TWELVE  PICTURE"), Top + 320.f * Unit, 1.6f * Unit, FLinearColor(0.6f, 0.6f, 0.6f));
-			DrawCentered(FilmTitle, Top + 410.f * Unit, 6.5f * Unit, FLinearColor::White);
-			DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, Top + 572.f * Unit, 180.f * Unit, 6.f * Unit);
-			DrawCentered(TEXT("THE DIRECTOR'S CUT"), Top + 612.f * Unit, 3.f * Unit, HighlightGold);
-			DrawCentered(FString::Printf(TEXT("%s      TAKE %d"), *FilmCut, CurrentTake), Top + 700.f * Unit, 1.9f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+			// The small screen the cut was chosen on opens out into the picture, and the film begins inside it.
+			// The titles wait until it has: they showed round its edges while it was small.
+			const float Grown = Film->GetTitleCardSecondsShown() / FilmOpensOutSeconds;
+			if (Grown >= FilmScreenGrowsShare)
+			{
+				DrawCentered(TEXT("A  PAGE  TWELVE  PICTURE"), Top + 320.f * Unit, 1.6f * Unit, FLinearColor(0.6f, 0.6f, 0.6f));
+				DrawCentered(FilmTitle, Top + 410.f * Unit, 6.5f * Unit, FLinearColor::White);
+				DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, Top + 572.f * Unit, 180.f * Unit, 6.f * Unit);
+				DrawCentered(TEXT("THE DIRECTOR'S CUT"), Top + 612.f * Unit, 3.f * Unit, HighlightGold);
+				DrawCentered(FString::Printf(TEXT("%s      TAKE %d"), *FilmCut, CurrentTake), Top + 700.f * Unit, 1.9f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
+			}
+			if (Grown < 1.f)
+			{
+				DrawFilmScreen(Unit, 0.f, Grown);
+			}
 			return;
 		}
 
@@ -144,9 +161,19 @@ void AStickHUD::DrawHUD()
 		const float Bar = Height * 0.11f;
 		DrawRect(FLinearColor::Black, 0.f, 0.f, Width, Bar);
 		DrawRect(FLinearColor::Black, 0.f, Height - Bar, Width, Bar);
+		// What a player of films shows: a play mark by the title, and a line that fills as the film runs.
+		const float PlayMark = 26.f * Unit;
+		const float AfterMark = 48.f * Unit + PlayMark + 14.f * Unit;
+		DrawPlayMark(48.f * Unit, Bar * 0.3f + 5.f * Unit, PlayMark, OuttakeTake > 0 ? HighlightGold : FLinearColor::White);
+		const float FilmLine = 5.f * Unit;
+		DrawRect(FLinearColor(0.22f, 0.22f, 0.22f), 0.f, Height - Bar, Width, FilmLine);
+		if (Film)
+		{
+			DrawRect(HighlightGold, 0.f, Height - Bar, Width * Film->GetProgress(), FilmLine);
+		}
 		if (OuttakeTake > 0)
 		{
-			Write(FString::Printf(TEXT("OUTTAKES   TAKE %d"), OuttakeTake), HighlightGold, 48.f * Unit, Bar * 0.3f, Font, 2.f * Unit);
+			Write(FString::Printf(TEXT("OUTTAKES   TAKE %d"), OuttakeTake), HighlightGold, AfterMark, Bar * 0.3f, Font, 2.f * Unit);
 			if (bOuttakeCut)
 			{
 				DrawCentered(TEXT("CUT!"), Top + 330.f * Unit, 10.f * Unit, RecordingRed);
@@ -155,7 +182,7 @@ void AStickHUD::DrawHUD()
 		}
 		else
 		{
-			Write(FString::Printf(TEXT("DIRECTOR'S CUT: %s   TAKE %d"), *FilmCut, CurrentTake), FLinearColor::White, 48.f * Unit, Bar * 0.3f, Font, 2.f * Unit);
+			Write(FString::Printf(TEXT("DIRECTOR'S CUT: %s   TAKE %d"), *FilmCut, CurrentTake), FLinearColor::White, AfterMark, Bar * 0.3f, Font, 2.f * Unit);
 		}
 
 		const FString Skip = TEXT("Enter or click to skip");
@@ -210,8 +237,19 @@ void AStickHUD::DrawHUD()
 			DrawSceneMenu(Unit);
 			return;
 		}
-		DrawCentered(CardHeadline, 270.f * Unit, 6.5f * Unit, FLinearColor::White);
-		DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, 405.f * Unit, 180.f * Unit, 6.f * Unit);
+		// The card that offers the cut shows the film waiting on a small screen, and its rows start under that.
+		const bool bCutChoice = CardHeadline == TEXT("DIRECTOR'S CUT");
+		if (bCutChoice)
+		{
+			DrawCentered(CardHeadline, 98.f * Unit, 4.2f * Unit, FLinearColor::White);
+			DrawFilmScreen(Unit, Top, 0.f);
+		}
+		else
+		{
+			DrawCentered(CardHeadline, 270.f * Unit, 6.5f * Unit, FLinearColor::White);
+			DrawRect(RecordingRed, Width * 0.5f - 90.f * Unit, 405.f * Unit, 180.f * Unit, 6.f * Unit);
+		}
+		const float FirstLine = bCutChoice ? 560.f : 470.f;
 		// A long card closes its lines up, so the last one stays on the screen.
 		const float LineStep = FMath::Min(62.f, 560.f / FMath::Max(CardLines.Num() - 1, 1));
 		const float LineSize = 2.4f * FMath::Sqrt(LineStep / 62.f);
@@ -219,7 +257,7 @@ void AStickHUD::DrawHUD()
 		for (int32 Line = 0; Line < CardLines.Num(); ++Line)
 		{
 			const FString& Text = CardLines[Line];
-			const float Y = (470.f + Line * LineStep) * Unit;
+			const float Y = (FirstLine + Line * LineStep) * Unit;
 			const bool bChosen = Text.StartsWith(TEXT(">\t"));
 			if (bChosen || Text.StartsWith(TEXT("\t")))
 			{
@@ -610,6 +648,56 @@ void AStickHUD::HandleCard(const FText& Headline, const FText& Detail)
 void AStickHUD::HandlePayChanged(int32 Pay)
 {
 	CurrentPay = Pay;
+}
+
+void AStickHUD::DrawPlayMark(float X, float Y, float Size, const FLinearColor& Color)
+{
+	// Out of thin strips: the HUD draws boxes and pictures, nothing with three corners.
+	const int32 Strips = FMath::Max(FMath::CeilToInt32(Size), 2);
+	const float Strip = Size / Strips;
+	for (int32 Index = 0; Index < Strips; ++Index)
+	{
+		const float FromMiddle = FMath::Abs((Index + 0.5f) / Strips * 2.f - 1.f);
+		DrawRect(Color, X, Y + Index * Strip, Size * 0.87f * (1.f - FromMiddle), Strip);
+	}
+}
+
+void AStickHUD::DrawFilmScreen(float Unit, float Down, float Grown)
+{
+	const float Width = Canvas->SizeX;
+	const float Height = Canvas->SizeY;
+	const float Top = (Height - 1080.f * Unit) * 0.5f;
+	const float Bar = Height * 0.11f;
+	const float Growth = FMath::InterpEaseInOut(0.f, 1.f, FMath::Clamp(Grown / FilmScreenGrowsShare, 0.f, 1.f), 2.f);
+	const float Shown = 1.f - FMath::Clamp((Grown - FilmScreenGrowsShare) / (1.f - FilmScreenGrowsShare), 0.f, 1.f);
+
+	// From the small screen on the card to the whole picture between the film's bars. Worked out on the window, then
+	// moved up by as much as the canvas has already been moved down.
+	const float ScreenWidth = FMath::Lerp(FilmScreenWidth * Unit, Width, Growth);
+	const float ScreenHeight = FMath::Lerp(FilmScreenWidth * Unit * 9.f / 16.f, Height - Bar * 2.f, Growth);
+	const float X = (Width - ScreenWidth) * 0.5f;
+	const float Y = FMath::Lerp(Top + FilmScreenTop * Unit, Bar, Growth) - Down;
+
+	const float Edge = 4.f * Unit;
+	DrawRect(FLinearColor(1.f, 1.f, 1.f, (1.f - Growth) * 0.9f), X - Edge, Y - Edge, ScreenWidth + Edge * 2.f, ScreenHeight + Edge * 2.f);
+	DrawRect(FLinearColor(0.f, 0.f, 0.f, Shown), X, Y, ScreenWidth, ScreenHeight);
+	const UStickGameInstance* Game = GetGameInstance<UStickGameInstance>();
+	if (Game && SceneCards.IsValidIndex(Game->SceneIndex) && SceneCards[Game->SceneIndex])
+	{
+		// The picture is 16 by 9 and the film's frame is wider: as the screen widens, its top and bottom are left out.
+		const float Kept = FMath::Min(16.f / 9.f * ScreenHeight / ScreenWidth, 1.f);
+		DrawTexture(SceneCards[Game->SceneIndex], X, Y, ScreenWidth, ScreenHeight, 0.f, (1.f - Kept) * 0.5f, 1.f, Kept, FLinearColor(1.f, 1.f, 1.f, Shown));
+	}
+
+	// The button is gone as soon as the screen starts to move: it has been pressed.
+	const float Button = 1.f - FMath::Clamp(Grown * 6.f, 0.f, 1.f);
+	if (Button > 0.f)
+	{
+		const float Box = 112.f * Unit;
+		const float Mark = 52.f * Unit;
+		DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.62f * Button), X + (ScreenWidth - Box) * 0.5f, Y + (ScreenHeight - Box) * 0.5f, Box, Box);
+		DrawPlayMark(X + (ScreenWidth - Mark * 0.87f) * 0.5f + 4.f * Unit, Y + (ScreenHeight - Mark) * 0.5f, Mark, HighlightGold);
+	}
 }
 
 void AStickHUD::DrawMenuRow(const FString& Text, bool bChosen, float Y, float Height, float Scale, float Unit)

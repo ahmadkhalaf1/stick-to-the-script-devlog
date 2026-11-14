@@ -1398,6 +1398,21 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
   - A read of the cook's store failed once during packaging and was tried again by the tool itself.
 - **Not verified:** how it feels to a person, which is the only test that counts here. Walking out of a strike and walking behind a guard, which need a held direction key. Whether the game is now too easy: its own player wins a scene in 19 to 28 seconds with the big finish, and had needed four takes for the bar earlier that evening.
 
+### 22:56 · The film on a screen: a play button, and the picture opens out into the film
+
+- **Developer said:** "where to play", which the agent answered with the path of the packaged game. Then, having played it: "looks nice so far , one improvment , while watching the reply there should be some indicator that shows this is a reply or the movie we recorded earlier , what do u suggest?" And before the agent had answered: "i suggest showing a screen at the end where we show a small thumbnail with play button we zoom inside the screen make it full screen and run the video inside it".
+- **Agent did:**
+  - Looked at what the film already showed: a title card, black bars, and a line of small white words in the top bar. Nothing in it moved, so nothing said that this was being played back.
+  - Built the developer's idea on the card that offers the cut. Above the three cuts there is now a small screen with the scene's picture and a play button. Choosing a cut opens that screen out, in 0.6 s, to the whole picture between the film's bars; there it fades into the title card, and the film begins. The title card is 0.6 s longer for it, so its words stay as long as they did.
+  - Added what the agent had been about to suggest: a play mark by the film's title, and a gold line along the bottom bar that fills as the film or an outtake runs.
+  - The game's canvas draws boxes and pictures and nothing with three corners, so the play button's triangle is a stack of thin strips.
+  - Told the video cutter about the longer title card, and to show the first film from the moment the screen opens.
+- **Result:** `Tools/check.ps1` passes. Photographed in the editor about every 0.15 s, on the warehouse and on the bar: the card with its screen, the screen opening, the title card, the film with its mark and its line. Packaged (829 MB, a 549 MB zip); the packaged game played itself through the warehouse and its film off screen with no errors, and the developer's saved progress was put back and compared.
+- **Went wrong:** in the first pass the title card's words showed round the small screen while it opened, the T and the E of THE WAREHOUSE either side of it. The words now wait until it has opened.
+- **Not verified:** nobody has seen it move, only in pictures. The small screen shows the scene's card from the first menu, a still made earlier, and not the take just shot: the developer has not said whether that will do. The video cutter has not met a recording since: none has been made.
+
+![The film on a screen, on the bar scene: the card with its play button, the screen opening out, the title card, and the film with its play mark and its line](Docs/devlog/90-the-film-on-a-screen.jpg)
+
 ---
 
 ## Asset and tool register

@@ -57,6 +57,10 @@ public:
 	bool IsOnEndSlate() const { return Phase == EPhase::HoldingLastFrame && !bOuttake; }
 	// How long the film itself ran, known once it is over.
 	float GetRunningSeconds() const { return RunningSeconds; }
+	// How long the title card has been up. The HUD opens the film out of a small screen in its first moments.
+	float GetTitleCardSecondsShown() const { return Phase == EPhase::Titles ? TitleCardSeconds - PhaseSecondsLeft : TitleCardSeconds; }
+	// 0 to 1: how much of what is being shown, the film or an outtake, has been shown.
+	float GetProgress() const;
 
 	UPROPERTY()
 	TObjectPtr<AFightRecorder> Recorder;
@@ -70,7 +74,8 @@ private:
 		Playing,
 		HoldingLastFrame
 	};
-	static constexpr float TitleCardSeconds = 2.2f;
+	// The first 0.6 s of it are the small screen opening out. Tools/cut_video.mjs has the same number.
+	static constexpr float TitleCardSeconds = 2.8f;
 
 	enum ECamera
 	{

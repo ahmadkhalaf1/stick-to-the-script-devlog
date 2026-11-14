@@ -18,7 +18,7 @@ const WORTH = { SwingKick: 10, Throw: 8, Roundhouse: 7, Uppercut: 7, Sweep: 5, C
 const KNOCKOUT = 5;
 const HIGHLIGHTS = [4, 3, 3];
 // As long as the film shows them: TitleCardSeconds and EndSlateSeconds in Cam/FinalCut.cpp.
-const TITLE_CARD = 2.2, END_SLATE = 2.6;
+const TITLE_CARD = 2.8, END_SLATE = 2.6;
 
 // Every line of the log starts with the moment it was written, to the millisecond.
 const log = readFileSync(`${DIR}run.log`, 'utf8').split('\n').map(line => {
@@ -113,8 +113,9 @@ scenes.forEach((scene, number) => {
     const choice = log.find(line => line.at > won.at && line.text.includes('OnCard: "DIRECTOR\'S CUT"'));
     if (choice) add(choice.at + 1.3, 2.0, 'choice of cut');
   }
-  // The first film is shown from its title card. The others start after theirs: a card seen for half a second is a flash.
-  if (film) add(film.from + (number === 0 ? 0.8 : TITLE_CARD + 0.1), Math.min(number === 0 ? 5.7 : 4, film.to - film.from - END_SLATE - TITLE_CARD), `film ${number + 1}`);
+  // The first film is shown from the moment its small screen opens out into the title card. The others start after
+  // their cards: a card seen for half a second is a flash.
+  if (film) add(film.from + (number === 0 ? 0 : TITLE_CARD + 0.1), Math.min(number === 0 ? 6.4 : 4, film.to - film.from - END_SLATE - (number === 0 ? 0 : TITLE_CARD)), `film ${number + 1}`);
   // The slate is the film's last picture only when no outtakes follow it.
   const outtakes = film && log.some(line => line.at > film.from && line.at < film.to && line.text.includes('OnOuttake'));
   if (film && !outtakes && number === scenes.length - 1) add(film.to - END_SLATE + 0.3, 2.0, 'slate');

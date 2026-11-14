@@ -199,6 +199,24 @@ void AFinalCut::HandleTakeFinished(const FTake& FinishedTake)
 	Phase = EPhase::Ready;
 }
 
+float AFinalCut::GetProgress() const
+{
+	if (Phase == EPhase::HoldingLastFrame)
+	{
+		return 1.f;
+	}
+	if (Phase != EPhase::Playing || !Clips.IsValidIndex(ClipIndex))
+	{
+		return 0.f;
+	}
+	float Shown = ReplaySeconds - Clips[ClipIndex].StartSeconds;
+	for (int32 Index = 0; Index < ClipIndex; ++Index)
+	{
+		Shown += Clips[Index].EndSeconds - Clips[Index].StartSeconds;
+	}
+	return FMath::Clamp(Shown / FMath::Max(TotalSeconds(Clips), 0.01f), 0.f, 1.f);
+}
+
 void AFinalCut::Start(EFilmCut InCut)
 {
 	if (Phase != EPhase::Ready)

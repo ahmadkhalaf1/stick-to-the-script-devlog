@@ -77,6 +77,12 @@ private:
 	TArray<TObjectPtr<class UTexture2D>> SceneCards;
 	UPROPERTY()
 	TArray<TObjectPtr<class UTexture2D>> LockedSceneCards;
+	// The film as a screen with a play button, so nobody takes it for the fight still going on: small on the card that
+	// offers the cut, and opening out to the whole picture between the film's bars as the film begins. Grown is 0 for
+	// the small screen and 1 for the whole picture; Down is added to its place when nothing has moved the canvas.
+	void DrawFilmScreen(float Unit, float Down, float Grown);
+	// A play button's triangle, pointing right, Size high.
+	void DrawPlayMark(float X, float Y, float Size, const FLinearColor& Color);
 	// The wardrobe's panel: every colour as a swatch, every hat and build as a pip, what is chosen named large.
 	void DrawWardrobe(float Unit);
 	// A strip along the bottom of a take: every key, and what it does at this moment. A meaning that has changed, because
