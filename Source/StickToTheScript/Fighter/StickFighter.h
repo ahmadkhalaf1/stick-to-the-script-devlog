@@ -122,6 +122,8 @@ public:
 	// Takes off the forearm or the shin nearest to a point: a gun does that. Someone still on their feet keeps both legs.
 	void Sever(const FVector& Near);
 	FVector GetCarryPoint() const;
+	// 0 while a carried weapon is held up, 1 as its swing lands.
+	float GetWeaponSwing() const;
 	// 0 the left hand, 1 the right.
 	FVector GetHandPoint(int32 Side) const;
 
@@ -400,6 +402,9 @@ private:
 	TWeakObjectPtr<AThrownProp> Carried;
 	float CarryAlpha = 0.f;
 	float ThrowSecondsLeft = 0.f;
+	// Since a swing of the carried weapon began, and when it lands. Negative while nothing is swung.
+	float WeaponSwingElapsed = -1.f;
+	float WeaponSwingContactAt = 0.f;
 	int32 BlowsInARow = 0;
 	float LastBlowSeconds = 0.f;
 

@@ -88,6 +88,10 @@ namespace
 	// How far from the struck joint a hit is still felt strongly.
 	const float RecoilReach = 40.f;
 	const float HeavyRecoil = 1.6f;
+	// How fast a ducked fighter moves, as a share of its walk.
+	const float DuckWalkSpeedShare = 0.5f;
+	// How long a swung weapon takes to come back up after it has landed.
+	const float WeaponSwingBackSeconds = 0.3f;
 	const float BlockedRecoil = 0.35f;
 	const float KnockoutSpeed = 200.f;
 	// How far outside the arena a body that is down may travel before it is stopped.
@@ -977,6 +981,14 @@ void AStickFighter::Tick(float DeltaSeconds)
 	StanceAlpha = FMath::FInterpConstantTo(StanceAlpha, bStandsReady ? 1.f : 0.f, DeltaSeconds, StanceBlendPerSecond);
 	CarryAlpha = FMath::FInterpConstantTo(CarryAlpha, Carried.IsValid() ? 1.f : 0.f, DeltaSeconds, PoseBlendPerSecond);
 	ThrowSecondsLeft = FMath::Max(ThrowSecondsLeft - DeltaSeconds, 0.f);
+	if (WeaponSwingElapsed >= 0.f)
+	{
+		WeaponSwingElapsed += DeltaSeconds;
+		if (WeaponSwingElapsed > WeaponSwingContactAt + WeaponSwingBackSeconds)
+		{
+			WeaponSwingElapsed = -1.f;
+		}
+	}
 
 	if (bDemoAllMoves && State != EFighterState::Busy)
 	{
@@ -1524,6 +1536,12 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		PoseArms(Joints, GetActorForwardVector(), Done < 0.6 ? 1. : (1. - Done) / 0.4, FMath::Lerp(4., 55., Swing), 14., FMath::Lerp(36., -25., Swing));
 	}
 
+	if (const double Swung = GetWeaponSwing(); Swung > 0.)
+	{
+		// Both hands stay on a weapon through its swing and drive it out in front, where a punch would have put one fist.
+		PoseArms(Joints, GetActorForwardVector(), 1., FMath::Lerp(24., 56., Swung), 5., FMath::Lerp(-20., -4., Swung));
+	}
+
 	if (bKicking && !bPosedByClip)
 	{
 		// 0 to 1 while the strike is on its way, 1 to 2 while it is taken back.
@@ -1979,6 +1997,12 @@ bool AStickFighter::StrikeWith(EMove Move, float SecondsUntilContact)
 		SecondsUntilContact = SecondsUntilContact > 0.f ? SecondsUntilContact : Posed->WindUpSeconds;
 		StartPosed(Move, SecondsUntilContact);
 	}
+	else if (Carried.IsValid() && Carried->IsSwung())
+	{
+		// With a bat in the hands the blow is the bat's: it comes over and down as the strike arrives.
+		WeaponSwingElapsed = 0.f;
+		WeaponSwingContactAt = FMath::Max(SecondsUntilContact > 0.f ? SecondsUntilContact : ContactSeconds, 0.1f);
+	}
 	bFreeStrike = true;
 	bStrikeFromAir = JumpHeight > OutOfReachHeight * 0.5f;
 
@@ -2425,6 +2449,18 @@ FVector AStickFighter::GetHandPoint(int32 Side) const
 	return BuildJoints(true)[HandOfSide[Side]];
 }
 
+float AStickFighter::GetWeaponSwing() const
+{
+	if (WeaponSwingElapsed < 0.f)
+	{
+		return 0.f;
+	}
+	// It gathers speed on its way in and is taken back evenly.
+	return WeaponSwingElapsed < WeaponSwingContactAt
+		? FMath::Square(WeaponSwingElapsed / WeaponSwingContactAt)
+		: 1.f - FMath::Min((WeaponSwingElapsed - WeaponSwingContactAt) / WeaponSwingBackSeconds, 1.f);
+}
+
 FVector AStickFighter::GetCarryPoint() const
 {
 	const TArray<FVector> Joints = BuildJoints(true);
@@ -2452,9 +2488,11 @@ void AStickFighter::AdvanceFreeMovement(float DeltaSeconds)
 	}
 
 	const bool bOnItsFeet = State == EFighterState::Idle || State == EFighterState::Moving;
-	const bool bMayWalk = bOnItsFeet && !bMoving && StunSecondsLeft <= 0.f && PoseAlpha < 0.3f;
+	// Ducked, a fighter still creeps along. Behind a guard it stands its ground.
+	const bool bCreeps = HeldPose == EMove::Duck && PoseAlpha >= 0.3f;
+	const bool bMayWalk = bOnItsFeet && !bMoving && StunSecondsLeft <= 0.f && (PoseAlpha < 0.3f || bCreeps);
 	const double InputLength = WalkInput.Size();
-	const FVector2D Velocity = bMayWalk && InputLength > 0.05 ? WalkInput / FMath::Max(InputLength, 1.) * WalkSpeed : FVector2D::ZeroVector;
+	const FVector2D Velocity = bMayWalk && InputLength > 0.05 ? WalkInput / FMath::Max(InputLength, 1.) * WalkSpeed * (bCreeps ? DuckWalkSpeedShare : 1.f) : FVector2D::ZeroVector;
 	const bool bWantsToWalk = !Velocity.IsNearlyZero(1.);
 
 	// Someone backing away from what it faces walks backwards, instead of jogging on the spot in reverse.

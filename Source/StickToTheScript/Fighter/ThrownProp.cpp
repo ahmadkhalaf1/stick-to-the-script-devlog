@@ -95,6 +95,7 @@ namespace
 	const float LegendaryGlow = 1.6f;
 	// A weapon in the hands points up and ahead, and is held near its handle end.
 	const double HeldPitchDegrees = 62.;
+	const double SwungPitchDegrees = -30.;
 	const double HeldAtShareOfLength = 0.55;
 	const double LegendaryDropHeight = 320.;
 	const float ThrownLegendLaunchSpeed = 950.f;
@@ -266,7 +267,8 @@ void AThrownProp::Tick(float DeltaSeconds)
 		{
 			if (IsSwung())
 			{
-				const FRotator Raised(HeldPitchDegrees, Carrier->GetActorRotation().Yaw, 0.);
+				// Up and ahead while it is carried, brought over and down onto its target as a swing lands.
+				const FRotator Raised(FMath::Lerp(HeldPitchDegrees, SwungPitchDegrees, static_cast<double>(Carrier->GetWeaponSwing())), Carrier->GetActorRotation().Yaw, 0.);
 				SetActorLocationAndRotation(Carrier->GetCarryPoint() + Raised.Vector() * (HalfLength * HeldAtShareOfLength), Raised);
 			}
 			else if (const FGunLook* Gun = FindGun(Kind))

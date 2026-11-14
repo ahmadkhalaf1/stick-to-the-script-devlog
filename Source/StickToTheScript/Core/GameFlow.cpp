@@ -529,7 +529,7 @@ void AGameFlow::Continue()
 		{
 			ShowCard(TEXT("THAT'S THE PICTURE"),
 				(Director && !Director->Script.Epilogue.IsEmpty() ? Director->Script.Epilogue.ToString() + TEXT("\n\n") : FString())
-						+ FString::Printf(TEXT("Fees: $%d of the $%d offered.\nBox office: $%d.\nTakes: %s.\nYou made $%d.\n\nPunch to go back to the menu."), Game->Earned - Game->BoxOffice, Game->Offered, Game->BoxOffice, *DescribeTakes(Game->TakesByScene), Game->Earned));
+						+ FString::Printf(TEXT("Fees: $%d of the $%d offered.\nBox office: $%d.\nTakes: %s.\nYou made $%d.\n\n>\tBack to the menu\n\nEnter or click"), Game->Earned - Game->BoxOffice, Game->Offered, Game->BoxOffice, *DescribeTakes(Game->TakesByScene), Game->Earned));
 			Enter(EStep::Results);
 		}
 		else
@@ -617,9 +617,9 @@ void AGameFlow::ShowMenu()
 	{
 		Detail += TEXT("\nLeft click: punch      Right click: guard      F: kick      Ctrl: duck      Space: jump      E: grab, throw\nDuck and punch: uppercut      Duck and kick: sweep      Guard and punch: hook      Guard and kick: roundhouse\nJump under a red bar to hang from it, then kick      A gun in your hands: left click fires it\n");
 	}
-	Detail += bShop ? TEXT("\nW / S: choose      Left click: buy")
-		: bPaused || bCutting ? TEXT("\nW / S: choose      Left click: go")
-		: TEXT("\nA / D  or  W / S: choose      Left click: go      Esc: pause");
+	Detail += bShop ? TEXT("\nW / S: choose      Enter or click: buy")
+		: bPaused || bCutting ? TEXT("\nW / S: choose      Enter or click: go")
+		: TEXT("\nA / D  or  W / S: choose      Enter or click: play      Esc: pause");
 	ShowCard(bPaused ? TEXT("PAUSED") : bCutting ? TEXT("DIRECTOR'S CUT") : bShop ? TEXT("THE PROP SHOP") : TEXT("STICK TO THE SCRIPT"), Detail);
 }
 
@@ -684,7 +684,7 @@ void AGameFlow::ChooseFromMenu()
 	else if (MenuCursor == SceneNames.Num() + 1)
 	{
 		ShowCard(TEXT("CREDITS"),
-			TEXT("Made for the 2026 Epic AI MegaJam.\nDirected by one human. Built with an AI coding agent, Claude Code.\nUnreal Engine 5.8. The fighters' body and their moves are Mixamo's, posed on sixteen joints.\nThe sets are built by scripts. Their surfaces, their sky, the guns and the props are Poly Haven's scans.\nThe director's voice, the blows and the music: ElevenLabs, through fal.ai.\n\nNo stunt performers were paid what the script promised.\n\nPunch to go back."));
+			TEXT("Made for the 2026 Epic AI MegaJam.\nDirected by one human. Built with an AI coding agent, Claude Code.\nUnreal Engine 5.8. The fighters' body and their moves are Mixamo's, posed on sixteen joints.\nThe sets are built by scripts. Their surfaces, their sky, the guns and the props are Poly Haven's scans.\nThe director's voice, the blows and the music: ElevenLabs, through fal.ai.\n\nNo stunt performers were paid what the script promised.\n\n>\tBack\n\nEnter or click"));
 		Enter(EStep::Credits);
 	}
 	else if (MenuCursor > SceneNames.Num() + 1)

@@ -157,7 +157,7 @@ void AStickHUD::DrawHUD()
 			Write(FString::Printf(TEXT("DIRECTOR'S CUT: %s   TAKE %d"), *FilmCut, CurrentTake), FLinearColor::White, 48.f * Unit, Bar * 0.3f, Font, 2.f * Unit);
 		}
 
-		const FString Skip = TEXT("Punch to skip");
+		const FString Skip = TEXT("Enter or click to skip");
 		float SkipWidth = 0.f;
 		float SkipHeight = 0.f;
 		Measure(Skip, SkipWidth, SkipHeight, Font, 1.4f * Unit);
@@ -707,6 +707,14 @@ void AStickHUD::DrawSceneMenu(float Unit)
 
 		float TextWidth = 0.f;
 		float TextHeight = 0.f;
+		if (Row.bChosen && !bLocked)
+		{
+			// The chosen card wears its button: nobody guesses that a picture is something to click.
+			const float Strip = 50.f * Unit;
+			DrawRect(HighlightGold, X, Y + CardHeight - Strip, CardWidth, Strip);
+			Measure(TEXT("PLAY"), TextWidth, TextHeight, Font, 2.6f * Unit);
+			Write(TEXT("PLAY"), FLinearColor::Black, X + (CardWidth - TextWidth) * 0.5f, Y + CardHeight - Strip + (Strip - TextHeight) * 0.5f, Font, 2.6f * Unit);
+		}
 		if (bLocked)
 		{
 			Measure(TEXT("LOCKED"), TextWidth, TextHeight, Font, 3.f * Unit);
@@ -809,7 +817,9 @@ void AStickHUD::DrawWardrobe(float Unit)
 	{
 		Flow->PointAtLook(PointedRow, PointedIndex);
 	}
-	DrawCentered(TEXT("Click a colour, a hat or a build to wear it.   Click anywhere else when you are ready."), 990.f * Unit, 1.9f * Unit, FLinearColor::White);
+	DrawCentered(TEXT("Click a colour, a hat or a build to wear it."), 918.f * Unit, 1.9f * Unit, FLinearColor::White);
+	// The way on, drawn as a button. A click anywhere off the panel goes on as well, which nobody could have known.
+	DrawMenuRow(TEXT("Start the scene     Enter or click"), true, 976.f * Unit, 62.f * Unit, 2.4f * Unit, Unit);
 }
 
 void AStickHUD::DrawCentered(const FString& Text, float Y, float Scale, const FLinearColor& Color)

@@ -1334,6 +1334,25 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The rooftop: bars over the opponents' heads, then the boss with his own bar](Docs/devlog/86-bars-over-heads-and-a-boss.jpg)
 
+### 20:38 · A person plays it, and finds three things in ten minutes
+
+- **Developer said:** asked to play the new build, "Later"; and then played it. Three messages came back while the game was open:
+  - "holding baseball bat how can i still punsh? hit should hit with the bat ."
+  - "at menu should be continue or next butotn or start not only clickign mouse , it snot obvious"
+  - "crouch + walking is not working i need to release crouch key first"
+- **Agent did:**
+  - Saw the game running when it went to start a test of its own, and started nothing: no window, no test, no packaging over files that were open.
+  - The bat. The blow had always counted as the bat's, with the bat's damage and reach. What was drawn was the plain punch, with the bat carried upright beside it. Now the bat comes over and down as the blow arrives and both hands stay on it.
+  - The menus. Enter and Space went on from every card already; the screen only ever said "Left click". The chosen scene card wears a PLAY button, the wardrobe has "Start the scene", the last card and the credits have "Back", and every hint names Enter beside the click.
+  - The duck. One condition stopped all walking while any pose was held. Ducked, the fighter now creeps at half speed; behind a guard it still does not move.
+- **Result:** `Tools/check.ps1` passes. In the editor the bat's swing was photographed in slow motion, and the PLAY and "Start the scene" buttons on their cards.
+- **Went wrong:** none of the three was found by the agent in a day of testing. Two of them could not be: its tests press keys and read the log, and a log does not say that a bat looked like a fist or that a button was missing. The third no test of its had ever tried: walking with the duck held needs two keys held at once.
+- **Not verified:** the creeping itself. It needs a key held down and the editor's tools can only tap one, so it is the developer's to try. Nothing of this is packaged yet: the developer's game was still open. And one number is not explained to the end. In the play of scene 1 before the merge, the game's own player needed five takes for the warehouse, which it had won in one take every time today, and took 8 to 13 blows a take instead of 6. The editor was running behind the developer's game at 40 frames a second instead of 80 and its log has 58 gaps of more than a second; a stall like that lets every opponent's blow land at once. Nothing in the three changes touches the warehouse's fight as the game's own player fights it (it never ducks there and carried no bat). So it is put down to the stalls, and the warehouse is to be run again on a quiet PC before anything is packaged.
+
+![A bat in the hands: the click now swings it, both hands on the handle, down through the target and back up](Docs/devlog/87-a-bat-is-swung.jpg)
+
+![The chosen card says PLAY, and the wardrobe has a button for going on](Docs/devlog/88-buttons-that-say-so.jpg)
+
 ---
 
 ## Asset and tool register
