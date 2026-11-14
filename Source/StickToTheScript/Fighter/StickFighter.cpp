@@ -286,6 +286,7 @@ namespace
 	const double ThrowAimDistance = 450.;
 	const double ThrowAimCosine = 0.82;
 	const float ThrowGestureSeconds = 0.3f;
+	const double ThrowLeanRadians = 0.42;
 	// A strike thrown from too close steps back by up to this much, so the fist does not go through the body.
 	const double StepBackDistance = 40.;
 
@@ -1393,6 +1394,8 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		// The arms that held the prop overhead come down and forward to hurl it, then let the pose go.
 		const double Done = 1. - ThrowSecondsLeft / ThrowGestureSeconds;
 		const double Swing = FMath::Min(Done * 2.5, 1.);
+		// The body goes with the throw: it leans into it as the arms come over, and straightens again.
+		LeanBody(Joints, GetActorForwardVector(), ThrowLeanRadians * FMath::Sin(UE_PI * FMath::Min(Done * 1.3, 1.)), 0.);
 		PoseArms(Joints, GetActorForwardVector(), Done < 0.6 ? 1. : (1. - Done) / 0.4, FMath::Lerp(4., 55., Swing), 14., FMath::Lerp(36., -25., Swing));
 	}
 

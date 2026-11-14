@@ -894,6 +894,20 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The new body in a fight, in a film close-up, and in the wardrobe with a top hat](Docs/devlog/57-a-real-body.jpg)
 
+### 02:19–02:39 · Props that drop in, bounce and break; a question about guns
+
+- **Developer said:** earlier, in a list of what still looked old: "throwing items also need improvbment in quality and graphic and spawning and holding and throwing techinqes". And in the middle of this work, a question: what if the fist fights became gun fights, with a shotgun, limbs shot off, weapons picked up from the ground, ricochets, and how much effort would that be.
+- **Agent did:**
+  - Read how a prop arrives, lands, is held and thrown before changing it. It was there when the take began, stuck where it touched the floor, vanished when it broke, and was thrown with the arms alone.
+  - Gave it a drop into place as the take is called, a bounce and a settle, ten flying pieces where it breaks (in the film too), and a throw that leans the whole body.
+  - Eased the warehouse's flat overhead light and thickened its haze. The sets already had haze, bloom, grain and a fixed exposure, so the "lighting pass" the agent had promised was mostly there, and it said so.
+  - Answered the question about guns: replacing the fist fighting is three to five days of work and cannot be done well by Monday; adding a shotgun and a pistol on top of what exists is five to seven hours, because the gunman, the weapons picked up from the floor, the shop, the impact effects and the new body made of parts are already there. The decision is the developer's.
+- **Result:** a crate tumbles onto the set at "action". A throw bends the thrower. A bottle broke into pieces in a take and broke again when the film replayed it.
+- **Went wrong:** the film did not break the bottle at first. The agent had told it to look for a prop dropping exactly two thousand units straight down between two frames, and a prop in flight has moved sideways by the next frame. It now looks for a prop that has gone deeper than one held in reserve ever is.
+- **Not verified:** how the pieces look; no picture caught them at a size that shows. The packaged build's frame rate: the check ran at nine frames a second with another game in front. How a bat sits in the new hands.
+
+![A crate dropping onto the set as the take is called, and a throw with the whole body](Docs/devlog/58-props-that-behave.jpg)
+
 ---
 
 ## Asset and tool register

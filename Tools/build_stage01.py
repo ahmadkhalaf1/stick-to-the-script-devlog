@@ -72,7 +72,7 @@ for index, x in enumerate((100, 650, 1200, 1750)):
 spot_light("Light_Key_End", (-190, 330, 430), (-450, 0, 110), 9000.0, (1.0, 0.86, 0.68), 36.0)
 spot_light("Light_Rim_End", (-120, -340, 450), (-450, 0, 120), 6000.0, (0.6, 0.75, 1.0), 34.0)
 block("Stand_Key_End", CYLINDER, metal_look, (-190, 460, 215), (0.06, 0.06, 4.3))
-fill_light((850, 150, 535), 2600.0, 1400.0)
+fill_light((850, 150, 535), 1100.0, 1400.0)
 
 # Lamps hanging over the goods at the back: a shade, a bulb that shows, and a warm pool under each. They cast no shadows,
 # which keeps them cheap; the key and rim lights do that work.
@@ -82,7 +82,7 @@ for index, x in enumerate((0, 600, 1200, 1800)):
     block(f"Lamp_{index}_Bulb", CYLINDER, bulb, (x, -300, 422), (0.3, 0.3, 0.04))
     spot_light(f"Light_Lamp_{index}", (x, -300, 418), (x, -300, 0), 3500.0, (1.0, 0.78, 0.5), 55.0, shadows=False)
 
-haze(0.012)
+haze(0.032)
 grade(6.0, 0.6)
 
 # Goods along the back wall, kept clear of the path and of the two places where opponents wait (x 480 to 960, behind the cover).

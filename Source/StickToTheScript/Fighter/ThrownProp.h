@@ -7,6 +7,7 @@
 
 class AStickFighter;
 class UMaterialInterface;
+class UMaterialInterface;
 class UStaticMesh;
 class UStaticMeshComponent;
 
@@ -71,6 +72,9 @@ private:
 	void HandleFighterDown(AActor* Fighter, bool bPlayer);
 
 	void Shatter();
+	// What a prop leaves where it breaks: pieces that fly apart, land, and lie there until the next take.
+	void BurstIntoPieces(const FVector& From, const FVector& Carried);
+	void FlyPieces(float DeltaSeconds);
 
 	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> Mesh;
@@ -97,4 +101,21 @@ private:
 	double HalfLength = 0.;
 	FVector2D ArenaMin = FVector2D::ZeroVector;
 	FVector2D ArenaMax = FVector2D::ZeroVector;
+
+	// A prop that has come to rest rights itself over a moment, from however it was lying when it stopped.
+	FRotator SettleFrom = FRotator::ZeroRotator;
+	float SettleSecondsLeft = 0.f;
+	// Each bounce takes some of the spin out of it.
+	float SpinShare = 1.f;
+
+	UPROPERTY()
+	TObjectPtr<UStaticMesh> PieceMesh;
+	UPROPERTY()
+	TObjectPtr<UMaterialInterface> PieceMaterial;
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> Pieces;
+	TArray<FVector> PieceVelocities;
+	bool bPiecesFlying = false;
+	// How the puppet moved between its last two places, for the pieces of one that breaks in the film.
+	FVector PuppetVelocity = FVector::ZeroVector;
 };

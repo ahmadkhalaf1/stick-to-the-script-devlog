@@ -25,19 +25,21 @@ namespace
 		int32 Uses;
 		// A golden prop knocks out whatever it touches and shines by its own light.
 		bool bLegendary;
+		// What its pieces look like when it breaks.
+		FLinearColor Pieces;
 	};
 	const FPropLook Looks[] = {
-		{ TEXT("SM_Crate"), 30.f, false, 0.f, 0, false },
-		{ TEXT("SM_Bottle"), 22.f, true, 0.f, 0, false },
-		{ TEXT("SM_Melon"), 26.f, true, 0.f, 0, false },
-		{ TEXT("SM_Cone"), 18.f, false, 0.f, 0, false },
-		{ TEXT("SM_Pan"), 34.f, false, 0.f, 0, false },
-		{ TEXT("SM_GoldHammer"), 999.f, false, 999.f, 3, true },
-		{ TEXT("SM_GoldBat"), 999.f, false, 999.f, 3, true },
-		{ TEXT("SM_GoldFish"), 999.f, false, 999.f, 3, true },
-		{ TEXT("SM_WoodBat"), 24.f, false, 22.f, 8, false },
-		{ TEXT("SM_IronBar"), 30.f, false, 30.f, 12, false },
-		{ TEXT("SM_Sledge"), 40.f, false, 45.f, 6, false },
+		{ TEXT("SM_Crate"), 30.f, false, 0.f, 0, false, FLinearColor(0.55f, 0.38f, 0.2f) },
+		{ TEXT("SM_Bottle"), 22.f, true, 0.f, 0, false, FLinearColor(0.1f, 0.45f, 0.2f) },
+		{ TEXT("SM_Melon"), 26.f, true, 0.f, 0, false, FLinearColor(0.75f, 0.06f, 0.08f) },
+		{ TEXT("SM_Cone"), 18.f, false, 0.f, 0, false, FLinearColor(1.f, 0.35f, 0.02f) },
+		{ TEXT("SM_Pan"), 34.f, false, 0.f, 0, false, FLinearColor(0.2f, 0.2f, 0.22f) },
+		{ TEXT("SM_GoldHammer"), 999.f, false, 999.f, 3, true, FLinearColor(1.f, 0.75f, 0.15f) },
+		{ TEXT("SM_GoldBat"), 999.f, false, 999.f, 3, true, FLinearColor(1.f, 0.75f, 0.15f) },
+		{ TEXT("SM_GoldFish"), 999.f, false, 999.f, 3, true, FLinearColor(1.f, 0.75f, 0.15f) },
+		{ TEXT("SM_WoodBat"), 24.f, false, 22.f, 8, false, FLinearColor(0.5f, 0.33f, 0.18f) },
+		{ TEXT("SM_IronBar"), 30.f, false, 30.f, 12, false, FLinearColor(0.3f, 0.3f, 0.33f) },
+		{ TEXT("SM_Sledge"), 40.f, false, 45.f, 6, false, FLinearColor(0.5f, 0.33f, 0.18f) },
 	};
 
 	const float LegendaryGlow = 1.6f;
@@ -57,7 +59,19 @@ namespace
 	const double BeyondArena = 150.;
 	// Where a shattered bottle goes. Its recorded place carries that into the film, so nothing else has to remember it broke.
 	const double GoneDepth = 2000.;
+
+	// A prop that comes down faster than this bounces, keeping this share of its speed upward and this share along the floor.
+	const float BounceAboveSpeed = 240.f;
+	const float BounceKeepsUp = 0.36f;
+	const float BounceKeepsAlong = 0.5f;
+	const float SettleSeconds = 0.14f;
+	// As a take is called, everything on the set is dropped into its place from between these heights.
+	const double DropInLowest = 80.;
+	const double DropInHighest = 170.;
+	const int32 PieceCount = 10;
 }
+
+DEFINE_LOG_CATEGORY_STATIC(LogThrownProp, Log, All);
 
 AThrownProp::AThrownProp()
 {
@@ -66,6 +80,11 @@ AThrownProp::AThrownProp()
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	RootComponent = Mesh;
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Shiny(TEXT("/Game/Materials/M_Figure"));
+	PieceMesh = Cube.Object;
+	PieceMaterial = Shiny.Object;
 }
 
 bool AThrownProp::IsLegendary() const
@@ -119,9 +138,18 @@ void AThrownProp::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// Before anything else: the pieces of a prop that broke fly on in the film too, where the prop itself is only placed.
+	FlyPieces(DeltaSeconds);
 	if (bPuppet)
 	{
 		return;
+	}
+
+	if (State == EState::Resting && SettleSecondsLeft > 0.f)
+	{
+		SettleSecondsLeft = FMath::Max(SettleSecondsLeft - DeltaSeconds, 0.f);
+		const FQuat Upright = FRotator(0., SettleFrom.Yaw, 0.).Quaternion();
+		SetActorRotation(FQuat::Slerp(SettleFrom.Quaternion(), Upright, 1.f - SettleSecondsLeft / SettleSeconds));
 	}
 
 	// A legendary prop lying on the set turns slowly, so it cannot be mistaken for a crate.
@@ -153,7 +181,7 @@ void AThrownProp::Tick(float DeltaSeconds)
 
 	Velocity.Z -= PropGravity * DeltaSeconds;
 	FVector Location = GetActorLocation() + Velocity * DeltaSeconds;
-	AddActorLocalRotation(FRotator(SpinDegreesPerSecond * DeltaSeconds, 0., 0.));
+	AddActorLocalRotation(FRotator(SpinDegreesPerSecond * SpinShare * DeltaSeconds, 0., 0.));
 
 	if (bCanStillHit)
 	{
@@ -200,16 +228,25 @@ void AThrownProp::Tick(float DeltaSeconds)
 	if (Location.Z <= FloorHeight + HalfHeight)
 	{
 		Location.Z = FloorHeight + HalfHeight;
-		SetActorLocationAndRotation(Location, FRotator(0., GetActorRotation().Yaw, 0.));
-		if ((bCanStillHit && Looks[static_cast<int32>(Kind)].bShatters) || (bThrown && IsLegendary()))
+		SetActorLocation(Location);
+		const bool bBreaks = (bCanStillHit && Looks[static_cast<int32>(Kind)].bShatters) || (bThrown && IsLegendary());
+		bCanStillHit = false;
+		if (bBreaks)
 		{
 			Shatter();
 		}
+		else if (Velocity.Z < -BounceAboveSpeed)
+		{
+			// It bounces, lower each time, and a bounce hurts nobody.
+			Velocity = FVector(Velocity.X * BounceKeepsAlong, Velocity.Y * BounceKeepsAlong, -Velocity.Z * BounceKeepsUp);
+			SpinShare *= 0.5f;
+		}
 		else
 		{
+			SettleFrom = GetActorRotation();
+			SettleSecondsLeft = SettleSeconds;
 			State = EState::Resting;
 		}
-		bCanStillHit = false;
 		return;
 	}
 	SetActorLocation(Location);
@@ -230,19 +267,100 @@ void AThrownProp::Release(const FVector& InVelocity)
 	Velocity = InVelocity;
 	bCanStillHit = !InVelocity.IsNearlyZero();
 	bThrown = bCanStillHit;
+	SpinShare = 1.f;
 	State = EState::Flying;
 }
 
 void AThrownProp::SetPuppetTransform(const FTransform& Transform)
 {
+	// A prop that broke in the take is recorded as dropping out of the world, deeper than one held in reserve ever is.
+	// The film breaks it again where it was.
+	const FVector Moved = Transform.GetLocation() - GetActorLocation();
+	if (bPuppet && GetActorLocation().Z > FloorHeight - 100. && Transform.GetLocation().Z < FloorHeight - (ReserveDepth + GoneDepth) * 0.5)
+	{
+		BurstIntoPieces(GetActorLocation(), PuppetVelocity);
+	}
+	else if (bPuppet && GetWorld()->GetDeltaSeconds() > UE_KINDA_SMALL_NUMBER)
+	{
+		PuppetVelocity = Moved / GetWorld()->GetDeltaSeconds();
+	}
 	bPuppet = true;
 	SetActorTransform(Transform);
 }
 
 void AThrownProp::Shatter()
 {
+	BurstIntoPieces(GetActorLocation(), Velocity);
 	State = EState::Shattered;
 	AddActorWorldOffset(FVector(0., 0., -GoneDepth));
+}
+
+void AThrownProp::BurstIntoPieces(const FVector& From, const FVector& Carried)
+{
+	while (Pieces.Num() < PieceCount)
+	{
+		UStaticMeshComponent* Piece = NewObject<UStaticMeshComponent>(this);
+		Piece->SetStaticMesh(PieceMesh);
+		Piece->SetMaterial(0, PieceMaterial);
+		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Piece->SetupAttachment(RootComponent);
+		// The prop itself drops out of the world when it breaks. Its pieces stay where it broke.
+		Piece->SetUsingAbsoluteLocation(true);
+		Piece->SetUsingAbsoluteRotation(true);
+		Piece->SetUsingAbsoluteScale(true);
+		Piece->RegisterComponent();
+		Pieces.Add(Piece);
+	}
+
+	UE_LOG(LogThrownProp, Log, TEXT("%s breaks into pieces%s"), Looks[static_cast<int32>(Kind)].Mesh, bPuppet ? TEXT(" in the film") : TEXT(""));
+	PieceVelocities.SetNum(PieceCount);
+	const FLinearColor Color = Looks[static_cast<int32>(Kind)].Pieces;
+	for (int32 Index = 0; Index < PieceCount; ++Index)
+	{
+		const float Size = FMath::FRandRange(0.035f, 0.09f);
+		UStaticMeshComponent* Piece = Pieces[Index];
+		Piece->SetWorldLocationAndRotation(From + FMath::VRand() * FMath::Max(HalfHeight, 4.) * 0.6, FMath::VRand().Rotation());
+		Piece->SetWorldScale3D(FVector(Size, Size * FMath::FRandRange(0.4f, 0.9f), Size * FMath::FRandRange(0.2f, 0.5f)));
+		// A melon is red inside its green rind, so every third piece of anything is a shade darker.
+		Piece->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Index % 3 == 0 ? Color * 0.45f : Color);
+		Piece->SetVisibility(true);
+		PieceVelocities[Index] = Carried * 0.25 + FMath::VRand() * FMath::FRandRange(90.f, 280.f) + FVector(0., 0., FMath::FRandRange(120.f, 300.f));
+	}
+	bPiecesFlying = true;
+}
+
+void AThrownProp::FlyPieces(float DeltaSeconds)
+{
+	if (!bPiecesFlying)
+	{
+		return;
+	}
+
+	bPiecesFlying = false;
+	for (int32 Index = 0; Index < Pieces.Num(); ++Index)
+	{
+		FVector& Speed = PieceVelocities[Index];
+		if (Speed.IsZero())
+		{
+			continue;
+		}
+
+		Speed.Z -= PropGravity * DeltaSeconds;
+		FVector Location = Pieces[Index]->GetComponentLocation() + Speed * DeltaSeconds;
+		if (Location.Z <= FloorHeight + 1.5)
+		{
+			// It lies where it lands, flat.
+			Location.Z = FloorHeight + 1.5;
+			Speed = FVector::ZeroVector;
+			Pieces[Index]->SetWorldRotation(FRotator(0., Pieces[Index]->GetComponentRotation().Yaw, 0.));
+		}
+		else
+		{
+			Pieces[Index]->AddWorldRotation(FRotator(500. * DeltaSeconds, 300. * DeltaSeconds, 0.));
+			bPiecesFlying = true;
+		}
+		Pieces[Index]->SetWorldLocation(Location);
+	}
 }
 
 void AThrownProp::HandleTakeStarted(int32 TakeNumber)
@@ -260,7 +378,20 @@ void AThrownProp::HandleTakeStarted(int32 TakeNumber)
 	State = EState::Resting;
 	Holder = nullptr;
 	Velocity = FVector::ZeroVector;
+	SettleSecondsLeft = 0.f;
 	SetActorTransform(Home);
+	bPiecesFlying = false;
+	for (UStaticMeshComponent* Piece : Pieces)
+	{
+		Piece->SetVisibility(false);
+	}
+
+	// The props crew drops everything back in its place as the take is called.
+	if (!bInReserve && !bOffTheSet)
+	{
+		AddActorWorldOffset(FVector(0., 0., FMath::FRandRange(DropInLowest, DropInHighest)));
+		Release(FVector::ZeroVector);
+	}
 }
 
 void AThrownProp::HoldInReserve(int32 LatestKnockoutToDropOn)
