@@ -1054,6 +1054,24 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the two recordings before this one were cut by luck: their first film happened to end in front of something bright. The new sets are darker in places than the old ones, and nothing said so until a cut failed.
 - **Not verified:** the video's sound. A line of small figures from a hardware monitor that runs on this PC (frames a second, processor heat) sits at the top edge of every recording made here, this one and the one from Nov 13 alike; it is for the developer to close that program before the last recording.
 
+### 05:55 · The mouse in the packaged game
+
+- **Developer said:** nothing new. Asleep.
+- **Agent did:** every run of the packaged game so far had played itself, so nothing had shown that the mouse works in it, only in the editor. Started the packaged game as a player would, moved the real pointer down its title menu, and clicked on the first row.
+- **Result:** the row under the pointer lit each time: the first scene, the third, the shop, the credits, and the first again. The click opened the wardrobe. The bank on the title was the developer's own, and the saved progress was put back after the run, as after every run tonight.
+- **Went wrong:** nothing.
+- **Not verified:** the shop, the wardrobe's swatches and the choice of cut by mouse in the packaged game; they were tried in the editor only.
+
+![The packaged game's title menu with the pointer on four of its rows in turn, and the wardrobe after a click on the first](Docs/devlog/71-mouse-in-the-packaged-game.jpg)
+
+### 06:04 · Eight minutes of the build that is in the zip
+
+- **Developer said:** nothing new. Asleep.
+- **Agent did:** let the packaged game, the one the upload zip was made from, play itself for eight minutes.
+- **Result:** nine takes, eight wraps, eight films and three results cards, through all three scenes three times. A median of 94 frames a second in the warehouse, 106 in the bar and 103 on the roof, never under 89. No errors and no warnings in the log, and no take that fell silent.
+- **Went wrong:** nothing in the run. One take of nine did not end in a wrap: it was still going when the eight minutes were up.
+- **Not verified:** a person playing it. Everything of this night is waiting for that.
+
 ---
 
 ## Asset and tool register
