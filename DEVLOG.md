@@ -1105,6 +1105,21 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![Six moments: the gunman's pistol at the fighter's feet with "Pick up" on the strip, the same pistol in the hands, a shot coming back off the end wall, the strip while hanging from a bar, the rifle from the shop, the bat from the shop](Docs/devlog/73-the-unseen-parts.jpg)
 
+### 12:51 · The checks that needed the real mouse
+
+- **Developer said:** "Yes, PC is free", to the question whether the agent may take the mouse and keyboard for five minutes.
+- **Agent did:** in the editor, walked to the bar's counter with a real key held down and picked up a bottle. Then wrote a script that plays the packaged game with the real pointer: it moves the pointer down a card until the game's log says the wanted row is the chosen one, clicks, photographs the game's window, and asks Windows whether the pointer is showing. The developer's saved progress was copied first and put back after.
+- **Result:**
+  - a bottle is held up in one hand, and the key strip reads "Throw" on the click, on F and on E;
+  - the shop, in the packaged game: the pointer chose the Shop row and a click opened it. Pointed at "Iron bar" and clicked, the bank went from $7333 to $7033, the card said "Sold." and the row "waiting for your next scene";
+  - the wardrobe: clicks on the fourth hat, the third build and the second colour gave Headband, Heavy and Sky, and the fighter walked into the take dressed so, with the iron bar at its feet;
+  - in the take Windows reports the pointer hidden, and a click threw a punch: the log's count of punches went from 0 to 1;
+  - afterwards the saved bank reads $7333 again.
+- **Went wrong:** the script's last part, the choice of cut, did not run. A helper's parameter was named `$true`, which PowerShell will not let a script write to, so the wait for a wrap ended at once. By the time that was mended the developer was using the PC again: the second run could not bring the game's window to the front and closed it, and the third refused to start because another program was in front and getting input. The agent stopped there.
+- **Not verified:** the choice of cut made with the pointer in the packaged game. It is drawn and answered by the same code as the title, pause and shop cards, which were tried. A crate carried in two hands has not been photographed since the holds were changed.
+
+![A bottle in one hand at the bar; the packaged game's shop with the pointer on "Iron bar", then "Sold."; the wardrobe after three clicks; the take that followed, the pointer hidden](Docs/devlog/74-the-last-checks.jpg)
+
 ---
 
 ## Asset and tool register

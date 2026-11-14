@@ -22,7 +22,9 @@ Asked for by the developer in the night of Nov 13 to 14, in one message before g
 **Done when:**
 - [x] A row is chosen by pointing at it and taken by clicking it: seen in the pause menu and the title menu, with the real pointer (03:54). The shop and the choice of cut draw their rows the same way and were not tried
 - [x] A colour, a hat and a build are picked by clicking them: a colour was, and a click beside the panel went on to the scene. A hat and a build were not tried
-- [ ] In a take the pointer is hidden again and the click punches. In the code; the tests click through the editor, which does not show it
+- [x] In a take the pointer is hidden again and the click punches. Seen in the packaged game on Nov 14: Windows reports the pointer hidden once the take is called, and a click there threw a punch
+- [x] The packaged game's shop and wardrobe take the real pointer (Nov 14): "Iron bar" pointed at and clicked, $300 off the bank, "Sold."; clicks on a hat, a build and a colour gave Headband, Heavy and Sky
+- [ ] The choice of cut is made with the pointer. Not tried: the test that would have done it failed on a mistake of its own, and then the PC was in use. It is drawn and answered by the same code as the other cards
 - [x] The mouse works in the packaged game too: on Nov 14 the real pointer lit the title menu's rows one after another, and a click on the first scene opened the wardrobe
 - [x] The shop is bought from with the mouse: tried in the editor on Nov 14 for the pistol and the wooden bat
 - [ ] The developer has tried it

@@ -22,7 +22,8 @@ Asked for by the developer in the night of Nov 13 to 14, in one message before g
 
 **Done when:**
 - [x] The rifle is shouldered and the pistol held in two hands, seen in play (03:48)
-- [ ] A bottle is held in one hand and a crate in two, seen in play. On Nov 14 a pan from the counter was seen held up in one hand, which is the same hold; a bottle itself has still not been seen carried
+- [x] A bottle is held in one hand, seen in play: on Nov 14 a bottle and a pan from the bar's counter were each picked up and held up in one hand by the shoulder
+- [ ] A crate is carried overhead in two hands. Not photographed since the holds were changed
 - [ ] The film shows the same
 - [ ] The developer has seen it
 
