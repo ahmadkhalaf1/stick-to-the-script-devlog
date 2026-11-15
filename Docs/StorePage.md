@@ -73,7 +73,7 @@ Made by one developer directing an AI coding agent (Claude Code). The agent wrot
 
 ## Before the page goes public
 
-The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stick-to-the-script (only the developer can see it). Its text, genre, tags and AI disclosure are filled in from this file, last on Sat Nov 14.
+The page exists as a draft since Fri Nov 13: https://the-fighter-ps.itch.io/stick-to-the-script (only the developer can see it). Its text, genre, tags and AI disclosure are filled in from this file, last on Sun Nov 15 at 06:57, when its six pictures and its cover were also replaced with ones that show the cast. The zip on the page is still Saturday's, and so is the video it links to: the page's file chooser does not open with nobody at the screen, and the video is the developer's to upload.
 
 - [x] Cover, screenshots and the zip uploaded to the draft, on Fri Nov 13. The zip there is replaced whenever the game changes, last on Sat Nov 14 at 18:35, when the six pictures of Nov 13 also gave way to six of that evening's. The game has changed a great deal since (a cast of characters, the big finish, the film's cutting): the zip of Sun Nov 15, 06:21, 598 MB, is the one to upload. The page's upload buttons open a file chooser; `Toolschoose_file.ps1` fills it in
 

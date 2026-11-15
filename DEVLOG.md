@@ -1484,6 +1484,17 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![The roof: the soldier with a pistol, the boss, and the hero in his own light](Docs/devlog/96-the-cast-on-the-roof.jpg)
 
+### 06:46 · The store page's draft: new words, new pictures, a new cover, and the old zip
+
+- **Developer said:** nothing new: asleep. This was one of the three things agreed before ("Yes, update the draft").
+- **Agent did:**
+  - Wrote a small script that turns `Docs/StorePage.md` into the HTML the page's description takes, and put it into the draft's form: the cast, the big finish, the Q key, eight character models in the list of what is not the team's own. The AI disclosure got its one changed word.
+  - Took the six pictures of Saturday off the draft and put on six from the night's video, in the same order: warehouse, bar, roof, the choice of cut, a film shot, the slate. Replaced the cover with one cut from the bar picture. Saved; the page said "Saved".
+  - Tried the zip. The page's file chooser did not open: nobody was at the screen, and Chrome only opens it for a window somebody is looking at.
+- **Result:** the draft, still private, describes and shows the game as it is now. Its download is still the zip of Sat Nov 14, 18:35, and its video is still the one of that evening.
+- **Went wrong:** the first way of getting the long text into the page, fetching it from a small server on the same PC, never answered: the browser holds such a request back until somebody allows it. The text went in as a file handed to the page instead.
+- **Not verified:** the draft page as a visitor would see it was not opened afterwards. The zip and the video are the developer's to do in the morning.
+
 ---
 
 ## Asset and tool register
