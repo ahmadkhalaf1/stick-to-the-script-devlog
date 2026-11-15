@@ -61,6 +61,11 @@ public:
 	float GetTitleCardSecondsShown() const { return Phase == EPhase::Titles ? TitleCardSeconds - PhaseSecondsLeft : TitleCardSeconds; }
 	// 0 to 1: how much of what is being shown, the film or an outtake, has been shown.
 	float GetProgress() const;
+	// 0 to 1: how far the picture is faded to black. It dips between two stretches of the film, so the fighters do
+	// not jump across the set; it comes up out of the title card's black, and goes out under the slate.
+	float GetDarkness() const;
+	// How long the slate at the end has been up: it comes on over a moment, it does not pop.
+	float GetEndSlateSecondsShown() const;
 
 	UPROPERTY()
 	TObjectPtr<AFightRecorder> Recorder;
@@ -104,6 +109,11 @@ private:
 	void FinishReplay();
 	void FindOrPlaceCameras();
 	void PlanShots();
+	// Moves the starts of shots to the ends of the film's stretches where they nearly meet them, so that no splice
+	// leaves a picture on the screen for a few frames.
+	void FitShotsToClips();
+	// How far apart the two fighters of a close shot are now, chest to chest. 0 when there is only one.
+	double PairApart(const FShot& Shot) const;
 	void ShowMoment(float Seconds);
 	void ReplayEvent(const FRecordedEvent& Event);
 	void CutTo(const FShot& Shot);

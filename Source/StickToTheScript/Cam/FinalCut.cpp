@@ -71,11 +71,9 @@ namespace
 
 	// A close-up starts just before its strike lands and stays a moment after.
 	const float CutBeforeImpactSeconds = 0.35f;
-	const float CutAfterShotSeconds = 0.25f;
 	// How far to the side a close shot is taken from: far enough for two fighters and their heads.
 	const double CloseUpDistance = 330.;
 	const double LowDistance = 300.;
-	const double CloseUpTowardsAttacker = 70.;
 	const float CloseUpFollowSpeed = 6.f;
 	const double PropHidesWithin = 55.;
 	const double BystanderHidesWithin = 45.;
@@ -83,6 +81,21 @@ namespace
 	const float StayAfterImpactSeconds = 1.f;
 	// In a long fight not every blow earns a cut. A knockout always does; the rest only after this long on other shots.
 	const float SecondsBetweenCloseUps = 2.5f;
+
+	// A cut between two stretches of the film dips to black and comes back: without it the fighters jump across the set.
+	const float SpliceFadeOutSeconds = 0.12f;
+	const float SpliceFadeInSeconds = 0.16f;
+	// The film comes up out of its title card's black, and goes out to black under its slate.
+	const float FilmFadeInSeconds = 0.35f;
+	const float FilmFadeOutSeconds = 0.45f;
+	// No shot is shorter than this. One seen for a fifth of a second is a flicker, not a shot.
+	const float ShortestShotSeconds = 1.1f;
+	// A close shot holds two fighters this far apart, moves back for a pair further apart, and past the last gives
+	// the picture to the wide camera.
+	const double CloseUpPairFits = 130.;
+	const double CloseUpWidensBy = 0.8;
+	const double CloseUpPairLostBeyond = 290.;
+	const double CloseUpLooksNoLower = 28.;
 
 	const FName CameraTags[] = { "Cam_Wide", "Cam_Close", "Cam_Low" };
 	const float CameraFieldsOfView[] = { 80.f, 55.f, 70.f };
@@ -149,7 +162,7 @@ void AFinalCut::Tick(float DeltaSeconds)
 			{
 				const FVector Subject = FindSubject(Shots[CurrentShot]);
 				// Someone knocked the length of the set is a speck from here, in a picture of nothing. The wide camera takes over.
-				if (FVector::Dist(Camera->GetActorLocation(), Subject) > CloseUpLosesBeyond)
+				if (FVector::Dist(Camera->GetActorLocation(), Subject) > CloseUpLosesBeyond || PairApart(Shots[CurrentShot]) > CloseUpPairLostBeyond)
 				{
 					ShotCamera = WideCamera;
 					if (APlayerController* Player = GetWorld()->GetFirstPlayerController())
@@ -199,6 +212,27 @@ void AFinalCut::HandleTakeFinished(const FTake& FinishedTake)
 	Phase = EPhase::Ready;
 }
 
+float AFinalCut::GetDarkness() const
+{
+	if (Phase == EPhase::HoldingLastFrame)
+	{
+		// The film goes out under its slate. An outtake stops dead under its "Cut!", as the take did.
+		return bOuttake ? 0.f : 1.f - FMath::Clamp(PhaseSecondsLeft / FilmFadeOutSeconds, 0.f, 1.f);
+	}
+	if (Phase != EPhase::Playing || !Clips.IsValidIndex(ClipIndex))
+	{
+		return 0.f;
+	}
+	const float In = (ReplaySeconds - Clips[ClipIndex].StartSeconds) / (ClipIndex == 0 ? FilmFadeInSeconds : SpliceFadeInSeconds);
+	const float Out = Clips.IsValidIndex(ClipIndex + 1) ? (Clips[ClipIndex].EndSeconds - ReplaySeconds) / SpliceFadeOutSeconds : 1.f;
+	return 1.f - FMath::Clamp(FMath::Min(In, Out), 0.f, 1.f);
+}
+
+float AFinalCut::GetEndSlateSecondsShown() const
+{
+	return IsOnEndSlate() ? EndSlateSeconds - PhaseSecondsLeft : 0.f;
+}
+
 float AFinalCut::GetProgress() const
 {
 	if (Phase == EPhase::HoldingLastFrame)
@@ -240,6 +274,7 @@ void AFinalCut::StartReplay()
 	PlanShots();
 
 	Clips = PlanClips(Take.Events, Take.Frames.Last().TimeSeconds, Cut);
+	FitShotsToClips();
 	ClipIndex = 0;
 	ReplaySeconds = Clips[0].StartSeconds;
 	Outtakes = Recorder->GetOuttakes();
@@ -388,8 +423,9 @@ void AFinalCut::PlanShots()
 		// close-up of someone hit from outside it says nothing about where the shot came from. Only when a shot puts
 		// someone down does the film cut in, and then after it has landed, to see the fall.
 		// The same goes for something thrown: it arrives from wherever the thrower stood.
+		// Cutting in after it had landed showed one fighter alone, hit from nowhere. The wide camera keeps it now.
 		const bool bShot = Event.Kind == ERecordedEventKind::Hit && (Event.Move == EMove::Shot || Event.Move == EMove::Blast || Event.Move == EMove::Throw);
-		if (bShot && !Event.bKnockout)
+		if (bShot)
 		{
 			continue;
 		}
@@ -400,7 +436,7 @@ void AFinalCut::PlanShots()
 		LastCloseUpSeconds = Event.TimeSeconds;
 
 		FShot CloseUp;
-		CloseUp.StartSeconds = bShot ? Event.TimeSeconds + CutAfterShotSeconds : Event.TimeSeconds - CutBeforeImpactSeconds;
+		CloseUp.StartSeconds = Event.TimeSeconds - CutBeforeImpactSeconds;
 		// Heavy hits and the knockout are seen from the floor, looking up. Everything else gets the side close-up.
 		const bool bBigMoment = Event.Kind == ERecordedEventKind::Hit && (Event.Move != EMove::Punch || Event.bKnockout);
 		CloseUp.Camera = bBigMoment ? LowCamera : CloseCamera;
@@ -408,8 +444,9 @@ void AFinalCut::PlanShots()
 		CloseUp.Attacker = Event.AttackerIndex;
 		CloseUp.Victim = Event.VictimIndex;
 
-		// Two strikes close together share one run of close-ups: the return to the wide shot between them is dropped.
-		if (Shots.Num() > 1 && Shots.Last().Camera == WideCamera && Shots.Last().StartSeconds > CloseUp.StartSeconds)
+		// Two strikes close together share one run of close-ups: a return to the wide shot that would last only a
+		// moment between them is dropped.
+		if (Shots.Num() > 1 && Shots.Last().Camera == WideCamera && CloseUp.StartSeconds - Shots.Last().StartSeconds < ShortestShotSeconds)
 		{
 			Shots.Pop();
 		}
@@ -419,6 +456,37 @@ void AFinalCut::PlanShots()
 		BackToWide.StartSeconds = Event.TimeSeconds + StayAfterImpactSeconds;
 		Shots.Add(BackToWide);
 	}
+}
+
+void AFinalCut::FitShotsToClips()
+{
+	for (const FFilmClip& Clip : Clips)
+	{
+		for (int32 Index = 1; Index < Shots.Num(); ++Index)
+		{
+			FShot& Shot = Shots[Index];
+			const bool bNextIsLater = !Shots.IsValidIndex(Index + 1) || Shots[Index + 1].StartSeconds > Clip.EndSeconds;
+			if (Shot.Camera != WideCamera && Shot.StartSeconds > Clip.StartSeconds && Shot.StartSeconds - Clip.StartSeconds < ShortestShotSeconds)
+			{
+				// The stretch opens on the close shot it was heading for, not on a moment of the wide one.
+				Shot.StartSeconds = Clip.StartSeconds;
+			}
+			else if (Shot.Camera == WideCamera && bNextIsLater && Shot.StartSeconds < Clip.EndSeconds && Clip.EndSeconds - Shot.StartSeconds < ShortestShotSeconds
+				&& &Clip != &Clips.Last())
+			{
+				// The stretch ends on its close shot, not on a moment of the wide one before the splice.
+				Shot.StartSeconds = Clip.EndSeconds;
+			}
+		}
+	}
+}
+
+double AFinalCut::PairApart(const FShot& Shot) const
+{
+	const AStickFighter* Victim = Recorder->GetFighter(Shot.Victim);
+	const AStickFighter* Attacker = Recorder->GetFighter(Shot.Attacker);
+	return Victim && Attacker && Victim != Attacker
+		? FVector::Dist(Victim->GetJointPositions()[StickJoint::ChestJoint], Attacker->GetJointPositions()[StickJoint::ChestJoint]) : 0.;
 }
 
 void AFinalCut::ShowMoment(float Seconds)
@@ -512,8 +580,9 @@ void AFinalCut::ReplayEvent(const FRecordedEvent& Event)
 	}
 }
 
-// What a close shot looks at: the chest of whoever is hit, drawn towards whoever hit them, so that one is more than an
-// arm at the edge of the picture. From the chest and not from the spot of the blow, which keeps heads in the picture.
+// What a close shot looks at: half way between the chests of the two fighters in the blow. Both are the picture, and
+// one of them is mostly the hero. Held near whoever was hit, the shot cut the hero off at its edge and then followed a
+// body to the floor without him. From the chests and not from the spot of the blow, which keeps heads in the picture.
 FVector AFinalCut::FindSubject(const FShot& Shot) const
 {
 	const AStickFighter* Victim = Recorder->GetFighter(Shot.Victim);
@@ -527,7 +596,11 @@ FVector AFinalCut::FindSubject(const FShot& Shot) const
 	{
 		return Struck;
 	}
-	return Struck + ((Attacker->GetJointPositions()[StickJoint::ChestJoint] - Struck) * 0.5).GetClampedToMaxSize(CloseUpTowardsAttacker);
+	// Not much lower than the one still standing: half way down to a body on the floor, the shot cut his head off.
+	const FVector Striker = Attacker->GetJointPositions()[StickJoint::ChestJoint];
+	FVector Between = (Struck + Striker) * 0.5;
+	Between.Z = FMath::Max(Between.Z, FMath::Max(Struck.Z, Striker.Z) - CloseUpLooksNoLower);
+	return Between;
 }
 
 // A prop standing between a camera and what it films fills half the picture with its back. So does a fighter who is
@@ -584,12 +657,18 @@ void AFinalCut::CutTo(const FShot& Shot)
 		const AStickFighter* Player = Recorder->GetFighter(0);
 		const double Floor = Player ? Player->GetActorLocation().Z : 0.;
 
+		// Further back for a pair standing further apart, so that both are in it.
+		const double Back = FMath::Max(PairApart(Shot) - CloseUpPairFits, 0.) * CloseUpWidensBy;
 		const FVector OnTheFloor(ShotLookAt.X, ShotLookAt.Y, Floor + 30.);
-		const FVector Level = ShotLookAt + Side * CloseUpDistance + FVector(0., 0., 10.);
+		const FVector Level = ShotLookAt + Side * (CloseUpDistance + Back) + FVector(0., 0., 10.);
+		// The low camera looks past the hero at whoever he is fighting, so it is the opponent who faces it. From the
+		// other end the opponent's back filled a third of the picture.
+		const AStickFighter* Near = Shot.Attacker == 0 || Shot.Victim == 0 ? Player : Recorder->GetFighter(Shot.Attacker);
+		const double Behind = Near && ((Near->GetJointPositions()[StickJoint::ChestJoint] - ShotLookAt) | Along) < 0. ? -90. : 90.;
 		// The first place nothing and nobody stands in front of. Failing that, the first with only a prop in front of it.
 		const FVector Places[] = {
-			Shot.Camera == CloseCamera ? Level : OnTheFloor + Side * LowDistance - Along * 90.,
-			Shot.Camera == CloseCamera ? Level + FVector(0., 0., 60.) : OnTheFloor + Side * LowDistance + Along * 90.,
+			Shot.Camera == CloseCamera ? Level : OnTheFloor + Side * (LowDistance + Back) + Along * Behind,
+			Shot.Camera == CloseCamera ? Level + FVector(0., 0., 60.) : OnTheFloor + Side * (LowDistance + Back) - Along * Behind,
 			Level + FVector(0., 0., 60.) - Along * 120.,
 			Level + FVector(0., 0., 60.) + Along * 120.,
 		};

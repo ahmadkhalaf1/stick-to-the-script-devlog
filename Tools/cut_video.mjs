@@ -141,8 +141,12 @@ const inputs = [], graph = [];
 usable.forEach((clip, index) => {
   inputs.push('-ss', (clip.from - pictureStarted).toFixed(3), '-t', clip.seconds.toFixed(3), '-i', `${DIR}run.mp4`);
   inputs.push('-ss', soundAt(clip.from).toFixed(3), '-t', clip.seconds.toFixed(3), '-i', `${DIR}run.wav`);
-  graph.push(`[${index * 2}:v]crop=1877:1056:21:24,scale=1920:1080,fps=60,setsar=1[v${index}]`);
-  graph.push(`[${index * 2 + 1}:a]afade=t=in:d=0.04,afade=t=out:st=${(clip.seconds - 0.06).toFixed(3)}:d=0.06,aresample=48000[a${index}]`);
+  // Every piece comes up out of black and goes back into it, picture and sound, as the film's own joins do: a hard cut
+  // from one fight into the middle of another read as a fault. The video opens and closes more slowly.
+  const fadeIn = index === 0 ? 0.4 : 0.14, fadeOut = index === usable.length - 1 ? 0.7 : 0.14;
+  const out = `st=${(clip.seconds - fadeOut).toFixed(3)}:d=${fadeOut}`;
+  graph.push(`[${index * 2}:v]crop=1877:1056:21:24,scale=1920:1080,fps=60,setsar=1,fade=t=in:st=0:d=${fadeIn},fade=t=out:${out}[v${index}]`);
+  graph.push(`[${index * 2 + 1}:a]afade=t=in:d=${fadeIn},afade=t=out:${out},aresample=48000[a${index}]`);
 });
 graph.push(`${usable.map((clip, index) => `[v${index}][a${index}]`).join('')}concat=n=${usable.length}:v=1:a=1[v][a]`);
 execFileSync('ffmpeg', ['-v', 'error', '-y', ...inputs, '-filter_complex', graph.join(';'), '-map', '[v]', '-map', '[a]',

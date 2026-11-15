@@ -53,6 +53,7 @@ namespace
 	const int32 SceneCardCount = 3;
 	// How long the small screen takes to open out into the film, and the share of that in which it grows: for the
 	// rest it fades into the title card behind it.
+	const float SlateComesOnSeconds = 0.4f;
 	const float FilmOpensOutSeconds = 0.6f;
 	const float FilmScreenGrowsShare = 0.75f;
 	// The small screen, on a layout 1920 wide.
@@ -171,6 +172,14 @@ void AStickHUD::DrawHUD()
 
 		// The film is letterboxed and carries no game interface: it is the result, not the shoot.
 		const float Bar = Height * 0.11f;
+		// The picture dips to black where two stretches of the film are joined, and comes up out of black at its start.
+		// Under the bars, so the title and the line stay. Under the slate it is drawn last instead, over everything.
+		const float Darkness = Film ? Film->GetDarkness() : 0.f;
+		const bool bSlate = Film && Film->IsOnEndSlate();
+		if (Darkness > 0.f && !bSlate)
+		{
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, Darkness), 0.f, 0.f, Width, Height);
+		}
 		DrawRect(FLinearColor::Black, 0.f, 0.f, Width, Bar);
 		DrawRect(FLinearColor::Black, 0.f, Height - Bar, Width, Bar);
 		// What a player of films shows: a play mark by the title, and a line that fills as the film runs.
@@ -203,23 +212,29 @@ void AStickHUD::DrawHUD()
 		Measure(Skip, SkipWidth, SkipHeight, Font, 1.4f * Unit);
 		Write(Skip, FLinearColor(0.55f, 0.55f, 0.55f), Width - SkipWidth - 48.f * Unit, Height - Bar * 0.65f, Font, 1.4f * Unit);
 
-		if (Film && Film->IsOnEndSlate())
+		if (bSlate)
 		{
-			// A clapperboard over the last frame: its striped stick, then what a slate says.
+			// A clapperboard over the last frame: its striped stick, then what a slate says. It comes on over a moment,
+			// dropping the last of the way into its place, and the film goes out to black under it.
+			const float On = FMath::InterpEaseOut(0.f, 1.f, FMath::Clamp(Film->GetEndSlateSecondsShown() / SlateComesOnSeconds, 0.f, 1.f), 2.f);
 			const float BoardWidth = 860.f * Unit;
 			const float Left = (Width - BoardWidth) * 0.5f;
-			const float BoardTop = Top + 350.f * Unit;
-			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.84f), Left, BoardTop, BoardWidth, 380.f * Unit);
+			const float BoardTop = Top + (350.f - (1.f - On) * 46.f) * Unit;
+			DrawRect(FLinearColor(0.f, 0.f, 0.f, 0.84f * On), Left, BoardTop, BoardWidth, 380.f * Unit);
 			const int32 Stripes = 12;
 			for (int32 Stripe = 0; Stripe < Stripes; Stripe += 2)
 			{
-				DrawRect(FLinearColor::White, Left + Stripe * BoardWidth / Stripes, BoardTop, BoardWidth / Stripes, 36.f * Unit);
+				DrawRect(FLinearColor(1.f, 1.f, 1.f, On), Left + Stripe * BoardWidth / Stripes, BoardTop, BoardWidth / Stripes, 36.f * Unit);
 			}
 			const int32 Ran = FMath::RoundToInt32(Film->GetRunningSeconds());
-			DrawCentered(TEXT("STICK TO THE SCRIPT"), BoardTop + 62.f * Unit, 2.f * Unit, FLinearColor(0.75f, 0.75f, 0.75f));
-			DrawCentered(FString::Printf(TEXT("%s      TAKE %d"), *FilmScene, CurrentTake), BoardTop + 118.f * Unit, 4.2f * Unit, FLinearColor::White);
-			DrawCentered(FString::Printf(TEXT("%s      %d:%02d"), *FilmCut, Ran / 60, Ran % 60), BoardTop + 222.f * Unit, 2.2f * Unit, HighlightGold);
-			DrawCentered(TEXT("CUT.  PRINT IT."), BoardTop + 292.f * Unit, 2.6f * Unit, FLinearColor::White);
+			DrawCentered(TEXT("STICK TO THE SCRIPT"), BoardTop + 62.f * Unit, 2.f * Unit, FLinearColor(0.75f, 0.75f, 0.75f, On));
+			DrawCentered(FString::Printf(TEXT("%s      TAKE %d"), *FilmScene, CurrentTake), BoardTop + 118.f * Unit, 4.2f * Unit, FLinearColor(1.f, 1.f, 1.f, On));
+			DrawCentered(FString::Printf(TEXT("%s      %d:%02d"), *FilmCut, Ran / 60, Ran % 60), BoardTop + 222.f * Unit, 2.2f * Unit, FLinearColor(HighlightGold.R, HighlightGold.G, HighlightGold.B, On));
+			DrawCentered(TEXT("CUT.  PRINT IT."), BoardTop + 292.f * Unit, 2.6f * Unit, FLinearColor(1.f, 1.f, 1.f, On));
+			if (Darkness > 0.f)
+			{
+				DrawRect(FLinearColor(0.f, 0.f, 0.f, Darkness), 0.f, 0.f, Width, Height);
+			}
 		}
 		return;
 	}

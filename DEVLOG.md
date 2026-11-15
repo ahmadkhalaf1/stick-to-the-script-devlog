@@ -956,6 +956,8 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![One of everything on the warehouse floor, and the rifle on the rooftop](Docs/devlog/61-real-things.jpg)
 
+## Day 3 — Sat Nov 14, 2026
+
 ### 03:48 · A rifle at the shoulder, a pistol in two hands
 
 - **Developer said:** "fix how character hold throwable items and it should look nicer", "the way holding the guns as well need to feel better".
@@ -1425,6 +1427,35 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Not verified:** nobody has seen it move. What reading a whole frame back costs on a large screen, once per wrap: at 2560 by 1440 it is 15 MB, and it was not timed.
 
 ![The small screen with the take's own picture: the card, the screen opening out, the title card, the film](Docs/devlog/91-your-take-on-the-screen.jpg)
+
+## Day 4 — Sun Nov 15, 2026
+
+### 04:38 · Faces and gear, built and turned down; and why the film felt strange
+
+- **Developer said:** "Faces and gear", choosing the first of two ways laid out for the character's look. Then, shown the pictures: "this still look ugly , and not 2026 like with AI , try to do better , also check the video , the scenes and how the video is made feels abit strange , foucs points and how it suddenly end and switch to new scene also looks strange , we need to consider this for reply and for youtube video later". Then "what i need to download?" and "why dont u do it for me?". Then, a little after midnight, "lets pause a bit", and at 04:37 "Continue".
+- **Agent did, the look:**
+  - Built the first way in about an hour and a quarter, all of plain shapes placed from the joints as the hats are: eyes, pupils and brows that scowl, open wide at a blow and are crossed out by a knockout; a red glove on each of the hero's hands and black ones on the opponents'; a woollen cap, goggles, a topknot, a steel helmet and a wide-brimmed hat for the five kinds; the boss in dark grey with a black hat, a red tie and eyes that glow.
+  - Photographed it in all three scenes and showed the developer, who turned it down in the words above. It is committed on its own branch, `feel/S3-FEEL-14-faces-and-gear`, and is not in the game.
+  - Said plainly that shapes stuck on the stock mannequin cannot look new, and that textured characters are the way: Mixamo's own, which share the skeleton the fitting code drives. Listed what to download and where to save it. Asked why it did not download them itself, answered that Mixamo needs the developer's Adobe sign-in, which the agent does not type, and offered to do it in the developer's browser if the developer is signed in and says yes. No answer yet.
+- **Agent did, the film:**
+  - Let the game play the bar and photographed its film about five times a second, 150 pictures, then looked at every one. Found: a close shot looked at whoever was hit, so the hero was cut off at its edge or missing, and after a knockout the camera followed the body to the floor; a wide shot came up for a fifth of a second between two close ones; something thrown got a close shot of the one it hit, alone, hit from nowhere; the low camera stood behind the opponent as often as not, whose back filled a third of the picture; stretches of the film were joined by a plain cut, the slate popped on, and the film cut straight to the results.
+  - Changed all of it. A close shot looks half way between the two in the blow and moves back for a pair standing apart. No shot is shorter than 1.1 s. A throw or a shot stays on the wide camera. The low camera stands on the hero's side. The picture dips to black at a join, comes up out of the title card's black, and goes out under a slate that comes on over 0.4 s; the results come up out of that black.
+  - The gameplay video's pieces now fade in and out, picture and sound.
+- **Result:** `Tools/check.ps1` passes. The film was photographed again on the bar and on the warehouse: both fighters are in the close shots, the joins dip, the slate comes on and the film goes out. The packaged build, 829 MB and a 549 MB zip, played itself from the first menu to the end card off screen: three scenes, three films, no errors; the developer's saved progress was put back and compared.
+- **When:** the work was done between about 23:15 on Saturday and 00:13 on Sunday, when the packaged build finished its run. The developer had asked for a pause by then, so nothing was committed. This entry and the commit were written when the developer said to continue.
+- **Went wrong:**
+  - The faces and gear themselves: an hour and a quarter on something the developer did not want. The agent had recommended it.
+  - In them: the hero's gloves came out black, because its side was set after its colours; white eyes could not be seen on a white head until they had a dark rim; boots over the model's feet looked like weights round the ankles and were taken out, though the agent had promised shoes; a topknot with a band under it was a small top hat.
+  - In the film's first fix: looking half way down to a body on the floor, the low camera cut the hero's head off, and when he walked away it showed an empty bar until the wide camera took over. The shot now looks no lower than just under the one still standing, and gives up at 2.9 m apart.
+  - This log had no heading for Saturday: every entry since Saturday 03:48 stood under "Day 2 — Fri Nov 13". The heading is put in with this entry, and one for Sunday.
+  - The first pictures of the film as it was were written over by the next run. What was wrong with it is told above from the agent's own reading of them; there is no picture of it in this log.
+- **Not verified:** nobody has watched the new film move; it was judged from stills a fifth of a second apart. The video cutter's fades have not met a recording. The developer has not said whether the film still feels strange.
+
+![Faces and gear on the bar, from the film's shots: the look that was turned down](Docs/devlog/92-faces-and-gear.jpg)
+
+![The boss dressed, on the roof: turned down with the rest](Docs/devlog/93-the-boss-dressed.jpg)
+
+![The warehouse's film after the changes, a picture every fifth of a second: two fighters in every close shot, dark frames where stretches are joined, the thrown crate left to the wide camera](Docs/devlog/94-the-film-flows.jpg)
 
 ---
 
