@@ -1652,6 +1652,13 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the agent called the thing in the screenshot a bottle. It was the pan.
 - **Not verified:** the pan in the hand and the finish for one were not photographed at all: they were built and run, and the session's limit was four hundredths from its end. The zip and the video are not on the store page: uploading both was left to the developer for the same reason. The page's six pictures and cover are from the 16:01 recording; nothing in them has changed since.
 
+### 20:49 · The video of the build that ships, on YouTube
+
+- **Developer said:** "uploading https://youtu.be/yoE4ckmznZA , unlisted".
+- **Agent did:** asked YouTube what the link was before using it, as it had learnt to that afternoon: "StickToTheScript gameplay", 59 seconds, playable without a sign-in. Put it in `Docs/StorePage.md` and its table for the jam's form.
+- **Result:** the gameplay video for the submission is https://www.youtube.com/watch?v=yoE4ckmznZA, cut at 20:15 from the build zipped at 20:05.
+- **Not verified:** the video was looked at as frames before it was uploaded, not watched on YouTube.
+
 ---
 
 ## Asset and tool register
