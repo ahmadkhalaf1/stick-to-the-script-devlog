@@ -1605,6 +1605,16 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 	{
 		const EPropHold Hold = Carried.IsValid() ? Carried->GetHold() : EPropHold::Overhead;
 		const FVector Ahead = GetActorForwardVector();
+		// A weapon in both hands is held towards where its carrier faces, and he stands with his chest to the camera:
+		// reaching past it, the far arm crossed the whole chest and the near one folded up against the ribs. So the
+		// shoulders are squared to the way he faces first.
+		if (Hold == EPropHold::Pistol || Hold == EPropHold::Swung || Hold == EPropHold::LongGun)
+		{
+			const FVector HalfAcross = (FVector::UpVector ^ Ahead) * (FVector::Dist(Joints[LeftShoulder], Joints[RightShoulder]) * 0.5);
+			const FVector Between = (Joints[LeftShoulder] + Joints[RightShoulder]) * 0.5;
+			Joints[LeftShoulder] = FMath::Lerp(Joints[LeftShoulder], Between - HalfAcross, static_cast<double>(CarryAlpha));
+			Joints[RightShoulder] = FMath::Lerp(Joints[RightShoulder], Between + HalfAcross, static_cast<double>(CarryAlpha));
+		}
 		if (Hold == EPropHold::LongGun || Hold == EPropHold::OneHand)
 		{
 			// Each arm has its own place here, so they are posed on a copy and eased in like the other holds.
@@ -2471,6 +2481,13 @@ bool AStickFighter::Finish()
 	if (!Nearest)
 	{
 		return false;
+	}
+
+	// The finish is done with empty hands: whatever was in them falls first.
+	if (AThrownProp* Held = Carried.Get())
+	{
+		Carried = nullptr;
+		Held->Release(FVector::ZeroVector);
 	}
 
 	FinishVictim = Nearest;

@@ -1631,6 +1631,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the draft page has the zip built at 18:39, uploaded at 18:48, 611 MB, for Windows. Still a draft, still linking to the 13:42 video.
 - **Not verified:** the zip on the page was not downloaded back and run. The developer has not played this build.
 
+### 19:33 · Arms that crossed the chest, and a finish with something still in the hands
+
+- **Developer said:** a screenshot of the hero aiming a pistol, with "this is not ok , look his left arm", then "and right arm"; a second screenshot of a weapon held low in both hands behind the wrap card; and "from my last play i was still able to do finish move while holding item , its should drop it first".
+- **Agent did:**
+  - A fighter stands with his chest to the camera, and a weapon in both hands is held the way he faces, which is across the picture. So the far arm crossed his whole chest and the near one folded up against his ribs. Before a pistol, a rifle or a swung weapon is held, his shoulders are now squared to the way he faces; the model's chest follows them.
+  - The finish drops whatever is in the hands before its first blow.
+- **Result:** `Tools/check.ps1` passes with 8 tests. Photographed in the editor: the hero side-on with the pistol out in both hands and no arm across his chest, and with the rifle on his shoulder. Packaged at 19:27, 892 MB; the packaged game played itself through the three scenes to the end card in four takes with no errors in its log; the zip is 611 MB, made at 19:32.
+- **Went wrong:** the first build of this was started while the developer's game was running, stopped at once, and the agent waited ten minutes for an answer that was not coming. The first three pictures showed empty hands: the opponents were held only after the pick-up, and one of them had knocked the weapon away. The test holds them first now.
+- **Not verified:** the swung weapon's hold, again: the hero walked out of the picture. The finish with full hands was not tried: it is five lines that were read, built and run in the self-played game, where nothing complained. The developer has not played this build.
+
 ---
 
 ## Asset and tool register
