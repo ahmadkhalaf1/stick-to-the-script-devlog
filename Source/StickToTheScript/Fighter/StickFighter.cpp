@@ -287,19 +287,30 @@ namespace
 		double Ahead;
 		double Above;
 		FVector Size;
+		// To the side of the middle of the head, for a piece that is not on it.
+		double Across;
 	};
 	enum { HatCylinder, HatCube, HatCone, HatBall };
+	const int32 HatPieceCount = 6;
+	// The points of the crown stand in a ring this far out from the middle of the head, in head radii.
+	const double CrownPointsOut = 0.72;
 	// The last two are sold in the shop, which names them by their place in this list. All of them sit on top of the
 	// cap the hero is modelled in: a hat that went round a bare head, as the first ones did, was lost in it.
 	const TCHAR* HatNames[] = { TEXT("None"), TEXT("Bowler"), TEXT("Top hat"), TEXT("Wide brim"), TEXT("Party hat"), TEXT("Halo"), TEXT("Crown") };
-	const FHatPiece Hats[][2] = {
+	const FHatPiece Hats[][HatPieceCount] = {
 		{ {}, {} },
 		{ { true, HatBall, 0., 0.95, FVector(1.75, 1.75, 1.3) }, { true, HatCylinder, 0., 0.82, FVector(2.55, 2.55, 0.1) } },
 		{ { true, HatCylinder, 0., 1.6, FVector(1.5, 1.5, 1.4) }, { true, HatCylinder, 0., 0.9, FVector(2.6, 2.6, 0.12) } },
 		{ { true, HatCylinder, 0., 1.25, FVector(1.55, 1.55, 0.8) }, { true, HatCylinder, 0., 0.88, FVector(3.5, 3.5, 0.1) } },
 		{ { true, HatCone, 0., 1.6, FVector(1.35, 1.35, 1.7) }, { true, HatBall, 0., 2.45, FVector(0.38, 0.38, 0.38) } },
 		{ { true, HatCylinder, 0., 1.8, FVector(2.1, 2.1, 0.07) }, {} },
-		{ { true, HatCylinder, 0., 1.05, FVector(1.8, 1.8, 0.6) }, { true, HatCylinder, 0., 1.38, FVector(2.3, 2.3, 0.12) } },
+		// A band, and five points on it, a fifth of a turn apart.
+		{ { true, HatCylinder, 0., 0.98, FVector(1.85, 1.85, 0.45) },
+			{ true, HatCone, CrownPointsOut, 1.45, FVector(0.5, 0.5, 0.62), 0. },
+			{ true, HatCone, CrownPointsOut * 0.309, 1.45, FVector(0.5, 0.5, 0.62), CrownPointsOut * 0.951 },
+			{ true, HatCone, CrownPointsOut * 0.309, 1.45, FVector(0.5, 0.5, 0.62), CrownPointsOut * -0.951 },
+			{ true, HatCone, CrownPointsOut * -0.809, 1.45, FVector(0.5, 0.5, 0.62), CrownPointsOut * 0.588 },
+			{ true, HatCone, CrownPointsOut * -0.809, 1.45, FVector(0.5, 0.5, 0.62), CrownPointsOut * -0.588 } },
 	};
 	const FLinearColor HatColors[] = {
 		FLinearColor::Black,
@@ -849,11 +860,14 @@ AStickFighter::AStickFighter()
 	Gun->SetVisibility(false);
 
 	HatMeshes = { Cylinder.Object, Cube.Object, Cone.Object, Sphere.Object };
-	for (int32 Piece = 0; Piece < 2; ++Piece)
+	for (int32 Piece = 0; Piece < HatPieceCount; ++Piece)
 	{
 		HatParts.Add(MakePart(FString::Printf(TEXT("Hat%d"), Piece), Cylinder.Object));
 		HatParts[Piece]->SetVisibility(false);
-		Eyes.Add(MakePart(FString::Printf(TEXT("Eye%d"), Piece), Sphere.Object));
+	}
+	for (int32 Eye = 0; Eye < 2; ++Eye)
+	{
+		Eyes.Add(MakePart(FString::Printf(TEXT("Eye%d"), Eye), Sphere.Object));
 	}
 	for (int32 Joint = FirstBallJoint; Joint < JointCount; ++Joint)
 	{
@@ -1883,7 +1897,8 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	}
 	TintedBrokenArms = BrokenArms;
 
-	const bool bHoldsGun = (BrokenArms & 4) != 0;
+	// The gun is in the right hand, and goes with the forearm when that comes off.
+	const bool bHoldsGun = (BrokenArms & 4) != 0 && (SeveredNow & 2) == 0;
 	Gun->SetVisibility(bHoldsGun);
 	if (bHoldsGun)
 	{
@@ -1979,12 +1994,12 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	if (Hat != 0)
 	{
 		const FRotator Tilt = FRotationMatrix::MakeFromZX(Up, Ahead).Rotator();
-		for (int32 Piece = 0; Piece < 2; ++Piece)
+		for (int32 Piece = 0; Piece < HatPieceCount; ++Piece)
 		{
 			const FHatPiece& Shape = Hats[Hat][Piece];
 			if (Shape.bUsed)
 			{
-				HatParts[Piece]->SetWorldLocationAndRotation(Middle + (Ahead * Shape.Ahead + Up * Shape.Above) * HeadRadius, Tilt);
+				HatParts[Piece]->SetWorldLocationAndRotation(Middle + (Ahead * Shape.Ahead + Across * Shape.Across + Up * Shape.Above) * HeadRadius, Tilt);
 				HatParts[Piece]->SetWorldScale3D(Shape.Size * (HeadRadius / 100.));
 			}
 		}
@@ -3007,8 +3022,8 @@ void AStickFighter::ApplyLook(const FCharacterLook& Look)
 		Piece->DyeOutfit(Dye);
 	}
 
-	Hat =FMath::Clamp(Look.Hat, 0, LookCount(1) - 1);
-	for (int32 Piece = 0; Piece < 2; ++Piece)
+	Hat = FMath::Clamp(Look.Hat, 0, LookCount(1) - 1);
+	for (int32 Piece = 0; Piece < HatPieceCount; ++Piece)
 	{
 		const FHatPiece& Shape = Hats[Hat][Piece];
 		HatParts[Piece]->SetVisibility(Shape.bUsed);
@@ -3036,7 +3051,7 @@ void AStickFighter::LightAsTheStar()
 	StarLight->RegisterComponent();
 }
 
-void AStickFighter::WearCast(const FString& Part)
+bool AStickFighter::WearCast(const FString& Part)
 {
 	// Looked for by name and not held by the class: which parts have a model is the project's business, not the code's.
 	// Config/DefaultGame.ini has the folder cooked whether or not anything else refers to it.
@@ -3048,7 +3063,9 @@ void AStickFighter::WearCast(const FString& Part)
 		{
 			Piece->Wear(Cast);
 		}
+		return true;
 	}
+	return false;
 }
 
 int32 AStickFighter::LookCount(int32 Row)

@@ -18,7 +18,7 @@ void ACaptive::Tick(float DeltaSeconds)
 
 	if (!bReleased)
 	{
-		Guard(EMove::Duck);
+		Guard(EMove::Block);
 	}
 }
 

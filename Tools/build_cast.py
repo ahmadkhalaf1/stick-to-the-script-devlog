@@ -1,11 +1,12 @@
 # Brings the cast into the project: one textured, skinned Mixamo character for the hero and one for each kind of
 # opponent, from the FBX files of Saved/Incoming/Mixamo/Characters, named by role: Hero.fbx, Thug.fbx, Rusher.fbx,
-# Kicker.fbx, Heavy.fbx, Gunman.fbx, Boss.fbx. Each lands in Content/Characters/Cast/<Role> as SK_<Role> with its own
+# Kicker.fbx, Heavy.fbx, Gunman.fbx, Boss.fbx, and Kid.fbx for the captive. Each lands in Content/Characters/Cast/<Role> as SK_<Role> with its own
 # materials and textures. The game poses them bone by bone on its sixteen joints, as it does the dummy, so they bring
 # no animation. A role with no file keeps the dummy. Needs ffmpeg, to halve the pictures that come too wide.
 #
 # A role that is in the project is left as it is: bringing it in again makes every file of it new, a hundred megabytes
-# of history for nothing. To bring one in afresh, delete its folder. To change M_CastCloth, delete it and the hero's folder.
+# of history for nothing. It is brought in afresh when its FBX file is newer than its model, which is how a character
+# is replaced: put the new file in the old one's place. To change M_CastCloth, delete it and the hero's folder.
 #
 # Run with the editor closed:
 #   UnrealEditor-Cmd.exe <path to StickToTheScript.uproject> -ExecutePythonScript=<path to this file> -unattended -nosplash -nullrhi -stdout
@@ -18,7 +19,7 @@ import unreal
 SOURCE = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()) + "Incoming/Mixamo/Characters/"
 SCRATCH = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_intermediate_dir())
 OUT = "/Game/Characters/Cast"
-ROLES = ["Hero", "Thug", "Rusher", "Kicker", "Heavy", "Gunman", "Boss"]
+ROLES = ["Hero", "Thug", "Rusher", "Kicker", "Heavy", "Gunman", "Boss", "Kid"]
 # The bones the game places. Fighter/DummyBody.cpp names the same ones.
 NEEDED = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head",
           "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand",
@@ -172,7 +173,8 @@ made_roles = []
 for role in ROLES:
     source = SOURCE + role + ".fbx"
     folder = f"{OUT}/{role}"
-    kept = assets.does_asset_exist(f"{folder}/SK_{role}")
+    model_file = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()) + f"Characters/Cast/{role}/SK_{role}.uasset"
+    kept = os.path.exists(model_file) and not (os.path.exists(source) and os.path.getmtime(source) > os.path.getmtime(model_file))
     if not kept:
         if not os.path.exists(source):
             said(f"{role}: no {role}.fbx, so it keeps the dummy")

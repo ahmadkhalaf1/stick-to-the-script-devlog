@@ -67,8 +67,8 @@ public:
 	// The player's choices: a colour, a hat and a build. Row 0 is colours, 1 hats, 2 builds.
 	void ApplyLook(const FCharacterLook& Look);
 	// Gives the fighter the body of one of the cast, by its role: Hero, or the name of a kind of opponent. The models
-	// are made by Tools/build_cast.py; a role without one keeps the dummy.
-	void WearCast(const FString& Part);
+	// are made by Tools/build_cast.py; a role without one keeps the dummy, and false comes back.
+	bool WearCast(const FString& Part);
 	// Gives the fighter a small light of its own that goes with its head, in the fight and in the film: the hero in
 	// dark clothes is otherwise lost on a dark set.
 	void LightAsTheStar();
@@ -341,7 +341,7 @@ private:
 	bool bLookedForAPistol = false;
 	bool bHoldsAPistol = false;
 
-	// A hat is one or two plain shapes set on the head. It is placed from the joints, so the film shows it too.
+	// A hat is a few plain shapes set on the head. It is placed from the joints, so the film shows it too.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> HatParts;
 

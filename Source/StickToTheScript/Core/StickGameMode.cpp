@@ -145,10 +145,12 @@ void AStickGameMode::StartPlay()
 	{
 		const FVector Location(Place.X, Place.Y, FloorHeight);
 		ACaptive* Captive = World->SpawnActor<ACaptive>(Location, Facing(Location, PlayerLocation));
-		Captive->SetActorScale3D(FVector(0.72));
 		Captive->Thickness = 5.5f;
 		Captive->HeadRadius = 10.f;
 		Captive->SetColor(FLinearColor(0.9f, 0.7f, 0.1f));
+		// The kid's model is a cartoon boy whose head is a third of him. At the dummy's size he stood as tall as
+		// the men round him; at this one the top of his cap is at their chests.
+		Captive->SetActorScale3D(FVector(Captive->WearCast(TEXT("Kid")) ? 0.5 : 0.72));
 		Captive->SetHome(Location, Captive->GetActorRotation());
 		Captive->Team = 0;
 		Captive->OpponentsToBeat = OpponentCount;

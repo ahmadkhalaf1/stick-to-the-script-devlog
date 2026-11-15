@@ -4,7 +4,8 @@
 #include "StickToTheScript/Fighter/StickFighter.h"
 #include "Captive.generated.h"
 
-// Someone to rescue. It cowers out of everyone's reach until the last opponent is down, then stands up.
+// Someone to rescue. It stands out of everyone's reach with its arms up in front of its face until the last opponent
+// is down, then lets them drop. It used to crouch: the kid's model, a third of which is head, folded into a heap.
 // Nobody can hit it: it is on the player's side and outside the arena.
 UCLASS()
 class ACaptive : public AStickFighter
