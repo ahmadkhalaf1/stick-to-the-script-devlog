@@ -21,6 +21,7 @@ depends:
 - [x] The new video uploaded by the developer on Sat Nov 14: https://www.youtube.com/watch?v=HJW6ExPfZdc. YouTube shows it without a sign-in. The link is in `Docs/StorePage.md` and on the draft page since 18:52
 - [x] Watched by the developer on Sat Nov 14, 18:45: "Video is good". The sound was not mentioned
 - [x] The first video, uploaded to YouTube by the developer on Fri Nov 13: https://www.youtube.com/watch?v=zvQRRTC56iA. The one of Nov 14 took its place on the page and in the form's notes
+- [x] Made again on Sun Nov 15 at 13:42 from the build with the cast and the new wounds: 57 seconds. The Start menu opened over the game for two seconds of the recording; `Tools/cut_video.mjs` can be told seconds to stay out of, and was. Uploaded by the developer that afternoon: https://www.youtube.com/watch?v=Rvms7Hs-x0Y. Looked at as frames by the agent; not yet said to have been watched by the developer
 - [x] Link saved for the submission form: in `Docs/StorePage.md`, and on the draft store page
 
 Sprint: [[Sprint 4 - Ship]] · Stream: ship

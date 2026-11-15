@@ -1550,6 +1550,13 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the wrong file went to YouTube, unlisted, for some minutes. It was caught by its title before the link was used. The agent had said in its message that the raw recording was not for sharing, and had left the two files with names that do not tell them apart at a glance in two folders next to each other.
 - **Not verified:** the zip on the page was not downloaded back and run. Whether the wrong video has been deleted from YouTube is the developer's to do and to say.
 
+### 14:49 · The right video's link on the draft page
+
+- **Developer said:** sent the same link again, twice, the second time after "ok what else at our list".
+- **Agent did:** asked YouTube again: still the raw recording, 396 seconds, uploaded at 14:10. Looked at the list of videos in the developer's YouTube Studio, which was signed in, without changing anything there. The cut was on it too, "StickToTheScript gameplay", 0:58, unlisted: the developer had uploaded the right file and copied the other one's link. Checked that link from outside (57 seconds, plays without a sign-in), put it in the draft page's video field at 14:49 in place of Saturday's, saved, and read the form back. Put it in `Docs/StorePage.md`, with the table for the jam's form.
+- **Result:** the draft page has today's zip and today's video: https://www.youtube.com/watch?v=Rvms7Hs-x0Y. It is still a draft.
+- **Not verified:** the raw recording is still on YouTube, unlisted, with the Start menu in it. Deleting it is the developer's, or the agent's on the developer's word. The developer has not said that the new video was watched.
+
 ---
 
 ## Asset and tool register
