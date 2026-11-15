@@ -36,14 +36,16 @@ namespace
 		float SpecialShare;
 	};
 	const FStyle Styles[] = {
-		{ 55.f, 250.f, 95.f, 0.42f, 1.f, 0.25f, 0.2f, 8.f, 13.f, false, false, 7.f, 11.f, EMove::Chop, EMove::Kick, 0.2f },
-		{ 35.f, 370.f, 90.f, 0.28f, 0.7f, 0.1f, 0.f, 6.f, 10.f, false, true, 5.5f, 10.f, EMove::Punch, EMove::Sweep, 0.5f },
-		{ 45.f, 270.f, 100.f, 0.5f, 1.2f, 0.9f, 0.3f, 8.f, 14.f, false, true, 6.5f, 10.5f, EMove::Chop, EMove::Roundhouse, 0.4f },
-		{ 170.f, 180.f, 100.f, 0.6f, 1.3f, 0.5f, 0.35f, 14.f, 22.f, true, false, 10.f, 13.5f, EMove::Uppercut, EMove::Kick, 0.25f },
+		// Their health is a fifth more than it was until Sun Nov 15: with quicker keys and the big finish, the game's own
+		// player was through a scene in a quarter of a minute.
+		{ 65.f, 250.f, 95.f, 0.42f, 1.f, 0.25f, 0.2f, 8.f, 13.f, false, false, 7.f, 11.f, EMove::Chop, EMove::Kick, 0.2f },
+		{ 42.f, 370.f, 90.f, 0.28f, 0.7f, 0.1f, 0.f, 6.f, 10.f, false, true, 5.5f, 10.f, EMove::Punch, EMove::Sweep, 0.5f },
+		{ 54.f, 270.f, 100.f, 0.5f, 1.2f, 0.9f, 0.3f, 8.f, 14.f, false, true, 6.5f, 10.5f, EMove::Chop, EMove::Roundhouse, 0.4f },
+		{ 200.f, 180.f, 100.f, 0.6f, 1.3f, 0.5f, 0.35f, 14.f, 22.f, true, false, 10.f, 13.5f, EMove::Uppercut, EMove::Kick, 0.25f },
 		// The gunman: its range is the gap it keeps, its wind-up the time it aims, and its punch damage what a shot does.
-		{ 35.f, 230.f, 450.f, 1.f, 2.6f, 0.f, 0.f, 14.f, 0.f, false, true, 6.f, 10.5f, EMove::Punch, EMove::Kick, 0.f },
+		{ 42.f, 230.f, 450.f, 1.f, 2.6f, 0.f, 0.f, 14.f, 0.f, false, true, 6.f, 10.5f, EMove::Punch, EMove::Kick, 0.f },
 		// The boss: a heavy who does not plod. He guards more, rests less, and half of what he throws is a big move.
-		{ 300.f, 230.f, 100.f, 0.5f, 0.8f, 0.5f, 0.5f, 16.f, 22.f, true, false, 10.5f, 14.f, EMove::Uppercut, EMove::Roundhouse, 0.45f },
+		{ 350.f, 230.f, 100.f, 0.5f, 0.8f, 0.5f, 0.5f, 16.f, 22.f, true, false, 10.5f, 14.f, EMove::Uppercut, EMove::Roundhouse, 0.45f },
 	};
 	// A bigger move is shown for longer before it lands, so it can be read and answered: step back, or duck a roundhouse.
 	const float SpecialWindUpScale = 1.35f;
@@ -210,6 +212,9 @@ void AStuntPartner::StartThinking(EOpponentKind Kind, float InWakeDistance)
 	bArmored = Style.bArmored;
 	Thickness = Style.Thickness;
 	HeadRadius = Style.HeadRadius;
+	// In the order of EOpponentKind.
+	const TCHAR* const Roles[] = { TEXT("Thug"), TEXT("Rusher"), TEXT("Kicker"), TEXT("Heavy"), TEXT("Gunman"), TEXT("Boss") };
+	WearCast(Roles[FMath::Clamp(static_cast<int32>(Kind), 0, static_cast<int32>(UE_ARRAY_COUNT(Roles)) - 1)]);
 
 	PreferredRange = Style.Range;
 	WindUpSeconds = Style.WindUpSeconds;

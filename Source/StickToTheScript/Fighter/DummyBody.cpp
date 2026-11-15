@@ -34,6 +34,13 @@ namespace
 	const double FlatFootUnder = 14.;
 	const double LooseFootOver = 30.;
 
+	// How high a fighter's ankle is above the floor it stands on, and how much of a fighter's build one of the cast takes on.
+	const double UsualAnkleHeight = 12.;
+	const float CastGirthShare = 0.35f;
+	// How much longer than it was made a limb's bone may be drawn. Some of the cast have shorter legs than the
+	// fighter they dress, and need most of this just to stand.
+	const double MostStretch = 1.35;
+
 	const uint8 TurnGiven = 1;
 	const uint8 PlaceGiven = 2;
 	const uint8 GoneGiven = 4;
@@ -149,7 +156,11 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 	// put on the joints whatever its size, so the size only decides how thick it is and how big its hands, feet and head.
 	const double RestLeg = FVector::Dist(RestAt(DummyLeftUpLeg), RestAt(DummyLeftLeg)) + FVector::Dist(RestAt(DummyLeftLeg), RestAt(DummyLeftFoot));
 	const double Leg = FVector::Dist(Joints[LeftHip], Joints[LeftKnee]) + FVector::Dist(Joints[LeftKnee], Joints[LeftFoot]);
-	const double Size = FMath::Max(Leg / RestLeg, 0.2) * Girth;
+	// One of the cast is sized by how high its hips stand, and is only a little stouter for the build of whoever
+	// wears it. Sized by its legs, a character with short legs under a long body came out half as big again as the rest.
+	const double Size = bOwnSkin
+		? FMath::Max((Leg + UsualAnkleHeight) / FMath::Max(RestAt(DummyHips).Z, 1.), 0.2) * FMath::Lerp(1.f, Girth, CastGirthShare)
+		: FMath::Max(Leg / RestLeg, 0.2) * Girth;
 	const FVector Origin = Joints[PelvisJoint] - FVector(0., 0., RestAt(DummyHips).Z * Size);
 	SetWorldTransform(FTransform(FQuat::Identity, Origin, FVector(Size)));
 
@@ -197,13 +208,15 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 	{
 		// An arm. The elbow bends forward, so at rest its axis is the upper arm crossed with the way the model faces.
 		const int32 Arm = Side == 0 ? DummyLeftArm : DummyRightArm;
-		const FVector Shoulder = Joints[Side == 0 ? LeftShoulder : RightShoulder];
-		const FVector Elbow = Joints[Side == 0 ? LeftElbow : RightElbow];
-		const FVector Hand = Joints[Side == 0 ? LeftHand : RightHand];
-		const FVector Inward = (Side == 0 ? ShoulderLine : -ShoulderLine).GetSafeNormal();
-		const FVector ElbowAxis = DummyHinge(Elbow - Shoulder, Hand - Elbow, Front + Up * 0.6 + Inward * 0.3);
 		const FVector RestUpperArm = RestAt(Arm + 1) - RestAt(Arm);
 		const FVector RestForearm = RestAt(Arm + 2) - RestAt(Arm + 1);
+		// A knocked-out body's joints can lie much further apart than a limb is long, and a limb drawn all that way
+		// was a rubber hose. It is drawn no longer than a limb can be, and stops short of the joint.
+		const FVector Shoulder = Joints[Side == 0 ? LeftShoulder : RightShoulder];
+		const FVector Elbow = Shoulder + (Joints[Side == 0 ? LeftElbow : RightElbow] - Shoulder).GetClampedToMaxSize(RestUpperArm.Size() * Size * MostStretch);
+		const FVector Hand = Elbow + (Joints[Side == 0 ? LeftHand : RightHand] - Elbow).GetClampedToMaxSize(RestForearm.Size() * Size * MostStretch);
+		const FVector Inward = (Side == 0 ? ShoulderLine : -ShoulderLine).GetSafeNormal();
+		const FVector ElbowAxis = DummyHinge(Elbow - Shoulder, Hand - Elbow, Front + Up * 0.6 + Inward * 0.3);
 		const FQuat UpperArmTurn = DummyFrame(Elbow - Shoulder, ElbowAxis) * DummyFrame(RestUpperArm, RestUpperArm ^ RestFront).Inverse();
 		const FQuat ForearmTurn = DummyFrame(Hand - Elbow, ElbowAxis) * DummyFrame(RestForearm, RestForearm ^ RestFront).Inverse();
 		Put(Arm, UpperArmTurn, Shoulder);
@@ -216,12 +229,12 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 
 		// A leg. The knee bends backward.
 		const int32 Thigh = Side == 0 ? DummyLeftUpLeg : DummyRightUpLeg;
-		const FVector Hip = Joints[Side == 0 ? LeftHip : RightHip];
-		const FVector Knee = Joints[Side == 0 ? LeftKnee : RightKnee];
-		const FVector Ankle = Joints[Side == 0 ? LeftFoot : RightFoot];
-		const FVector KneeAxis = DummyHinge(Knee - Hip, Ankle - Knee, -Front - Up * 0.6);
 		const FVector RestThigh = RestAt(Thigh + 1) - RestAt(Thigh);
 		const FVector RestShin = RestAt(Thigh + 2) - RestAt(Thigh + 1);
+		const FVector Hip = Joints[Side == 0 ? LeftHip : RightHip];
+		const FVector Knee = Hip + (Joints[Side == 0 ? LeftKnee : RightKnee] - Hip).GetClampedToMaxSize(RestThigh.Size() * Size * MostStretch);
+		const FVector Ankle = Knee + (Joints[Side == 0 ? LeftFoot : RightFoot] - Knee).GetClampedToMaxSize(RestShin.Size() * Size * MostStretch);
+		const FVector KneeAxis = DummyHinge(Knee - Hip, Ankle - Knee, -Front - Up * 0.6);
 		const FQuat ThighTurn = DummyFrame(Knee - Hip, KneeAxis) * DummyFrame(RestThigh, RestThigh ^ -RestFront).Inverse();
 		const FQuat ShinTurn = DummyFrame(Ankle - Knee, KneeAxis) * DummyFrame(RestShin, RestShin ^ -RestFront).Inverse();
 		Put(Thigh, ThighTurn, Hip);
@@ -274,9 +287,25 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 	RefreshBoneTransforms();
 }
 
+void UDummyBody::Wear(USkeletalMesh* Cast)
+{
+	if (!Cast || Cast == GetSkinnedAsset())
+	{
+		return;
+	}
+	SetSkinnedAssetAndUpdate(Cast);
+	// The model's own materials, not the dummy's two.
+	EmptyOverrideMaterials();
+	// What was learnt of the dummy's bones is not true of this one.
+	Placed.Reset();
+	Fingers[0].Reset();
+	Fingers[1].Reset();
+	bOwnSkin = true;
+}
+
 void UDummyBody::Paint(const FLinearColor& Skin, const FLinearColor& Rubber)
 {
-	if (!HasBody())
+	if (!HasBody() || bOwnSkin)
 	{
 		return;
 	}

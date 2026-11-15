@@ -51,9 +51,10 @@ namespace
 	const float AutoplayRestSeconds = 1.6f;
 	const float AutoplayGuardShare = 0.7f;
 
-	// What a blow that lands adds to the finish bar: about a dozen blows fill it, fewer if they are big ones.
-	const float FinishChargeForABlow = 0.07f;
-	const float FinishChargeForABigBlow = 0.11f;
+	// What a blow that lands adds to the finish bar: about twenty blows fill it, fewer if they are big ones. At a dozen,
+	// with everyone within 3.4 m ended by it, two finishes were a scene.
+	const float FinishChargeForABlow = 0.05f;
+	const float FinishChargeForABigBlow = 0.08f;
 	// How long the low camera keeps the picture, by the clock on the wall: the kick in slow motion and what it does.
 	const double FinishShotRealSeconds = 2.4;
 	// The game's own player lets a full bar be seen for this long before it spends it.

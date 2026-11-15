@@ -24,8 +24,14 @@ public:
 	void PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed = 0);
 	void Paint(const FLinearColor& Skin, const FLinearColor& Rubber);
 
+	// Puts one of the cast on the same joints in the dummy's place: a model with a skin, a face and clothes of its
+	// own, which Paint then leaves alone. Any model with the dummy's bone names will do.
+	void Wear(class USkeletalMesh* Cast);
+	bool WearsItsOwnSkin() const { return bOwnSkin; }
+
 private:
 	bool LearnRest();
+	bool bOwnSkin = false;
 
 	// The model standing as it was made, arms straight out: each bone relative to its parent, and relative to the model.
 	TArray<FTransform> RestLocal;

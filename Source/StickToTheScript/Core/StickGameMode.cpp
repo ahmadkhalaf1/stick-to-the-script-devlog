@@ -103,6 +103,8 @@ void AStickGameMode::StartPlay()
 	const FVector FirstPartnerLocation(Opponents[0].Spot.X, Opponents[0].Spot.Y, FloorHeight);
 	const FRotator PlayerFacing = Facing(PlayerLocation, FirstPartnerLocation);
 	AStickFighter* PlayerFighter = World->SpawnActor<AStickFighter>(PlayerLocation, PlayerFacing);
+	PlayerFighter->WearCast(TEXT("Hero"));
+	PlayerFighter->LightAsTheStar();
 	PlayerFighter->SetColor(PlayerMark.Color);
 	if (const UStickGameInstance* Wardrobe = GetGameInstance<UStickGameInstance>())
 	{

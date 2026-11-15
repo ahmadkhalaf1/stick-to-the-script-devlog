@@ -66,6 +66,12 @@ public:
 
 	// The player's choices: a colour, a hat and a build. Row 0 is colours, 1 hats, 2 builds.
 	void ApplyLook(const FCharacterLook& Look);
+	// Gives the fighter the body of one of the cast, by its role: Hero, or the name of a kind of opponent. The models
+	// are made by Tools/build_cast.py; a role without one keeps the dummy.
+	void WearCast(const FString& Part);
+	// Gives the fighter a small light of its own that goes with its head, in the fight and in the film: the hero in
+	// dark clothes is otherwise lost on a dark set.
+	void LightAsTheStar();
 	static int32 LookCount(int32 Row);
 	static FString LookName(int32 Row, int32 Index);
 	static FLinearColor LookColor(int32 Index);
@@ -321,6 +327,12 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> Gun;
+	UPROPERTY()
+	TObjectPtr<class UPointLightComponent> StarLight;
+
+	// The gun in an opponent's hand is the pistol prop's own model, looked for the first time one is held.
+	bool bLookedForAPistol = false;
+	bool bHoldsAPistol = false;
 
 	// A hat is one or two plain shapes set on the head. It is placed from the joints, so the film shows it too.
 	UPROPERTY()
@@ -333,6 +345,8 @@ private:
 	TObjectPtr<UStaticMesh> CubeMesh;
 
 	int32 Hat = 0;
+	// The colour of a limb that comes off, when the fighter wears one of the cast.
+	FLinearColor CastLimbColor = FLinearColor(0.3f, 0.3f, 0.3f);
 
 	// A ball at every joint rounds the limbs off and gives the figure hands and feet. Eyes show which way it faces.
 	UPROPERTY()

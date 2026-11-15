@@ -2,6 +2,7 @@
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimSequenceBase.h"
+#include "Components/PointLightComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -94,7 +95,7 @@ namespace
 	const float WeaponSwingBackSeconds = 0.3f;
 	// The big finish reaches everyone this near, all round. It ends anyone up to this health, and only hurts the rest:
 	// a boss is not a one-button fight.
-	const double FinishRadius = 340.;
+	const double FinishRadius = 260.;
 	const EMove FinishMoves[] = { EMove::Chop, EMove::Uppercut, EMove::Roundhouse };
 	const float FinishWindUps[] = { 0.2f, 0.26f, 0.4f };
 	const float FinishBetweenBlowsSeconds = 0.1f;
@@ -102,7 +103,8 @@ namespace
 	const float FinishHeldSeconds = 2.5f;
 	const float FinishLiftSpeed = 430.f;
 	const float FinishGivenUpAfterSeconds = 3.f;
-	const float FinishEndsUpToHealth = 200.f;
+	// Under a heavy's: he is hurt by it and has to be fought, like the boss.
+	const float FinishEndsUpToHealth = 120.f;
 	const float FinishDamageToTheStrong = 110.f;
 	// Not far: what is left of them should come down inside the picture that is watching.
 	const float FinishLaunchSpeed = 250.f;
@@ -296,6 +298,30 @@ namespace
 		FLinearColor(2.6f, 2.2f, 0.7f),
 		FLinearColor(1.6f, 1.05f, 0.12f),
 	};
+	// The hero's own light: how strong, how far it reaches, and where it hangs from his chest. Every stage is watched
+	// from the side of higher Y, so that is where it leans.
+	const float StarLightCandelas = 420.f;
+	const float StarLightReach = 460.f;
+	const double StarLightAbove = 85.;
+	const FVector StarLightTowardsCamera(0., 120., 0.);
+	const float StarLightTakesColor = 0.6f;
+
+	// What colour a limb is that comes off one of the cast, by its part.
+	struct FCastLimb
+	{
+		const TCHAR* Part;
+		FLinearColor Color;
+	};
+	const FCastLimb CastLimbs[] = {
+		{ TEXT("Hero"), FLinearColor(0.02f, 0.02f, 0.025f) },
+		{ TEXT("Thug"), FLinearColor(0.6f, 0.4f, 0.32f) },
+		{ TEXT("Rusher"), FLinearColor(0.85f, 0.7f, 0.05f) },
+		{ TEXT("Kicker"), FLinearColor(0.45f, 0.04f, 0.03f) },
+		{ TEXT("Heavy"), FLinearColor(0.85f, 0.85f, 0.82f) },
+		{ TEXT("Gunman"), FLinearColor(0.2f, 0.27f, 0.33f) },
+		{ TEXT("Boss"), FLinearColor(0.55f, 0.4f, 0.16f) },
+	};
+
 	// A free strike lands on anyone within about 70 degrees of straight ahead.
 	const double StrikeConeCosine = 0.34;
 	const float AirStrikeDamageScale = 1.4f;
@@ -1235,6 +1261,10 @@ void AStickFighter::CaptureBlendFrom()
 void AStickFighter::SetColor(const FLinearColor& NewColor)
 {
 	Color = NewColor;
+	if (StarLight)
+	{
+		StarLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, 0.93f, 0.84f), Color, StarLightTakesColor));
+	}
 	for (UStaticMeshComponent* Part : Limbs)
 	{
 		Part->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
@@ -1685,8 +1715,9 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 				Flying.Along = (To - From).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
 				Flying.Length = FVector::Dist(From, To);
 				Flying.Velocity = FMath::VRand() * 160. + FVector(0., 0., 330.) + (Flying.Middle - Joints[PelvisJoint]).GetSafeNormal2D() * 260.;
-				LooseLimbs[Limb * 2]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
-				LooseLimbs[Limb * 2 + 1]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", RubberFor(Color));
+				const FLinearColor LimbColor = Model->WearsItsOwnSkin() ? CastLimbColor : Color;
+				LooseLimbs[Limb * 2]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", LimbColor);
+				LooseLimbs[Limb * 2 + 1]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", RubberFor(LimbColor));
 				Stumps[Limb]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", StumpRed);
 				bJustLost = true;
 			}
@@ -1808,9 +1839,29 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	Gun->SetVisibility(bHoldsGun);
 	if (bHoldsGun)
 	{
+		// The pistol the props are made of, in the hand: a black box stood in for it, and on one of the cast it showed.
+		if (!bLookedForAPistol)
+		{
+			bLookedForAPistol = true;
+			if (UStaticMesh* Pistol = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Props/SM_Pistol.SM_Pistol"), nullptr, LOAD_NoWarn | LOAD_Quiet))
+			{
+				Gun->SetStaticMesh(Pistol);
+				Gun->EmptyOverrideMaterials();
+				bHoldsAPistol = true;
+			}
+		}
 		const FVector Barrel = (Joints[RightHand] - Joints[RightElbow]).GetSafeNormal();
-		Gun->SetWorldLocationAndRotation(Joints[RightHand] + Barrel * 9., Barrel.Rotation());
-		Gun->SetWorldScale3D(FVector(0.2, 0.05, 0.11));
+		if (bHoldsAPistol)
+		{
+			// Its grip in the palm, a hand's length past the wrist, and its barrel along the forearm.
+			Gun->SetWorldLocationAndRotation(Joints[RightHand] + Barrel * 13. + FVector(0., 0., 3.5), Barrel.Rotation());
+			Gun->SetWorldScale3D(FVector(1.));
+		}
+		else
+		{
+			Gun->SetWorldLocationAndRotation(Joints[RightHand] + Barrel * 9., Barrel.Rotation());
+			Gun->SetWorldScale3D(FVector(0.2, 0.05, 0.11));
+		}
 	}
 
 	// The smear joins where the fastest hand or foot was last frame to where it is now.
@@ -1837,6 +1888,12 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	}
 	LastDrawnJoints = Joints;
 	LastDrawnSeconds = Now;
+
+	if (StarLight)
+	{
+		// Above and a little towards whoever is watching, wherever the body is: the film puts it where the actor is not.
+		StarLight->SetWorldLocation(Joints[ChestJoint] + FVector(0., 0., StarLightAbove) + StarLightTowardsCamera);
+	}
 
 	const FVector Up = (Joints[SkullJoint] - Joints[NeckJoint]).GetSafeNormal();
 	Head->SetVisibility(bShapes);
@@ -2880,6 +2937,44 @@ void AStickFighter::ApplyLook(const FCharacterLook& Look)
 		HatParts[Piece]->SetVisibility(Shape.bUsed);
 		HatParts[Piece]->SetStaticMesh(Shape.bCube ? CubeMesh : CylinderMesh);
 		HatParts[Piece]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", HatColors[Hat]);
+	}
+}
+
+void AStickFighter::LightAsTheStar()
+{
+	if (StarLight)
+	{
+		return;
+	}
+	StarLight = NewObject<UPointLightComponent>(this);
+	StarLight->SetupAttachment(RootComponent);
+	StarLight->SetUsingAbsoluteLocation(true);
+	StarLight->SetIntensityUnits(ELightUnits::Candelas);
+	StarLight->SetIntensity(StarLightCandelas);
+	StarLight->SetAttenuationRadius(StarLightReach);
+	// One of the cast wears its own clothes, so the colour chosen in the wardrobe is the colour of the light he is filmed in.
+	StarLight->SetLightColor(FMath::Lerp(FLinearColor(1.f, 0.93f, 0.84f), Color, StarLightTakesColor));
+	// It is there to pick the hero out, not to throw his shadow about the set.
+	StarLight->SetCastShadows(false);
+	StarLight->RegisterComponent();
+}
+
+void AStickFighter::WearCast(const FString& Part)
+{
+	// Looked for by name and not held by the class: which parts have a model is the project's business, not the code's.
+	// Config/DefaultGame.ini has the folder cooked whether or not anything else refers to it.
+	const FString Path = FString::Printf(TEXT("/Game/Characters/Cast/%s/SK_%s.SK_%s"), *Part, *Part, *Part);
+	if (USkeletalMesh* Cast = LoadObject<USkeletalMesh>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet))
+	{
+		Model->Wear(Cast);
+		// A limb that comes off is a plain shape, and takes the colour of the sleeve or the trouser leg it was in.
+		for (const FCastLimb& Limb : CastLimbs)
+		{
+			if (Part == Limb.Part)
+			{
+				CastLimbColor = Limb.Color;
+			}
+		}
 	}
 }
 
