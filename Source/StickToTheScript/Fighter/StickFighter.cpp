@@ -389,6 +389,8 @@ namespace
 	// What is held sits in the palm, this far past the wrist. And how far a hand that holds something closes: 1 is a fist.
 	const double PalmPastWrist = 8.;
 	const float HoldingGrip = 0.6f;
+	// The fist round something held in one hand is nearly shut.
+	const float OneHandGrip = 0.9f;
 
 	// Where an elbow or knee sits, given both ends of the limb, its two lengths and the way it bends.
 	FVector MiddleJoint(const FVector& Root, const FVector& End, double UpperLength, double LowerLength, const FVector& BendDirection)
@@ -1889,7 +1891,7 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 		{
 			// What one hand holds is in the right.
 			Grips[0] = Carried->GetHold() == EPropHold::OneHand ? 1.f : HoldingGrip;
-			Grips[1] = HoldingGrip;
+			Grips[1] = Carried->GetHold() == EPropHold::OneHand ? OneHandGrip : HoldingGrip;
 		}
 		if ((BrokenArms & 4) != 0)
 		{
@@ -2549,12 +2551,14 @@ void AStickFighter::LandFinish()
 	}
 
 	bFinishing = false;
+	const AStickFighter* Finished = FinishVictim.Get();
 	FinishVictim = nullptr;
 	const FVector From = GetActorLocation();
 	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
 	{
 		AStickFighter* Other = *It;
-		if (Other->Team == Team || Other->IsDown() || FVector::Dist2D(Other->GetActorLocation(), From) > FinishRadius)
+		// The last blow is for the one the finish was started on. It used to take apart everyone who stood near.
+		if (Other != Finished || Other->IsDown())
 		{
 			continue;
 		}

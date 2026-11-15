@@ -1641,6 +1641,17 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the first build of this was started while the developer's game was running, stopped at once, and the agent waited ten minutes for an answer that was not coming. The first three pictures showed empty hands: the opponents were held only after the pick-up, and one of them had knocked the weapon away. The test holds them first now.
 - **Not verified:** the swung weapon's hold, again: the hero walked out of the picture. The finish with full hands was not tried: it is five lines that were read, built and run in the self-played game, where nothing complained. The developer has not played this build.
 
+### 20:15 · A pan held by its handle, a finish for one, and the video of the build that ships
+
+- **Developer said:** a screenshot of something floating behind the hero's open hand, "this item is hold in strange way", then "item was not bottle it was the pan , but could be same issue for both ietms"; "finiish move is applied to all nearby enemies , should be at the one i click at"; and "before we submit make sure itch has new screenshots , videos etc. all up to date , youtube video ask me to upload an dwhich one to match the latest version".
+- **Agent did:**
+  - Something long held in one hand lay level on the palm, by its middle. It is held by its end in a fist that is nearly shut, standing up and a little back, as a thing is held to be thrown.
+  - The finish's last blow took apart everyone within its reach. It lands on the one the finish was started on, who is the nearest when the key is pressed: the game has no way to point at someone.
+  - Built, packaged and zipped at 20:05. Recorded the packaged game from 20:06 to 20:13 and cut 58.9 seconds from it at 20:15. Measured each of its 3522 frames for a menu's flat grey and looked at one frame a second: nothing but the game.
+- **Result:** `Tools/check.ps1` passes with 8 tests. The packaged game played itself through the three scenes to the end card in the recording, seven takes of which two were lost, no errors in its log. The zip is 611 MB. The video is `Saved/Release/StickToTheScript_gameplay.mp4`.
+- **Went wrong:** the agent called the thing in the screenshot a bottle. It was the pan.
+- **Not verified:** the pan in the hand and the finish for one were not photographed at all: they were built and run, and the session's limit was four hundredths from its end. The zip and the video are not on the store page: uploading both was left to the developer for the same reason. The page's six pictures and cover are from the 16:01 recording; nothing in them has changed since.
+
 ---
 
 ## Asset and tool register

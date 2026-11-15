@@ -91,6 +91,10 @@ namespace
 	// A gun longer than twice this is shouldered. Anything else smaller than twice the second is held in one hand.
 	const double LongGunOverHalfLength = 30.;
 	const double OneHandUnderHalfSize = 26.;
+	// A long thing in one hand points up and this far back past upright, and the fist is this share of its half
+	// length below its middle.
+	const double OneHandPitchDegrees = 112.;
+	const double OneHandHeldAtShare = 0.7;
 
 	const float LegendaryGlow = 1.6f;
 	// A weapon in the hands points up and ahead, and is held near its handle end.
@@ -282,8 +286,18 @@ void AThrownProp::Tick(float DeltaSeconds)
 			}
 			else if (GetHold() == EPropHold::OneHand)
 			{
-				// In the palm of the right hand, by its lower end.
-				SetActorLocationAndRotation(Carrier->GetGripPoint(1) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
+				if (HalfLength > HalfHeight)
+				{
+					// Something long, a bottle: held by its end in the right fist, standing up and a little back
+					// out of it, as it is held to be thrown. Laid level on the palm it floated behind the fingers.
+					const FRotator Cocked(OneHandPitchDegrees, Carrier->GetActorRotation().Yaw, 0.);
+					SetActorLocationAndRotation(Carrier->GetGripPoint(1) + Cocked.Vector() * (HalfLength * OneHandHeldAtShare), Cocked);
+				}
+				else
+				{
+					// Something upright: on the palm of the right hand, by its lower end.
+					SetActorLocationAndRotation(Carrier->GetGripPoint(1) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
+				}
 			}
 			else
 			{
