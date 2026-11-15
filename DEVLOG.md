@@ -1659,6 +1659,13 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the gameplay video for the submission is https://www.youtube.com/watch?v=yoE4ckmznZA, cut at 20:15 from the build zipped at 20:05.
 - **Not verified:** the video was looked at as frames before it was uploaded, not watched on YouTube.
 
+### 20:54 · The store page carries the build that ships
+
+- **Developer said:** nothing new; the agent had left the two uploads to the developer and then read the page.
+- **Agent did:** read the saved page: it still had the zip of 18:39 and the afternoon's video link. Put the evening's link in the video field, pressed "Upload files" in the tab left open from before, filled the chooser in, waited for the upload, saved once for both, and read the saved page back.
+- **Result:** the store page has the zip built at 20:05 (uploaded at 20:50, 611 MB, Windows) and links to https://www.youtube.com/watch?v=yoE4ckmznZA, the video cut from that same build. Its text, six pictures and cover are the afternoon's and still show the game as it is.
+- **Not verified:** the zip on the page was not downloaded back and run. Whether the page is still a draft was not read this time: making it public and submitting are the developer's.
+
 ---
 
 ## Asset and tool register
