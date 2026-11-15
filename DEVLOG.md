@@ -1495,6 +1495,14 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the first way of getting the long text into the page, fetching it from a small server on the same PC, never answered: the browser holds such a request back until somebody allows it. The text went in as a file handed to the page instead.
 - **Not verified:** the draft page as a visitor would see it was not opened afterwards. The zip and the video are the developer's to do in the morning.
 
+### 06:49 · The hats on the new head, and the end of the night
+
+- **Developer said:** nothing: asleep, having asked for the PC to be put to sleep when the work was done.
+- **Agent did:** photographed the hero in the wardrobe wearing each of the six hats, the one thing about the cast it had said it had not looked at. They sit on his head, on top of the cap he comes with. Nothing was changed for it.
+- **Result:** `main` is the build with the cast, pushed. On the disk: the packaged game, its 598 MB zip of 06:21, and the 58.7 second video of 06:39. The store page's draft has the new words and pictures.
+- **Went wrong:** the commit before this one has a stray mark in front of its first word, from the way its message was written to a file. It is pushed, and `main` is not rewritten.
+- **Left for the developer:** to play it; to upload the zip to the draft and the video to YouTube and give the new link; to say whether the film still feels strange; and the two things that were never the agent's, making the page public and submitting.
+
 ---
 
 ## Asset and tool register
