@@ -1624,6 +1624,13 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the fixes were written while the developer's game was running, and could not be built until it was closed. The agent's own pictures of the hour before had passed the crate and the one-handed pistol; the developer's screenshots, taken close and from the camera's side, showed what a picture of a small figure did not.
 - **Not verified:** the bat's new hold and the finish with a broken arm were not photographed: the test's player did not pick the bat up, and the limit of the session was near. The developer has not played this build.
 
+### 18:53 · The 18:39 zip on the draft page
+
+- **Developer said:** "CLAUDE ZIP 3 is in front".
+- **Agent did:** a fresh tab again, "Upload files", `Tools\choose_file.ps1`, four minutes, saved, loaded the form again and read it back.
+- **Result:** the draft page has the zip built at 18:39, uploaded at 18:48, 611 MB, for Windows. Still a draft, still linking to the 13:42 video.
+- **Not verified:** the zip on the page was not downloaded back and run. The developer has not played this build.
+
 ---
 
 ## Asset and tool register
