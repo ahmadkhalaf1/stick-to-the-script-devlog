@@ -1588,6 +1588,13 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
   - The new zip did not get onto the draft page. After the browser tool's own file upload had been used on a tab for the pictures, Chrome opened no file chooser for that tab any more; the fresh tab opened in its place fell out of the agent's control when the old one was closed. The developer had brought the tab to the front for nothing, twice.
 - **Not verified:** the developer has not said whether the holds and the kicks are right now. The kicks were judged from small frames of a self-played fight, in which no limb was seen in a body; nobody has counted. The video of 16:10 was recorded before these fixes and shows the old holds. The zip on the draft page is still the one of 13:14.
 
+### 17:28 · The zip on the draft page, at the third try
+
+- **Developer said:** "CLAUDE ZIP is in front", of the tab the agent had asked for.
+- **Agent did:** pressed "Upload files" in a tab on which the browser tool's own file upload had never been used. The file chooser opened, `Tools\choose_file.ps1` filled it in, and the zip built at 17:14 went up in about three and a half minutes. Saved, loaded the form again and read it back.
+- **Result:** the draft page has the 611 MB zip, uploaded at 17:23, for Windows, with the afternoon's text, six pictures and cover. It is still a draft. It links to the video cut at 13:42; the 16:10 cut is on the developer's disk.
+- **Not verified:** the zip on the page was not downloaded back and run.
+
 ---
 
 ## Asset and tool register
