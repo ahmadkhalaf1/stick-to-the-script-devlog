@@ -1,7 +1,7 @@
 ---
 sprint: 3
 stream: fight
-status: doing
+status: done
 owner: lead
 estimate: 2
 depends:
@@ -30,8 +30,8 @@ depends:
 - [x] The kid is kid-sized and stands up: photographed on the roof beside a thug
 - [x] The crown reads as a crown: photographed in the wardrobe
 - [x] The packaged build has all of it and plays itself to the end card: run and its log read, not seen
-- [ ] The gameplay video and the store pictures show the game as it is
+- [x] The gameplay video and the store pictures show the game as it is: video cut at 20:15 from the build of 20:05, pictures from the 16:01 recording
 - [x] The store page and the dev log's register name Brute and Timmy, and no longer Big Vegas
-- [ ] The developer has seen them in the game
+- [x] The developer has seen them in the game: played the builds that evening and sent screenshots of what was still wrong, which was put right
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight

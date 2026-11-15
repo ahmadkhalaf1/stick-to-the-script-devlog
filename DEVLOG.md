@@ -1677,6 +1677,15 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the limit, as told. The rule was to check the meter at checkpoints; the agent checked its memory of the meter.
 - **Not verified:** the jam's form is not filled in or submitted yet. That is the developer's, with the answers in `Saved/Release/jam-form-answers.txt`.
 
+### 21:27 · Submitted
+
+- **Developer said:** "Yes, fill it in", of the jam's form. Asked four things the form wanted that were the developer's to say: whether to enter the name and email given on Nov 13 ("Yes, enter those"); student or not ("N/A, not a student"); which prize categories ("u know what we did , and u select which categories our game fit at"); and whether the rules were read and agreed to and the form should go ("I agree, submit it"). One field more turned up as required, whether Epic and the jam's partners may write to the developer: "Yes".
+- **Agent did:** opened the form in the developer's browser, chose the project, and filled it in from `Docs/StorePage.md`: engine, team and game name, one person, the video, how to play, Windows, what was made before the jam, the dev log, the take on the theme, the tools and every third-party asset, and where an OpenAI model was used (Whisper, to check the spoken lines, in development only). Categories: Solo Driver, Glass Box, and Render Royalty, since being considered costs nothing; not the NVIDIA award, whose features the game does not use. Then the developer's four answers, and Submit.
+- **What was declared as made before Nov 12:** no game code, level, asset, script or project prompt. What existed before and was used: the developer's general Claude Code setup, a personal instruction file about code comments and third-party plugins, none of it made for this game. The agent wrote that wording and read it to the developer before the form went.
+- **Result:** "Entry submitted to jam", at 21:27, five hours and thirty-two minutes before the deadline: https://itch.io/jam/2026-epic-ai-megajam/rate/5353264. The store page is public with the build of 20:05 and its video.
+- **Went wrong:** the agent had told the developer for two days that the partners' contact box would stay unticked. It was not a box: it was a required line of text, found on the way to the Submit button. The agent stopped and asked.
+- **Not verified:** the last two fixes, the pan in the hand and the finish for one opponent, were never photographed. Nobody but the developer has played the game.
+
 ---
 
 ## Asset and tool register
