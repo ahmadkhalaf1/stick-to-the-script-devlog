@@ -63,6 +63,9 @@ public:
 	// A gun: the punch fires it while it has rounds left.
 	bool IsGun() const;
 	EPropHold GetHold() const;
+	// The pistol kept for a gunman falls where he stands: when he goes down, or when his gun arm breaks. False if
+	// this is not his, or has fallen already.
+	bool FallFromHandOf(AActor* Fighter);
 	int32 GetShotsLeft() const { return RoundsLeft; }
 	const TCHAR* GetGunName() const;
 	// One pull of the trigger. False when it is empty or was fired a moment ago; otherwise what came out of it.

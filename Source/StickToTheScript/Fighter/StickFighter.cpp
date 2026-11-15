@@ -384,6 +384,9 @@ namespace
 	const double FistPastWrist = 9.;
 	const double FootPastAnkle = 14.;
 	const double ShortestDrawnBack = 0.25;
+	// What is held sits in the palm, this far past the wrist. And how far a hand that holds something closes: 1 is a fist.
+	const double PalmPastWrist = 8.;
+	const float HoldingGrip = 0.6f;
 
 	// Where an elbow or knee sits, given both ends of the limb, its two lengths and the way it bends.
 	FVector MiddleJoint(const FVector& Root, const FVector& End, double UpperLength, double LowerLength, const FVector& BendDirection)
@@ -1610,8 +1613,11 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 			}
 			else
 			{
-				// In one hand, raised beside the head, ready to throw. The other arm is left to the stance.
-				ReachWithArm(Held, Reach, 1, Held[RightShoulder] + Ahead * 4. + FVector::UpVector * 20. + Outward * 12., Outward * 0.5 - Ahead - FVector::UpVector * 0.5);
+				// In one hand, raised beside the head, ready to throw: the right, or the left if the right arm is
+				// broken. The other arm is left to the stance.
+				const int32 Side = GetCarrySide();
+				const FVector Out = Side == 1 ? Outward : -Outward;
+				ReachWithArm(Held, Reach, Side, Held[Side == 1 ? RightShoulder : LeftShoulder] + Ahead * 4. + FVector::UpVector * 20. + Out * 12., Out * 0.5 - Ahead - FVector::UpVector * 0.5);
 			}
 			for (const int32 Joint : { LeftElbow, LeftHand, RightElbow, RightHand })
 			{
@@ -1856,6 +1862,20 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	Model->SetVisibility(bModel && !bBones);
 	if (bModel && !bBones)
 	{
+		// A hand with something in it closes round it, and does not make the fist it fights with. The film's
+		// figures carry nothing themselves, so theirs stay fists.
+		float Grips[2] = { 1.f, 1.f };
+		if (!bPuppet && Carried.IsValid())
+		{
+			const bool bInOneHand = Carried->GetHold() == EPropHold::OneHand;
+			Grips[0] = bInOneHand && GetCarrySide() == 1 ? 1.f : HoldingGrip;
+			Grips[1] = bInOneHand && GetCarrySide() == 0 ? 1.f : HoldingGrip;
+		}
+		if ((BrokenArms & 4) != 0)
+		{
+			Grips[1] = HoldingGrip;
+		}
+		Model->SetGrip(Grips[0], Grips[1]);
 		Model->PoseOn(Joints, FloorHeight, FMath::Clamp(Thickness / UsualThickness, SlightestGirth, StoutestGirth), SeveredNow, BrokenArms & 3);
 	}
 	// What the wounds are put on: the body as it was drawn, which stops short of a joint its limb cannot reach.
@@ -1985,7 +2005,7 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	TintedBrokenArms = BrokenArms;
 
 	// The gun is in the right hand, and goes with the forearm when that comes off.
-	const bool bHoldsGun = (BrokenArms & 4) != 0 && (SeveredNow & 2) == 0;
+	const bool bHoldsGun = (BrokenArms & 4) != 0 && (SeveredNow & 2) == 0 && (BrokenArms & 2) == 0;
 	Gun->SetVisibility(bHoldsGun);
 	if (bHoldsGun)
 	{
@@ -2638,7 +2658,7 @@ bool AStickFighter::GrabOrThrow()
 	}
 
 	AThrownProp* Found = FindPropInReach();
-	if (!Found)
+	if (!Found || !CanHold(Found))
 	{
 		return false;
 	}
@@ -2833,17 +2853,20 @@ void AStickFighter::Sever(const FVector& Near)
 
 void AStickFighter::HurtForTests()
 {
-	if (LooseArms[0].bBroken && LooseArms[1].bBroken)
+	const int32 Side = !LooseArms[1].bBroken ? 1 : !LooseArms[0].bBroken ? 0 : INDEX_NONE;
+	if (Side == INDEX_NONE)
 	{
 		Severed = Severed == 0 ? 1 : 15;
 		return;
 	}
-	const TArray<FVector> Joints = BuildJoints(true);
-	for (int32 Side = 0; Side < 2; ++Side)
+	LooseArms[Side].bBroken = true;
+	LooseArms[Side].Hand = BuildJoints(true)[HandOfSide[Side]];
+	LooseArms[Side].Velocity = FVector::ZeroVector;
+	// The blow that breaks an arm knocks what was held out of the hands, as any blow does.
+	if (AThrownProp* Held = Carried.Get())
 	{
-		LooseArms[Side].bBroken = true;
-		LooseArms[Side].Hand = Joints[HandOfSide[Side]];
-		LooseArms[Side].Velocity = FVector::ZeroVector;
+		Carried = nullptr;
+		Held->Release(FVector::ZeroVector);
 	}
 }
 
@@ -2897,10 +2920,28 @@ float AStickFighter::GetWeaponSwing() const
 		: 1.f - FMath::Min((WeaponSwingElapsed - WeaponSwingContactAt) / WeaponSwingBackSeconds, 1.f);
 }
 
-FVector AStickFighter::GetCarryPoint() const
+FVector AStickFighter::GetGripPoint(int32 Side) const
 {
 	const TArray<FVector> Joints = BuildJoints(true);
-	return (Joints[LeftHand] + Joints[RightHand]) * 0.5;
+	const FVector Wrist = Joints[HandOfSide[Side]];
+	return Wrist + (Wrist - Joints[ElbowOfSide[Side]]).GetSafeNormal() * PalmPastWrist;
+}
+
+FVector AStickFighter::GetCarryPoint() const
+{
+	// Between the two palms, or in the one there is when an arm is broken.
+	if (LooseArms[0].bBroken != LooseArms[1].bBroken)
+	{
+		return GetGripPoint(GetCarrySide());
+	}
+	return (GetGripPoint(0) + GetGripPoint(1)) * 0.5;
+}
+
+bool AStickFighter::CanHold(const AThrownProp* Prop) const
+{
+	const int32 Broken = (LooseArms[0].bBroken ? 1 : 0) + (LooseArms[1].bBroken ? 1 : 0);
+	const EPropHold Hold = Prop->GetHold();
+	return Broken == 0 || (Broken == 1 && (Hold == EPropHold::Pistol || Hold == EPropHold::OneHand));
 }
 
 void AStickFighter::AdvanceFreeMovement(float DeltaSeconds)

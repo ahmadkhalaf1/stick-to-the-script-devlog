@@ -1595,6 +1595,16 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the draft page has the 611 MB zip, uploaded at 17:23, for Windows, with the afternoon's text, six pictures and cover. It is still a draft. It links to the video cut at 13:42; the 16:10 cut is on the developer's disk.
 - **Not verified:** the zip on the page was not downloaded back and run.
 
+### 17:50 · A broken arm holds nothing, and a hand closes round what it holds
+
+- **Developer said:** "we need to fix the following 1- broken arms should not hold items or guns 2- holding items and guns hand and fingers and the way we hold the item need review and fix , it very bad".
+- **Agent did, the broken arms:** any blow already knocked what was held out of the hands. What was missing came after: a fighter with a broken arm could pick a thing up again, and it hung between his good hand and the one that dangled. Now a fighter with one broken arm picks up only what one hand holds, a pistol or something small, and holds it in the good hand; with two he picks up nothing. A gunman whose gun arm breaks lets his pistol fall where he stands, and fights on with his feet.
+- **Agent did, the hands:** everything held was placed on the wrists, which are the joints, so a fist stood in the middle of it. It is placed in the palms now, a hand's width past the wrist. And a hand that holds something closes part of the way round it; it used to be the fist it fights with.
+- **Agent did, to see it:** the test key breaks one arm at a time now. The test puts a pistol, a rifle or a crate at the hero's feet, lets the game pick it up, photographs him from the side and through the body camera, breaks an arm, asks him to pick it up again, and breaks the other.
+- **Result:** `Tools/check.ps1` passes with 8 tests. Photographed in the editor: the pistol held out in both hands and the crate on the palms with whole arms; nothing held, and nothing picked up, with both arms broken. Packaged at 17:44, 892 MB; the packaged game played itself through the three scenes to the end card in four takes, picking things up ten times, with no errors in its log; the zip is 611 MB, made at 17:50, and is not on the draft page yet.
+- **Went wrong:** in the rifle's run the hero was not holding it in the first picture: something in the half second before had taken it from him, a blow or his own throw. And the test asked him to pick the pistol up again while it was still falling, so the one-handed hold with a broken arm was not photographed. Both are the test's timing; neither was run again, to stay inside the session's limit.
+- **Not verified:** the pistol in one good hand, as said. Fingers were seen through the body camera on the pistol only, from behind the hands. Nobody has played with any of it. The video of 16:10 and the store pictures are older than all of this.
+
 ---
 
 ## Asset and tool register

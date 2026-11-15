@@ -26,6 +26,8 @@ public:
 	// Where the body, as it was last posed, has one of the fighter's joints. Not always where the joint is: a limb
 	// is drawn no longer than it can be. False for a joint it has no bone for, or with no body.
 	bool FindDrawnJoint(int32 Joint, FVector& At) const;
+	// How far each hand is closed the next time the body is posed: 1 is a fist, less is a hand round something.
+	void SetGrip(float Left, float Right) { Grip[0] = Left; Grip[1] = Right; }
 	void Paint(const FLinearColor& Skin, const FLinearColor& Rubber);
 
 	// Puts one of the cast on the same joints in the dummy's place: a model with a skin, a face and clothes of its
@@ -48,6 +50,7 @@ private:
 	bool LearnRest();
 	bool bOwnSkin = false;
 	double LastSize = 1.;
+	float Grip[2] = { 1.f, 1.f };
 	// Where the one limb shown starts in the model as it was made, and which way it runs.
 	FVector LimbRootAtRest = FVector::ZeroVector;
 	FVector LimbRunsAtRest = FVector::ForwardVector;

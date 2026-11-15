@@ -132,7 +132,7 @@ public:
 	FVector2D GetArenaMax() const { return ArenaMax; }
 	// Takes off the forearm or the shin nearest to a point: a gun does that. Someone still on their feet keeps both legs.
 	void Sever(const FVector& Near);
-	// For tests in the editor: the first call breaks both arms, the second takes the left forearm off, the third every limb.
+	// For tests in the editor: the first call breaks the right arm, the second the left, the third takes the left forearm off, the fourth every limb.
 	void HurtForTests();
 	FVector GetCarryPoint() const;
 	// 0 while a carried weapon is held up, 1 as its swing lands.
@@ -144,6 +144,13 @@ public:
 	bool Finish();
 	// 0 the left hand, 1 the right.
 	FVector GetHandPoint(int32 Side) const;
+	// Where a hand grips: the middle of its palm, a little past the wrist that is its joint.
+	FVector GetGripPoint(int32 Side) const;
+	// Which hand holds what one hand holds: the right, or the left when the right arm is broken.
+	int32 GetCarrySide() const { return LooseArms[1].bBroken ? 0 : 1; }
+	// A broken arm holds nothing. With one good arm a fighter still holds what one hand can: a pistol, or
+	// something small. With none, nothing.
+	bool CanHold(const AThrownProp* Prop) const;
 
 	// A blow from anything, a strike or a thrown prop: it hurts, staggers or knocks out, and the take hears about it.
 	void SufferBlow(AStickFighter* Attacker, float Damage, const FVector& Point, const FVector& Direction, bool bHeavy, EMove Move);

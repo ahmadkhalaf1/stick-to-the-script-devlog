@@ -8,6 +8,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "EngineUtils.h"
 #include "StickToTheScript/Core/TakeEvents.h"
+#include "StickToTheScript/Fighter/ThrownProp.h"
 
 namespace
 {
@@ -100,6 +101,20 @@ void AStuntPartner::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// A broken arm holds nothing: a gunman whose gun arm breaks lets his pistol fall, and fights on like anyone else.
+	if (bShoots && !IsDown() && (GetBrokenArms() & 2) != 0)
+	{
+		bShoots = false;
+		bArmed = false;
+		bAiming = false;
+		for (TActorIterator<AThrownProp> It(GetWorld()); It; ++It)
+		{
+			if (It->FallFromHandOf(this))
+			{
+				break;
+			}
+		}
+	}
 	if (bThinks && bFightLive && !IsDown() && PlayerFighter)
 	{
 		Think(DeltaSeconds);

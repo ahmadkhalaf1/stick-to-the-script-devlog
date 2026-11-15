@@ -277,13 +277,13 @@ void AThrownProp::Tick(float DeltaSeconds)
 				// hand for one that is shouldered, between the two hands for a pistol.
 				const double Kick = GunKickDegrees * FMath::Clamp(1. - (GetWorld()->GetTimeSeconds() - LastShotSeconds) / GunKickSeconds, 0., 1.);
 				const FRotator Aimed(Kick, Carrier->GetActorRotation().Yaw, 0.);
-				const FVector Grip = GetHold() == EPropHold::LongGun ? Carrier->GetHandPoint(1) : Carrier->GetCarryPoint();
+				const FVector Grip = GetHold() == EPropHold::LongGun ? Carrier->GetGripPoint(1) : Carrier->GetCarryPoint();
 				SetActorLocationAndRotation(Grip + Aimed.Vector() * Gun->GripToMiddle + FVector(0., 0., Gun->GripUnderMiddle), Aimed);
 			}
 			else if (GetHold() == EPropHold::OneHand)
 			{
-				// In the right hand, by its lower end.
-				SetActorLocationAndRotation(Carrier->GetHandPoint(1) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
+				// In the palm of the hand that carries, by its lower end.
+				SetActorLocationAndRotation(Carrier->GetGripPoint(Carrier->GetCarrySide()) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
 			}
 			else
 			{
@@ -528,20 +528,27 @@ void AThrownProp::HoldInReserve(int32 LatestKnockoutToDropOn)
 	Home = GetActorTransform();
 }
 
+bool AThrownProp::FallFromHandOf(AActor* Fighter)
+{
+	if (Fighter != ReservedFor.Get() || !bInReserve)
+	{
+		return false;
+	}
+	const FVector Fallen = Fighter->GetActorLocation();
+	SetActorLocation(FVector(FMath::Clamp(Fallen.X, ArenaMin.X, ArenaMax.X), FMath::Clamp(Fallen.Y, ArenaMin.Y, ArenaMax.Y), FloorHeight + GunmanDropHeight));
+	bInReserve = false;
+	Holder = nullptr;
+	Release(FVector::ZeroVector);
+	UE_LOG(LogThrownProp, Log, TEXT("%s falls from the hand of %s at %.0f, %.0f"), Looks[static_cast<int32>(Kind)].Mesh, *GetNameSafe(Fighter), GetActorLocation().X, GetActorLocation().Y);
+	return true;
+}
+
 void AThrownProp::HandleFighterDown(AActor* Fighter, bool bPlayer)
 {
 	if (ReservedFor.IsValid())
 	{
 		// A gunman's pistol falls from his hand where he goes down.
-		if (Fighter == ReservedFor.Get() && bInReserve)
-		{
-			const FVector Fallen = Fighter->GetActorLocation();
-			SetActorLocation(FVector(FMath::Clamp(Fallen.X, ArenaMin.X, ArenaMax.X), FMath::Clamp(Fallen.Y, ArenaMin.Y, ArenaMax.Y), FloorHeight + GunmanDropHeight));
-			bInReserve = false;
-			Holder = nullptr;
-			Release(FVector::ZeroVector);
-			UE_LOG(LogThrownProp, Log, TEXT("%s falls from the hand of %s at %.0f, %.0f"), Looks[static_cast<int32>(Kind)].Mesh, *GetNameSafe(Fighter), GetActorLocation().X, GetActorLocation().Y);
-		}
+		FallFromHandOf(Fighter);
 		return;
 	}
 

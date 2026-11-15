@@ -252,7 +252,7 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 		Put(Arm + 2, HandTurn, Hand);
 		for (const FFingerBone& Finger : Fingers[Side])
 		{
-			Turn(Finger.Bone, bBroken ? HandTurn : HandTurn * Finger.Curl);
+			Turn(Finger.Bone, bBroken ? HandTurn : HandTurn * FQuat::Slerp(FQuat::Identity, Finger.Curl, Grip[Side]));
 		}
 
 		// A leg. The knee bends backward.
