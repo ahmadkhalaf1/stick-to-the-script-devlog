@@ -40,6 +40,15 @@ namespace
 	// How much longer than it was made a limb's bone may be drawn. Some of the cast have shorter legs than the
 	// fighter they dress, and need most of this just to stand.
 	const double MostStretch = 1.35;
+	// How far a broken arm's hand is turned off the line of its forearm, sideways, where no wrist bends.
+	const float BrokenWristDegrees = 75.f;
+
+	// The bone that stands at each of the fighter's joints, in the order of StickJoint.
+	const int32 BoneOfJoint[JointCount] = {
+		DummyHips, DummySpine2, DummyNeck, DummyHead,
+		DummyLeftArm, DummyLeftForeArm, DummyLeftHand, DummyRightArm, DummyRightForeArm, DummyRightHand,
+		DummyLeftUpLeg, DummyLeftLeg, DummyLeftFoot, DummyRightUpLeg, DummyRightLeg, DummyRightFoot,
+	};
 
 	const uint8 TurnGiven = 1;
 	const uint8 PlaceGiven = 2;
@@ -143,7 +152,17 @@ bool UDummyBody::LearnRest()
 	return true;
 }
 
-void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed)
+bool UDummyBody::FindDrawnJoint(int32 Joint, FVector& At) const
+{
+	if (Placed.Num() != DummyBoneCount || !Posed.IsValidIndex(Placed[BoneOfJoint[Joint]]))
+	{
+		return false;
+	}
+	At = GetComponentTransform().TransformPosition(Posed[Placed[BoneOfJoint[Joint]]].GetTranslation());
+	return true;
+}
+
+void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed, uint8 BrokenArms)
 {
 	if (Joints.Num() != JointCount || !LearnRest() || BoneSpaceTransforms.Num() != Rest.Num())
 	{
@@ -161,6 +180,7 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 	const double Size = bOwnSkin
 		? FMath::Max((Leg + UsualAnkleHeight) / FMath::Max(RestAt(DummyHips).Z, 1.), 0.2) * FMath::Lerp(1.f, Girth, CastGirthShare)
 		: FMath::Max(Leg / RestLeg, 0.2) * Girth;
+	LastSize = Size;
 	const FVector Origin = Joints[PelvisJoint] - FVector(0., 0., RestAt(DummyHips).Z * Size);
 	SetWorldTransform(FTransform(FQuat::Identity, Origin, FVector(Size)));
 
@@ -202,7 +222,9 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 	Put(DummySpine1, FQuat::Slerp(HipsTurn, ChestTurn, 2. / 3.), FMath::Lerp(HipsAt, ChestAt, 2. / 3.));
 	Put(DummySpine2, ChestTurn, ChestAt);
 	Put(DummyNeck, FQuat::Slerp(ChestTurn, HeadTurn, 0.5), Joints[NeckJoint]);
-	Put(DummyHead, HeadTurn, Joints[SkullJoint]);
+	// A neck is drawn no longer than a neck can be, as a limb is: a body thrown into the air had one a forearm long.
+	Put(DummyHead, HeadTurn, Joints[NeckJoint]
+		+ (Joints[SkullJoint] - Joints[NeckJoint]).GetClampedToMaxSize(FVector::Dist(RestAt(DummyHead), RestAt(DummyNeck)) * Size * MostStretch));
 
 	for (int32 Side = 0; Side < 2; ++Side)
 	{
@@ -221,10 +243,16 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 		const FQuat ForearmTurn = DummyFrame(Hand - Elbow, ElbowAxis) * DummyFrame(RestForearm, RestForearm ^ RestFront).Inverse();
 		Put(Arm, UpperArmTurn, Shoulder);
 		Put(Arm + 1, ForearmTurn, Elbow);
-		Put(Arm + 2, ForearmTurn, Hand);
+		// A model's forearm is one bone and cannot be drawn snapped in two, so its break shows at the wrist: the hand
+		// hangs off sideways with its fingers open.
+		const bool bBroken = (BrokenArms & (1 << Side)) != 0;
+		const FQuat HandTurn = bBroken
+			? FQuat(((Hand - Elbow) ^ ElbowAxis).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector), FMath::DegreesToRadians(BrokenWristDegrees)) * ForearmTurn
+			: ForearmTurn;
+		Put(Arm + 2, HandTurn, Hand);
 		for (const FFingerBone& Finger : Fingers[Side])
 		{
-			Turn(Finger.Bone, ForearmTurn * Finger.Curl);
+			Turn(Finger.Bone, bBroken ? HandTurn : HandTurn * Finger.Curl);
 		}
 
 		// A leg. The knee bends backward.
@@ -248,13 +276,21 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 		Put(Thigh + 2, FQuat::Slerp(ShinTurn, FlatTurn, Flat), Ankle);
 	}
 
-	// A limb shot away is closed down to nothing at its joint, and the skin that hung on it gathers there into a stump.
+	// A limb shot away is closed down at its joint along its own length only, so what is left ends in a flat cut as
+	// wide as the limb was and not in a point. Its hand or foot closes down to nothing in the middle of the cut.
 	const int32 CanGo[] = { DummyLeftForeArm, DummyRightForeArm, DummyLeftLeg, DummyRightLeg };
+	int32 CutBones[4];
+	FVector CutScales[4];
 	for (int32 Limb = 0; Limb < 4; ++Limb)
 	{
+		CutBones[Limb] = INDEX_NONE;
 		if (Severed & (1 << Limb))
 		{
-			Given[Placed[CanGo[Limb]]] = GoneGiven;
+			CutBones[Limb] = Placed[CanGo[Limb]];
+			Given[CutBones[Limb]] = GoneGiven;
+			// The hand follows the forearm and the foot the shin in the list of bones, and lies along its length.
+			const FVector Runs = RestLocal[Placed[CanGo[Limb] + 1]].GetTranslation().GetAbs();
+			CutScales[Limb] = FVector(Runs.X < Runs.GetMax() ? 1. : 0.001, Runs.Y < Runs.GetMax() ? 1. : 0.001, Runs.Z < Runs.GetMax() ? 1. : 0.001);
 		}
 	}
 
@@ -271,7 +307,8 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 		FTransform Now = Parent == INDEX_NONE ? RestLocal[Bone] : RestLocal[Bone] * Posed[Parent];
 		if (Given[Bone] & GoneGiven)
 		{
-			Now.SetScale3D(FVector(0.001));
+			const int32 Cut = MakeArrayView(CutBones).Find(Bone);
+			Now.SetScale3D(Cut == INDEX_NONE ? FVector(0.001) : CutScales[Cut]);
 		}
 		if (Given[Bone] & TurnGiven)
 		{
@@ -285,6 +322,56 @@ void UDummyBody::PoseOn(const TArray<FVector>& Joints, double FloorHeight, float
 		BoneSpaceTransforms[Bone] = Parent == INDEX_NONE ? Now : Now.GetRelativeTransform(Posed[Parent]);
 	}
 	RefreshBoneTransforms();
+}
+
+void UDummyBody::ShowOnlyLimb(int32 Limb)
+{
+	if (!LearnRest() || BoneSpaceTransforms.Num() != Rest.Num())
+	{
+		return;
+	}
+	const int32 LimbRoots[] = { DummyLeftForeArm, DummyRightForeArm, DummyLeftLeg, DummyRightLeg };
+	const int32 Which = LimbRoots[FMath::Clamp(Limb, 0, 3)];
+	const int32 Root = Placed[Which];
+	// The hand follows the forearm and the foot the shin in the list of bones.
+	LimbRootAtRest = Rest[Root].GetTranslation();
+	LimbRunsAtRest = (Rest[Placed[Which + 1]].GetTranslation() - LimbRootAtRest).GetSafeNormal(UE_SMALL_NUMBER, FVector::ForwardVector);
+
+	// Everything that is not the limb is closed down to nothing where the limb begins, which is how the body it came
+	// off closes the limb down. Parents come before their children, so one pass tells what hangs from the limb's root.
+	const FTransform Gone(Rest[Root].GetRotation(), LimbRootAtRest, FVector(0.001));
+	TArray<bool> bKept;
+	bKept.SetNumZeroed(Rest.Num());
+	for (int32 Bone = 0; Bone < Rest.Num(); ++Bone)
+	{
+		const int32 Parent = Parents[Bone];
+		bKept[Bone] = Bone == Root || (Parent != INDEX_NONE && bKept[Parent]);
+		Posed[Bone] = bKept[Bone] ? Rest[Bone] : Gone;
+		BoneSpaceTransforms[Bone] = Parent == INDEX_NONE ? Posed[Bone] : Posed[Bone].GetRelativeTransform(Posed[Parent]);
+	}
+	RefreshBoneTransforms();
+}
+
+void UDummyBody::PlaceLimb(const FVector& From, const FVector& To, double Size)
+{
+	const FQuat Turn = FQuat::FindBetweenNormals(LimbRunsAtRest, (To - From).GetSafeNormal(UE_SMALL_NUMBER, LimbRunsAtRest));
+	SetWorldTransform(FTransform(Turn, From - Turn.RotateVector(LimbRootAtRest) * Size, FVector(Size)));
+}
+
+void UDummyBody::DyeOutfit(const FLinearColor& Dye)
+{
+	if (!bOwnSkin)
+	{
+		return;
+	}
+	// A material that is not cloth has no such colour to set, and is left as it is.
+	for (int32 Slot = 0; Slot < GetNumMaterials(); ++Slot)
+	{
+		if (UMaterialInstanceDynamic* Cloth = CreateDynamicMaterialInstance(Slot))
+		{
+			Cloth->SetVectorParameterValue("Tint", Dye);
+		}
+	}
 }
 
 void UDummyBody::Wear(USkeletalMesh* Cast)

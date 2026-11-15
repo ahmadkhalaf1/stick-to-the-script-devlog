@@ -132,6 +132,8 @@ public:
 	FVector2D GetArenaMax() const { return ArenaMax; }
 	// Takes off the forearm or the shin nearest to a point: a gun does that. Someone still on their feet keeps both legs.
 	void Sever(const FVector& Near);
+	// For tests in the editor: the first call breaks both arms, the second takes the left forearm off, the third every limb.
+	void HurtForTests();
 	FVector GetCarryPoint() const;
 	// 0 while a carried weapon is held up, 1 as its swing lands.
 	float GetWeaponSwing() const;
@@ -253,9 +255,14 @@ private:
 	// For each limb that can come off, a length of it and its hand or foot, to fly and lie where they land.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> LooseLimbs;
-	// The wound where each one was.
+	// The wound where each one was: a flat cut, and the end of bone that shows in the middle of it.
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> Stumps;
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> StumpBones;
+	// The same cut on the end of the limb that flew off, when the limb is one of the cast's own.
+	UPROPERTY()
+	TArray<TObjectPtr<UStaticMeshComponent>> LimbCuts;
 	struct FFlyingLimb
 	{
 		FVector Middle = FVector::ZeroVector;
@@ -338,15 +345,14 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<UStaticMeshComponent>> HatParts;
 
+	// The plain shapes a hat is made of: a cylinder, a cube, a cone and a ball.
 	UPROPERTY()
-	TObjectPtr<UStaticMesh> CylinderMesh;
-
-	UPROPERTY()
-	TObjectPtr<UStaticMesh> CubeMesh;
+	TArray<TObjectPtr<UStaticMesh>> HatMeshes;
 
 	int32 Hat = 0;
-	// The colour of a limb that comes off, when the fighter wears one of the cast.
-	FLinearColor CastLimbColor = FLinearColor(0.3f, 0.3f, 0.3f);
+	// A limb that comes off one of the cast is that limb: a copy of the model with everything else closed down.
+	UPROPERTY()
+	TArray<TObjectPtr<class UDummyBody>> LimbBodies;
 
 	// A ball at every joint rounds the limbs off and gives the figure hands and feet. Eyes show which way it faces.
 	UPROPERTY()

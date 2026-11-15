@@ -50,6 +50,14 @@ namespace
 	const FLinearColor BloodiedColor(0.45f, 0.01f, 0.01f);
 	const FLinearColor BoneColor(0.92f, 0.9f, 0.82f);
 	const FLinearColor StumpRed(0.3f, 0.f, 0.f);
+	// How wide a model's limb is where it is cut, at the elbow and at the knee, for a model drawn at its own size. The
+	// cut is this share as thick as it is wide, and the bone in it this share as wide and this share as long.
+	const double CutWidths[4] = { 8.5, 8.5, 11.5, 11.5 };
+	const double CutDepthShare = 0.22;
+	const double CutBoneWidthShare = 0.3;
+	const double CutBoneLengthShare = 0.4;
+	// A model's forearm is this wide where it breaks. The wound goes round it, and the bone comes out of it aslant.
+	const double BrokenForearmWidth = 7.5;
 	// A gun is aimed at the nearest opponent within this distance and this much of straight ahead, and reaches this far.
 	// The distance is what the camera can hold in one picture (AimedAtWithin in Cam/FightCamera.cpp): nobody is aimed at unseen.
 	const double GunAimDistance = 950.;
@@ -242,9 +250,10 @@ namespace
 		const TCHAR* Name;
 		FLinearColor Color;
 	};
-	// Bright, and none of them an opponent's colour or the captive's.
+	// Bright, and none of them an opponent's colour or the captive's. They are what the hero's smear and his light take,
+	// and the dye of his clothes: all but the first, which leaves them the black they were made (see LookColor).
 	const FLookColor LookColors[] = {
-		{ TEXT("Chalk"), FLinearColor(0.8f, 0.8f, 0.8f) },
+		{ TEXT("Black"), FLinearColor(0.8f, 0.8f, 0.8f) },
 		{ TEXT("Sky"), FLinearColor(0.25f, 0.6f, 1.f) },
 		{ TEXT("Lime"), FLinearColor(0.45f, 0.9f, 0.15f) },
 		{ TEXT("Orange"), FLinearColor(1.f, 0.45f, 0.05f) },
@@ -273,28 +282,31 @@ namespace
 	struct FHatPiece
 	{
 		bool bUsed;
-		bool bCube;
+		// Which of AStickFighter::HatMeshes it is.
+		int32 Mesh;
 		double Ahead;
 		double Above;
 		FVector Size;
 	};
-	// The last two are sold in the shop, which names them by their place in this list.
-	const TCHAR* HatNames[] = { TEXT("None"), TEXT("Cap"), TEXT("Top hat"), TEXT("Headband"), TEXT("Mohawk"), TEXT("Halo"), TEXT("Crown") };
+	enum { HatCylinder, HatCube, HatCone, HatBall };
+	// The last two are sold in the shop, which names them by their place in this list. All of them sit on top of the
+	// cap the hero is modelled in: a hat that went round a bare head, as the first ones did, was lost in it.
+	const TCHAR* HatNames[] = { TEXT("None"), TEXT("Bowler"), TEXT("Top hat"), TEXT("Wide brim"), TEXT("Party hat"), TEXT("Halo"), TEXT("Crown") };
 	const FHatPiece Hats[][2] = {
 		{ {}, {} },
-		{ { true, false, 0., 0.75, FVector(2.1, 2.1, 0.7) }, { true, true, 1.1, 0.5, FVector(1.2, 1.6, 0.12) } },
-		{ { true, false, 0., 1.6, FVector(1.5, 1.5, 1.4) }, { true, false, 0., 0.9, FVector(2.6, 2.6, 0.12) } },
-		{ { true, false, 0., 0.25, FVector(2.12, 2.12, 0.32) }, { true, true, -1.4, 0.25, FVector(0.9, 0.25, 0.25) } },
-		{ { true, true, 0., 1., FVector(1.9, 0.22, 0.75) }, {} },
-		{ { true, false, 0., 1.8, FVector(2.1, 2.1, 0.07) }, {} },
-		{ { true, false, 0., 1., FVector(1.9, 1.9, 0.6) }, { true, false, 0., 0.7, FVector(2.25, 2.25, 0.14) } },
+		{ { true, HatBall, 0., 0.95, FVector(1.75, 1.75, 1.3) }, { true, HatCylinder, 0., 0.82, FVector(2.55, 2.55, 0.1) } },
+		{ { true, HatCylinder, 0., 1.6, FVector(1.5, 1.5, 1.4) }, { true, HatCylinder, 0., 0.9, FVector(2.6, 2.6, 0.12) } },
+		{ { true, HatCylinder, 0., 1.25, FVector(1.55, 1.55, 0.8) }, { true, HatCylinder, 0., 0.88, FVector(3.5, 3.5, 0.1) } },
+		{ { true, HatCone, 0., 1.6, FVector(1.35, 1.35, 1.7) }, { true, HatBall, 0., 2.45, FVector(0.38, 0.38, 0.38) } },
+		{ { true, HatCylinder, 0., 1.8, FVector(2.1, 2.1, 0.07) }, {} },
+		{ { true, HatCylinder, 0., 1.05, FVector(1.8, 1.8, 0.6) }, { true, HatCylinder, 0., 1.38, FVector(2.3, 2.3, 0.12) } },
 	};
 	const FLinearColor HatColors[] = {
 		FLinearColor::Black,
-		FLinearColor(0.55f, 0.03f, 0.03f),
+		FLinearColor(0.3f, 0.02f, 0.03f),
 		FLinearColor(0.03f, 0.03f, 0.04f),
-		FLinearColor(0.6f, 0.03f, 0.03f),
-		FLinearColor(0.75f, 0.3f, 0.02f),
+		FLinearColor(0.2f, 0.09f, 0.03f),
+		FLinearColor(1.f, 0.2f, 0.5f),
 		FLinearColor(2.6f, 2.2f, 0.7f),
 		FLinearColor(1.6f, 1.05f, 0.12f),
 	};
@@ -304,23 +316,8 @@ namespace
 	const float StarLightReach = 460.f;
 	const double StarLightAbove = 85.;
 	const FVector StarLightTowardsCamera(0., 120., 0.);
-	const float StarLightTakesColor = 0.6f;
-
-	// What colour a limb is that comes off one of the cast, by its part.
-	struct FCastLimb
-	{
-		const TCHAR* Part;
-		FLinearColor Color;
-	};
-	const FCastLimb CastLimbs[] = {
-		{ TEXT("Hero"), FLinearColor(0.02f, 0.02f, 0.025f) },
-		{ TEXT("Thug"), FLinearColor(0.6f, 0.4f, 0.32f) },
-		{ TEXT("Rusher"), FLinearColor(0.85f, 0.7f, 0.05f) },
-		{ TEXT("Kicker"), FLinearColor(0.45f, 0.04f, 0.03f) },
-		{ TEXT("Heavy"), FLinearColor(0.85f, 0.85f, 0.82f) },
-		{ TEXT("Gunman"), FLinearColor(0.2f, 0.27f, 0.33f) },
-		{ TEXT("Boss"), FLinearColor(0.55f, 0.4f, 0.16f) },
-	};
+	// Only a little of the wardrobe's colour: his clothes are dyed with it now, and a light of the same colour on top washed him out.
+	const float StarLightTakesColor = 0.15f;
 
 	// A free strike lands on anyone within about 70 degrees of straight ahead.
 	const double StrikeConeCosine = 0.34;
@@ -765,11 +762,19 @@ AStickFighter::AStickFighter()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cone(TEXT("/Engine/BasicShapes/Cone"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Material(TEXT("/Game/Materials/M_Figure"));
 
 	Body->SetSkeletalMeshAsset(Mannequin.Object);
 	Model = CreateDefaultSubobject<UDummyBody>("Model");
 	Model->SetupAttachment(RootComponent);
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		UDummyBody* Piece = CreateDefaultSubobject<UDummyBody>(*FString::Printf(TEXT("LimbBody%d"), Limb));
+		Piece->SetupAttachment(RootComponent);
+		Piece->SetVisibility(false);
+		LimbBodies.Add(Piece);
+	}
 	IdleAnimation = Idle.Object;
 	PunchAnimations = { Punch1.Object, Punch2.Object, Punch3.Object };
 	// shortcut: the engine ships no kick, so the charged punch stands in, S2-FIGHT-01 replaces it.
@@ -824,9 +829,13 @@ AStickFighter::AStickFighter()
 		LooseLimbs.Add(MakePart(FString::Printf(TEXT("LooseLimb%d"), Limb), Cylinder.Object));
 		LooseLimbs.Add(MakePart(FString::Printf(TEXT("LooseLimbEnd%d"), Limb), Sphere.Object));
 		Stumps.Add(MakePart(FString::Printf(TEXT("Stump%d"), Limb), Sphere.Object));
+		StumpBones.Add(MakePart(FString::Printf(TEXT("StumpBone%d"), Limb), Cylinder.Object));
+		LimbCuts.Add(MakePart(FString::Printf(TEXT("LimbCut%d"), Limb), Sphere.Object));
 		LooseLimbs[Limb * 2]->SetVisibility(false);
 		LooseLimbs[Limb * 2 + 1]->SetVisibility(false);
 		Stumps[Limb]->SetVisibility(false);
+		StumpBones[Limb]->SetVisibility(false);
+		LimbCuts[Limb]->SetVisibility(false);
 	}
 
 	for (int32 i = 0; i < UE_ARRAY_COUNT(LimbJoints); ++i)
@@ -839,8 +848,7 @@ AStickFighter::AStickFighter()
 	Gun = MakePart(TEXT("Gun"), Cube.Object);
 	Gun->SetVisibility(false);
 
-	CylinderMesh = Cylinder.Object;
-	CubeMesh = Cube.Object;
+	HatMeshes = { Cylinder.Object, Cube.Object, Cone.Object, Sphere.Object };
 	for (int32 Piece = 0; Piece < 2; ++Piece)
 	{
 		HatParts.Add(MakePart(FString::Printf(TEXT("Hat%d"), Piece), Cylinder.Object));
@@ -1705,8 +1713,16 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 			// It has just come off, or a new take or the film has put it back.
 			FFlyingLimb& Flying = FlyingLimbs[Limb];
 			Flying.bFlying = bGone;
-			LooseLimbs[Limb * 2]->SetVisibility(bGone);
-			LooseLimbs[Limb * 2 + 1]->SetVisibility(bGone);
+			// One of the cast loses the limb it has, skin and sleeve and all. The dummy loses a plain shape.
+			const bool bItsOwnLimb = Model->WearsItsOwnSkin();
+			LooseLimbs[Limb * 2]->SetVisibility(bGone && !bItsOwnLimb);
+			LooseLimbs[Limb * 2 + 1]->SetVisibility(bGone && !bItsOwnLimb);
+			LimbBodies[Limb]->SetVisibility(bGone && bItsOwnLimb);
+			LimbCuts[Limb]->SetVisibility(bGone && bItsOwnLimb);
+			if (bGone && bItsOwnLimb)
+			{
+				LimbBodies[Limb]->ShowOnlyLimb(Limb);
+			}
 			if (bGone)
 			{
 				const FVector From = Joints[SeveredJoints[Limb][0]];
@@ -1715,19 +1731,16 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 				Flying.Along = (To - From).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
 				Flying.Length = FVector::Dist(From, To);
 				Flying.Velocity = FMath::VRand() * 160. + FVector(0., 0., 330.) + (Flying.Middle - Joints[PelvisJoint]).GetSafeNormal2D() * 260.;
-				const FLinearColor LimbColor = Model->WearsItsOwnSkin() ? CastLimbColor : Color;
-				LooseLimbs[Limb * 2]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", LimbColor);
-				LooseLimbs[Limb * 2 + 1]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", RubberFor(LimbColor));
+				LooseLimbs[Limb * 2]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Color);
+				LooseLimbs[Limb * 2 + 1]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", RubberFor(Color));
 				Stumps[Limb]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", StumpRed);
+				StumpBones[Limb]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", BoneColor);
+				LimbCuts[Limb]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", StumpRed);
 				bJustLost = true;
 			}
 		}
 		Stumps[Limb]->SetVisibility(bGone);
-		if (bGone)
-		{
-			Stumps[Limb]->SetWorldLocation(Joints[SeveredJoints[Limb][0]]);
-			Stumps[Limb]->SetWorldScale3D(FVector(Thickness * 1.25f / 100.f));
-		}
+		StumpBones[Limb]->SetVisibility(bGone);
 	}
 	DrawnSevered = SeveredNow;
 	if (bJustLost)
@@ -1742,7 +1755,31 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 	Model->SetVisibility(bModel && !bBones);
 	if (bModel && !bBones)
 	{
-		Model->PoseOn(Joints, FloorHeight, FMath::Clamp(Thickness / UsualThickness, SlightestGirth, StoutestGirth), SeveredNow);
+		Model->PoseOn(Joints, FloorHeight, FMath::Clamp(Thickness / UsualThickness, SlightestGirth, StoutestGirth), SeveredNow, BrokenArms & 3);
+	}
+	// What the wounds are put on: the body as it was drawn, which stops short of a joint its limb cannot reach.
+	auto Drawn = [this, &Joints, bModel, bBones](int32 Joint)
+	{
+		FVector At = Joints[Joint];
+		if (bModel && !bBones)
+		{
+			Model->FindDrawnJoint(Joint, At);
+		}
+		return At;
+	};
+	const double ModelSize = bModel ? Model->GetSize() : 0.;
+	for (int32 Limb = 0; Limb < 4; ++Limb)
+	{
+		if (SeveredNow & (1 << Limb))
+		{
+			// A flat cut across the end of what is left, with the bone showing in the middle of it.
+			// The shoulder comes just before the elbow in the list of joints, and the hip before the knee.
+			const FVector At = Drawn(SeveredJoints[Limb][0]);
+			const FVector Out = (At - Drawn(SeveredJoints[Limb][0] - 1)).GetSafeNormal(UE_SMALL_NUMBER, FVector::DownVector);
+			const double Width = bModel ? CutWidths[Limb] * ModelSize : Thickness * 1.25;
+			PlaceBlob(Stumps[Limb], At, FRotationMatrix::MakeFromX(Out).Rotator(), FVector(Width * CutDepthShare, Width, Width));
+			PlaceLimb(StumpBones[Limb], At, At + Out * Width * CutBoneLengthShare, Width * CutBoneWidthShare);
+		}
 	}
 	for (int32 i = 0; i < Limbs.Num(); ++i)
 	{
@@ -1819,18 +1856,29 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 			Stump->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", Tint);
 		}
 
-		if (bBroken)
+		const FVector Elbow = Drawn(ElbowOfSide[Side]);
+		const FVector Hand = Drawn(HandOfSide[Side]);
+		if (bBroken && bShapes)
 		{
 			// A broken forearm is drawn in two pieces that meet at an angle.
-			const FVector Elbow = Joints[ElbowOfSide[Side]];
-			const FVector Hand = Joints[HandOfSide[Side]];
 			const FVector Sideways = ((Hand - Elbow) ^ GetActorForwardVector()).GetSafeNormal(UE_SMALL_NUMBER, FVector::RightVector);
 			const FVector Break = (Elbow + Hand) * 0.5f + Sideways * BreakKink;
 			PlaceLimb(Forearm, Elbow, Break, Thickness);
 			PlaceLimb(Stump, Break, Hand, Thickness);
 			PlaceLimb(BreakParts[Side * 2], Break, Break + (Break - Elbow).GetSafeNormal() * BoneLength, Thickness * 0.42f);
-			BreakParts[Side * 2 + 1]->SetWorldLocation(Break);
-			BreakParts[Side * 2 + 1]->SetWorldScale3D(FVector(Thickness * 1.3f / 100.f));
+			PlaceBlob(BreakParts[Side * 2 + 1], Break, FRotator::ZeroRotator, FVector(Thickness * 1.3f));
+		}
+		else if (bBroken)
+		{
+			// A model's forearm stays in one piece. The wound goes round the middle of it, and the bone comes out
+			// of it aslant, across the picture and not at the camera, which looks along Y on every stage.
+			const FVector Along = (Hand - Elbow).GetSafeNormal(UE_SMALL_NUMBER, FVector::DownVector);
+			FVector Across = (Along ^ FVector::RightVector).GetSafeNormal(UE_SMALL_NUMBER, FVector::UpVector);
+			Across *= (Across | (GetActorForwardVector() + FVector::UpVector * 0.5)) < 0. ? -1. : 1.;
+			const FVector Break = (Elbow + Hand) * 0.5;
+			const double Width = BrokenForearmWidth * ModelSize * Thickness / UsualThickness;
+			PlaceLimb(BreakParts[Side * 2], Break, Break + (Across + Along * 0.6).GetSafeNormal() * BoneLength, Width * 0.3f);
+			PlaceBlob(BreakParts[Side * 2 + 1], Break, FRotationMatrix::MakeFromX(Along).Rotator(), FVector(Width * 0.7, Width * 1.12, Width * 1.12));
 		}
 	}
 	TintedBrokenArms = BrokenArms;
@@ -2681,6 +2729,22 @@ void AStickFighter::Sever(const FVector& Near)
 	UE_LOG(LogStickFighter, Verbose, TEXT("%s loses a limb: %d"), *GetName(), Nearest);
 }
 
+void AStickFighter::HurtForTests()
+{
+	if (LooseArms[0].bBroken && LooseArms[1].bBroken)
+	{
+		Severed = Severed == 0 ? 1 : 15;
+		return;
+	}
+	const TArray<FVector> Joints = BuildJoints(true);
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		LooseArms[Side].bBroken = true;
+		LooseArms[Side].Hand = Joints[HandOfSide[Side]];
+		LooseArms[Side].Velocity = FVector::ZeroVector;
+	}
+}
+
 void AStickFighter::FlyLooseLimbs(float DeltaSeconds)
 {
 	for (int32 Limb = 0; Limb < 4; ++Limb)
@@ -2703,6 +2767,12 @@ void AStickFighter::FlyLooseLimbs(float DeltaSeconds)
 		}
 		const FVector Half = Flying.Along * (Flying.Length * 0.5);
 		PlaceLimb(LooseLimbs[Limb * 2], Flying.Middle - Half, Flying.Middle + Half, Thickness * 1.1f);
+		if (Model->WearsItsOwnSkin())
+		{
+			LimbBodies[Limb]->PlaceLimb(Flying.Middle - Half, Flying.Middle + Half, Model->GetSize());
+			const double Width = CutWidths[Limb] * Model->GetSize();
+			PlaceBlob(LimbCuts[Limb], Flying.Middle - Half, FRotationMatrix::MakeFromX(Flying.Along).Rotator(), FVector(Width * CutDepthShare, Width, Width));
+		}
 		LooseLimbs[Limb * 2 + 1]->SetWorldLocation(Flying.Middle + Half);
 		LooseLimbs[Limb * 2 + 1]->SetWorldScale3D(FVector(Thickness * HandAndFootWidth / 100.f));
 	}
@@ -2929,13 +2999,20 @@ void AStickFighter::ApplyLook(const FCharacterLook& Look)
 	Thickness = Build.Thickness;
 	HeadRadius = Build.HeadRadius;
 	SetColor(LookColors[FMath::Clamp(Look.Color, 0, LookCount(0) - 1)].Color);
+	// One of the cast wears the colour as the dye of his clothes, and a limb of his that comes off is dyed with them.
+	const FLinearColor Dye = LookColor(Look.Color);
+	Model->DyeOutfit(Dye);
+	for (UDummyBody* Piece : LimbBodies)
+	{
+		Piece->DyeOutfit(Dye);
+	}
 
-	Hat = FMath::Clamp(Look.Hat, 0, LookCount(1) - 1);
+	Hat =FMath::Clamp(Look.Hat, 0, LookCount(1) - 1);
 	for (int32 Piece = 0; Piece < 2; ++Piece)
 	{
 		const FHatPiece& Shape = Hats[Hat][Piece];
 		HatParts[Piece]->SetVisibility(Shape.bUsed);
-		HatParts[Piece]->SetStaticMesh(Shape.bCube ? CubeMesh : CylinderMesh);
+		HatParts[Piece]->SetStaticMesh(HatMeshes[Shape.Mesh]);
 		HatParts[Piece]->CreateDynamicMaterialInstance(0)->SetVectorParameterValue("Color", HatColors[Hat]);
 	}
 }
@@ -2967,13 +3044,9 @@ void AStickFighter::WearCast(const FString& Part)
 	if (USkeletalMesh* Cast = LoadObject<USkeletalMesh>(nullptr, *Path, nullptr, LOAD_NoWarn | LOAD_Quiet))
 	{
 		Model->Wear(Cast);
-		// A limb that comes off is a plain shape, and takes the colour of the sleeve or the trouser leg it was in.
-		for (const FCastLimb& Limb : CastLimbs)
+		for (UDummyBody* Piece : LimbBodies)
 		{
-			if (Part == Limb.Part)
-			{
-				CastLimbColor = Limb.Color;
-			}
+			Piece->Wear(Cast);
 		}
 	}
 }
@@ -2985,7 +3058,9 @@ int32 AStickFighter::LookCount(int32 Row)
 
 FLinearColor AStickFighter::LookColor(int32 Index)
 {
-	return LookColors[FMath::Clamp(Index, 0, LookCount(0) - 1)].Color;
+	// The first is the black the hero's clothes were made in, which is no dye at all: its alpha says so.
+	Index = FMath::Clamp(Index, 0, LookCount(0) - 1);
+	return Index == 0 ? FLinearColor(0.f, 0.f, 0.f, 0.f) : LookColors[Index].Color;
 }
 
 FString AStickFighter::LookName(int32 Row, int32 Index)

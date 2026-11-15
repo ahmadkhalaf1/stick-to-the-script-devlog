@@ -21,17 +21,36 @@ public:
 
 	// Joints as AStickFighter::GetJointPositions gives them. Girth is how stout the body is, 1 for the usual build.
 	// Severed has a bit for each limb that is gone: the left and right forearm, then the left and right shin.
-	void PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed = 0);
+	// BrokenArms has one for the left and the right arm: a broken one's hand hangs loose and askew.
+	void PoseOn(const TArray<FVector>& Joints, double FloorHeight, float Girth, uint8 Severed = 0, uint8 BrokenArms = 0);
+	// Where the body, as it was last posed, has one of the fighter's joints. Not always where the joint is: a limb
+	// is drawn no longer than it can be. False for a joint it has no bone for, or with no body.
+	bool FindDrawnJoint(int32 Joint, FVector& At) const;
 	void Paint(const FLinearColor& Skin, const FLinearColor& Rubber);
 
 	// Puts one of the cast on the same joints in the dummy's place: a model with a skin, a face and clothes of its
 	// own, which Paint then leaves alone. Any model with the dummy's bone names will do.
 	void Wear(class USkeletalMesh* Cast);
 	bool WearsItsOwnSkin() const { return bOwnSkin; }
+	// Dyes the clothes of one of the cast, where its materials are the kind that can be dyed (Tools/build_cast.py
+	// makes the hero's so). The colour replaces what is dark and plain in its pictures: the cloth, not the skin.
+	// Its alpha is how much of the dye is taken: none leaves the clothes as they were made.
+	void DyeOutfit(const FLinearColor& Dye);
+
+	// For a limb that has come off: shows that one limb of the model and nothing else, as it was made. 0 and 1 are
+	// the forearms with their hands, 2 and 3 the shins with their feet. Then puts it where it has flown to: its
+	// joint end at From, its hand or foot towards To, at the size the body it came off was drawn.
+	void ShowOnlyLimb(int32 Limb);
+	void PlaceLimb(const FVector& From, const FVector& To, double Size);
+	double GetSize() const { return LastSize; }
 
 private:
 	bool LearnRest();
 	bool bOwnSkin = false;
+	double LastSize = 1.;
+	// Where the one limb shown starts in the model as it was made, and which way it runs.
+	FVector LimbRootAtRest = FVector::ZeroVector;
+	FVector LimbRunsAtRest = FVector::ForwardVector;
 
 	// The model standing as it was made, arms straight out: each bone relative to its parent, and relative to the model.
 	TArray<FTransform> RestLocal;

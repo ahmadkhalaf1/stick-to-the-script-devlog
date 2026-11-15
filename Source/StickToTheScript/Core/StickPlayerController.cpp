@@ -330,6 +330,14 @@ void AStickPlayerController::CycleHeldForTests()
 	HeldForTests = HeldForTests == EMove::None ? EMove::Duck : HeldForTests == EMove::Duck ? EMove::Block : EMove::None;
 }
 
+void AStickPlayerController::HurtEveryoneForTests()
+{
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		It->HurtForTests();
+	}
+}
+
 EMove AStickPlayerController::HeldKey() const
 {
 	if (HeldForTests != EMove::None)
@@ -685,6 +693,8 @@ void AStickPlayerController::SetupInputComponent()
 #if WITH_EDITOR
 	Input->BindAction(MakeAction({ EKeys::F7 }), ETriggerEvent::Started, this, &AStickPlayerController::ToggleOpponentsHeld);
 	Input->BindAction(MakeAction({ EKeys::F6 }), ETriggerEvent::Started, this, &AStickPlayerController::CycleHeldForTests);
+	// Not a function key: the editor has its own use for those that are left.
+	Input->BindAction(MakeAction({ EKeys::H }), ETriggerEvent::Started, this, &AStickPlayerController::HurtEveryoneForTests);
 #endif
 	Input->BindAction(MakeAction({ EKeys::One }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 0);
 	Input->BindAction(MakeAction({ EKeys::Two }), ETriggerEvent::Started, this, &AStickPlayerController::JumpToScene, 1);

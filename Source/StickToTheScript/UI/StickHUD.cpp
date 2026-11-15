@@ -970,6 +970,8 @@ void AStickHUD::DrawWardrobe(float Unit)
 				{
 					DrawRect(FLinearColor::White, X - 4.f * Unit, Y - 4.f * Unit, Each + 8.f * Unit, Each + 8.f * Unit);
 				}
+				// A rim, so that the black one shows on the dark panel.
+				DrawRect(FLinearColor(1.f, 1.f, 1.f, bOwned ? 0.3f : 0.08f), X - Unit, Y - Unit, Each + 2.f * Unit, Each + 2.f * Unit);
 				FLinearColor Swatch = AStickFighter::LookColor(Index);
 				Swatch.A = bOwned ? 1.f : 0.22f;
 				DrawRect(Swatch, X, Y, Each, Each);

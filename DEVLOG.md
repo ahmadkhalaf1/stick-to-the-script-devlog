@@ -1503,6 +1503,35 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** the commit before this one has a stray mark in front of its first word, from the way its message was written to a file. It is pushed, and `main` is not rewritten.
 - **Left for the developer:** to play it; to upload the zip to the draft and the video to YouTube and give the new link; to say whether the film still feels strange; and the two things that were never the agent's, making the page public and submitting.
 
+### 13:15 · The wardrobe and the wounds, made again for a character with a skin
+
+- **Developer said:** "re-think of character customization now since we use different char make sure it works and looks good , re check broken limbs and how it looks a the new character and improve it".
+- **Agent did, first:** looked. Photographed the wardrobe in every colour, and a self-played warehouse scene every second and a half. The colour did nothing but tint the hero's light. Three of the six hats were lost in his modelled head. A limb that came off was a grey cylinder, the stump a red ball on a point, and the bone of a broken arm hung in the air beside the arm, where the plain figure's forearm used to kink. A thug thrown up by the finish had a neck as long as his forearm.
+- **Agent did, the wardrobe:**
+  - Colour. The hero's hood, cap and trousers are black and plain in his two pictures, and nothing else in them is but his eyes, brows and hair, which lie in one corner of one picture. A new material, `M_CastCloth`, swaps what is dark and without colour for a tint, outside that corner; `Tools/build_cast.py` makes it and puts it on him. The hood and the cap take the colour, the trousers a dark shade of it. The first colour is called Black now and is no dye at all, so the hero of the video and the store pictures is still what the game opens with.
+  - Hat. The cap, the headband and the mohawk went round a ball of a head. They are a bowler, a wide brim and a party hat, which sit on top of the cap he is modelled in, as the top hat did. A hat can now be a cone or a ball as well as a cylinder or a cube.
+  - Build was looked at and left: it makes the model stouter or slighter, as it did the dummy.
+- **Agent did, the wounds:**
+  - A limb that comes off one of the cast is that limb: a second copy of the model with everything but the forearm and hand, or the shin and foot, closed down to nothing. The hero's is dyed with his clothes.
+  - What is left ends in a flat cut as wide as the limb was. The limb's bone is closed down along its length only, where it used to be closed down to a point, and a red face with the end of the bone in it is put on the cut. The limb that flies off has the same red end.
+  - A model's forearm is one bone and cannot be drawn snapped in two. The wound goes round the middle of it, the bone comes out of it aslant and across the picture, and the hand hangs off sideways with its fingers open.
+  - A neck is drawn no longer than a neck can be, as a limb already was.
+  - The wounds are put on the body as it was drawn, not on the joints, which a stretched limb stops short of.
+  - A test key for the editor, H: everyone's arms break, then a forearm comes off, then every limb. It is how the pictures below were taken, with the opponents held still.
+- **Result:** `Tools/check.ps1` passes with 8 tests. In the editor the hero was photographed in all nine colours, in every hat and in the three builds, and the wounds in all three scenes. The game was packaged at 13:09, 878 MB; the packaged game then played itself through the three scenes to the end card in four takes, with no errors in its log. The zip is 598 MB, made at 13:14.
+- **Went wrong:**
+  - The first version of the dye counted two materials as dyed and never put them on the model: the script changed a copy of the model's list of materials. The wardrobe was photographed in eight colours and the hero was black in all of them.
+  - That same first run brought the whole cast in again, 110 MB of files made new for a change to one character. They were put back from the repository, and the script now leaves alone a part that is already in the project.
+  - The wardrobe's colours were made bright, for a plain figure. In full, on cloth, under the hero's own light, a tracksuit glowed. It took two more rounds of the material to get colours that look like clothes.
+  - The test key was F5 first. In the editor that is the key for a view that paints the picture green by how costly it is to draw, and three of the first four test pictures were that.
+  - The first new hat was a beanie made of a ball. On his cap it was a tomato. It is a bowler now.
+  - In the test with opponents held still, the limbs that came off them hung at the knee: someone held does not move, and nor does what falls off him. It is the test, not the game; the hero's flew, and so did theirs in the takes played through.
+- **Not verified:** nobody has played with any of this. The dye and the wounds were photographed in the editor; in the packaged build they have only been run, not seen, and the log of that run names no material as missing. Wounds were photographed on the hero, the thug and the kicker, not on the rusher, the heavy, the gunman or the boss. The broken arm's hand was not seen close. The crown is still a yellow puck. The gameplay video and the store pictures are from the morning and show the old limbs in the finish.
+
+![The hero in each of the wardrobe's nine colours, and in each of its hats](Docs/devlog/97-the-wardrobe-dyes-the-hero.jpg)
+
+![A thug with a broken arm and then without his limbs, and the hero losing a forearm and both shins](Docs/devlog/98-wounds-on-the-cast.jpg)
+
 ---
 
 ## Asset and tool register

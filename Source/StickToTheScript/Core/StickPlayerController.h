@@ -36,6 +36,7 @@ public:
 
 	// For tests in the editor, which can tap a key but not hold one: the duck key counts as held, then the guard key, then neither.
 	void CycleHeldForTests();
+	void HurtEveryoneForTests();
 
 	// For tests and demos: with autoplay on, the keys 1, 2 and 3 go straight to that scene.
 	void JumpToScene(int32 Index);

@@ -34,7 +34,7 @@ depends:
 - [x] The store page and the dev log's register name all seven
 - [ ] The developer has seen them in the game
 
-**Known and left:** the hero wears his own clothes, so the wardrobe's colour is now the colour of the light he is filmed in. Its hats were sized for the dummy's head; photographed on his on Sun Nov 15, they sit on top of the cap he comes with. The captive is still the dummy.
+**Known and left:** the hero wears his own clothes, so the wardrobe's colour is now the colour of the light he is filmed in. Its hats were sized for the dummy's head; photographed on his on Sun Nov 15, they sit on top of the cap he comes with. The captive is still the dummy. The colour and the hats were made again in [[S3-FIGHT-19 Limbs and wardrobe on the cast]].
 
 **Balance, the same night:** opponents have a fifth more health, the finish bar takes about twenty blows, the finish reaches 2.6 m and only hurts a heavy. The game's own player went from 14, 17 and 25 seconds a scene to about 19, 28 and 34.
 
