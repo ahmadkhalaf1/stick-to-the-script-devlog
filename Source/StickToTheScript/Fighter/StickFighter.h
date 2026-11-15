@@ -146,11 +146,9 @@ public:
 	FVector GetHandPoint(int32 Side) const;
 	// Where a hand grips: the middle of its palm, a little past the wrist that is its joint.
 	FVector GetGripPoint(int32 Side) const;
-	// Which hand holds what one hand holds: the right, or the left when the right arm is broken.
-	int32 GetCarrySide() const { return LooseArms[1].bBroken ? 0 : 1; }
-	// A broken arm holds nothing. With one good arm a fighter still holds what one hand can: a pistol, or
-	// something small. With none, nothing.
-	bool CanHold(const AThrownProp* Prop) const;
+	// A broken arm holds nothing, and a fighter with one holds nothing in the other either: what he had falls, and
+	// he picks nothing up. One good hand on a gun or a crate looked wrong whichever way it was drawn.
+	bool CanHold() const { return !LooseArms[0].bBroken && !LooseArms[1].bBroken; }
 
 	// A blow from anything, a strike or a thrown prop: it hurts, staggers or knocks out, and the take hears about it.
 	void SufferBlow(AStickFighter* Attacker, float Damage, const FVector& Point, const FVector& Direction, bool bHeavy, EMove Move);

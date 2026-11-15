@@ -282,8 +282,8 @@ void AThrownProp::Tick(float DeltaSeconds)
 			}
 			else if (GetHold() == EPropHold::OneHand)
 			{
-				// In the palm of the hand that carries, by its lower end.
-				SetActorLocationAndRotation(Carrier->GetGripPoint(Carrier->GetCarrySide()) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
+				// In the palm of the right hand, by its lower end.
+				SetActorLocationAndRotation(Carrier->GetGripPoint(1) + FVector(0., 0., HalfHeight * 0.55), FRotator(0., Carrier->GetActorRotation().Yaw, 0.));
 			}
 			else
 			{

@@ -1612,6 +1612,18 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** the draft page has the zip built at 17:50, uploaded at 17:52, 611 MB, for Windows. Still a draft, still linking to the 13:42 video.
 - **Not verified:** the zip on the page was not downloaded back and run.
 
+### 18:40 · Three screenshots from the developer, and what they showed
+
+- **Developer said:** sent three screenshots of the build of 17:50 and wrote: "the way he hold the box is strange , holding gun then get 1 broken arm make the gun looks strange , holding gun is also strange , broken arms then doing finish move is also looking stragne". Asked to close the game so that it could be built: "Closed".
+- **Agent did:**
+  - The crate was held a forearm above the head on straight arms. It is carried just over the head on the palms, hands wide, elbows bent.
+  - The rule of an hour before, that one good arm still holds a pistol, is gone: the screenshot showed a gun in one hand beside an arm that dangled, and it looked wrong. A fighter with either arm broken holds nothing: what is in his hands falls, however it got there, and he picks nothing up. The code that chose the good hand went with it.
+  - A bat was held up by the collar bones with the elbows out, and the model's shoulders bunched. It is held in both hands in front of the stomach.
+  - The finish is three kicks for someone with a broken arm, where it was a chop, an uppercut and a kick.
+- **Result:** `Tools/check.ps1` passes with 8 tests. Photographed in the editor: the crate just over the head on bent arms; the crate and the pistol on the floor, and not picked up again, once one arm is broken. Packaged at 18:33, 892 MB; the packaged game played itself through the three scenes to the end card in four takes, one of them lost, with no errors in its log; the zip is 611 MB, made at 18:39.
+- **Went wrong:** the fixes were written while the developer's game was running, and could not be built until it was closed. The agent's own pictures of the hour before had passed the crate and the one-handed pistol; the developer's screenshots, taken close and from the camera's side, showed what a picture of a small figure did not.
+- **Not verified:** the bat's new hold and the finish with a broken arm were not photographed: the test's player did not pick the bat up, and the limit of the session was near. The developer has not played this build.
+
 ---
 
 ## Asset and tool register

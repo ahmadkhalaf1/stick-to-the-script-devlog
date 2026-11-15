@@ -105,6 +105,8 @@ namespace
 	// a boss is not a one-button fight.
 	const double FinishRadius = 260.;
 	const EMove FinishMoves[] = { EMove::Chop, EMove::Uppercut, EMove::Roundhouse };
+	// The same three beats for someone with a broken arm: nobody finishes a fight with a hand that dangles.
+	const EMove LegFinishMoves[] = { EMove::Roundhouse, EMove::Sweep, EMove::Roundhouse };
 	const float FinishWindUps[] = { 0.2f, 0.26f, 0.4f };
 	const float FinishBetweenBlowsSeconds = 0.1f;
 	// Whoever it is for stays where he is for this long, and the uppercut lifts him this fast.
@@ -1067,6 +1069,13 @@ void AStickFighter::Tick(float DeltaSeconds)
 	StanceAlpha = FMath::FInterpConstantTo(StanceAlpha, bStandsReady ? 1.f : 0.f, DeltaSeconds, StanceBlendPerSecond);
 	CarryAlpha = FMath::FInterpConstantTo(CarryAlpha, Carried.IsValid() ? 1.f : 0.f, DeltaSeconds, PoseBlendPerSecond);
 	ThrowSecondsLeft = FMath::Max(ThrowSecondsLeft - DeltaSeconds, 0.f);
+	// A broken arm holds nothing: whatever is in the hands of someone with one falls, however it got there.
+	if (AThrownProp* Held = Carried.Get(); Held && !CanHold())
+	{
+		Carried = nullptr;
+		Held->Release(FVector::ZeroVector);
+	}
+
 	if (WeaponSwingElapsed >= 0.f)
 	{
 		WeaponSwingElapsed += DeltaSeconds;
@@ -1613,11 +1622,8 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 			}
 			else
 			{
-				// In one hand, raised beside the head, ready to throw: the right, or the left if the right arm is
-				// broken. The other arm is left to the stance.
-				const int32 Side = GetCarrySide();
-				const FVector Out = Side == 1 ? Outward : -Outward;
-				ReachWithArm(Held, Reach, Side, Held[Side == 1 ? RightShoulder : LeftShoulder] + Ahead * 4. + FVector::UpVector * 20. + Out * 12., Out * 0.5 - Ahead - FVector::UpVector * 0.5);
+				// In one hand, raised beside the head, ready to throw. The other arm is left to the stance.
+				ReachWithArm(Held, Reach, 1, Held[RightShoulder] + Ahead * 4. + FVector::UpVector * 20. + Outward * 12., Outward * 0.5 - Ahead - FVector::UpVector * 0.5);
 			}
 			for (const int32 Joint : { LeftElbow, LeftHand, RightElbow, RightHand })
 			{
@@ -1632,11 +1638,15 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		}
 		else if (Hold == EPropHold::Swung)
 		{
-			PoseArms(Joints, Ahead, CarryAlpha, 24., 5., -20.);
+			// In both hands in front of the stomach, the upper arms hanging: up by the collar bones the elbows
+			// stood out and the shoulders of a model bunched.
+			PoseArms(Joints, Ahead, CarryAlpha, 30., 4., -38.);
 		}
 		else
 		{
-			PoseArms(Joints, Ahead, CarryAlpha, 6., 15., 32.);
+			// On the palms just over the head, the hands wide and the elbows bent. Held a forearm higher, as it
+			// first was, the arms were straight up and the crate hung in the air above them.
+			PoseArms(Joints, Ahead, CarryAlpha, 4., 21., 17.);
 		}
 	};
 	// Not during a strike: a carried prop then follows the fists, which is what makes a swing of it.
@@ -1658,7 +1668,7 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 	if (const double Swung = GetWeaponSwing(); Swung > 0.)
 	{
 		// Both hands stay on a weapon through its swing and drive it out in front, where a punch would have put one fist.
-		PoseArms(Joints, GetActorForwardVector(), 1., FMath::Lerp(24., 56., Swung), 5., FMath::Lerp(-20., -4., Swung));
+		PoseArms(Joints, GetActorForwardVector(), 1., FMath::Lerp(30., 56., Swung), 4., FMath::Lerp(-38., -4., Swung));
 	}
 
 	if (bKicking && !bPosedByClip)
@@ -1867,9 +1877,9 @@ void AStickFighter::PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms)
 		float Grips[2] = { 1.f, 1.f };
 		if (!bPuppet && Carried.IsValid())
 		{
-			const bool bInOneHand = Carried->GetHold() == EPropHold::OneHand;
-			Grips[0] = bInOneHand && GetCarrySide() == 1 ? 1.f : HoldingGrip;
-			Grips[1] = bInOneHand && GetCarrySide() == 0 ? 1.f : HoldingGrip;
+			// What one hand holds is in the right.
+			Grips[0] = Carried->GetHold() == EPropHold::OneHand ? 1.f : HoldingGrip;
+			Grips[1] = HoldingGrip;
 		}
 		if ((BrokenArms & 4) != 0)
 		{
@@ -2473,7 +2483,7 @@ bool AStickFighter::Finish()
 
 void AStickFighter::StartFinishBeat()
 {
-	const EMove Move = FinishMoves[FinishBeat];
+	const EMove Move = (CanHold() ? FinishMoves : LegFinishMoves)[FinishBeat];
 	const float WindUp = FinishWindUps[FinishBeat];
 	const AStickFighter* Victim = FinishVictim.Get();
 	if (Victim)
@@ -2514,7 +2524,7 @@ void AStickFighter::LandFinish()
 			{
 				Victim->PopUp(FinishLiftSpeed, FinishHeldSeconds);
 			}
-			Events->OnHit.Broadcast(this, Victim, FinishMoves[FinishBeat]);
+			Events->OnHit.Broadcast(this, Victim, (CanHold() ? FinishMoves : LegFinishMoves)[FinishBeat]);
 		}
 		++FinishBeat;
 		FinishNextBeatSecondsLeft = FinishBetweenBlowsSeconds;
@@ -2658,7 +2668,7 @@ bool AStickFighter::GrabOrThrow()
 	}
 
 	AThrownProp* Found = FindPropInReach();
-	if (!Found || !CanHold(Found))
+	if (!Found || !CanHold())
 	{
 		return false;
 	}
@@ -2929,19 +2939,7 @@ FVector AStickFighter::GetGripPoint(int32 Side) const
 
 FVector AStickFighter::GetCarryPoint() const
 {
-	// Between the two palms, or in the one there is when an arm is broken.
-	if (LooseArms[0].bBroken != LooseArms[1].bBroken)
-	{
-		return GetGripPoint(GetCarrySide());
-	}
 	return (GetGripPoint(0) + GetGripPoint(1)) * 0.5;
-}
-
-bool AStickFighter::CanHold(const AThrownProp* Prop) const
-{
-	const int32 Broken = (LooseArms[0].bBroken ? 1 : 0) + (LooseArms[1].bBroken ? 1 : 0);
-	const EPropHold Hold = Prop->GetHold();
-	return Broken == 0 || (Broken == 1 && (Hold == EPropHold::Pistol || Hold == EPropHold::OneHand));
 }
 
 void AStickFighter::AdvanceFreeMovement(float DeltaSeconds)
