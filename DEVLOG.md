@@ -1605,6 +1605,13 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Went wrong:** in the rifle's run the hero was not holding it in the first picture: something in the half second before had taken it from him, a blow or his own throw. And the test asked him to pick the pistol up again while it was still falling, so the one-handed hold with a broken arm was not photographed. Both are the test's timing; neither was run again, to stay inside the session's limit.
 - **Not verified:** the pistol in one good hand, as said. Fingers were seen through the body camera on the pistol only, from behind the hands. Nobody has played with any of it. The video of 16:10 and the store pictures are older than all of this.
 
+### 17:56 · The 17:50 zip on the draft page
+
+- **Developer said:** "CLAUDE ZIP 2 is in front".
+- **Agent did:** opened a fresh tab for the upload, as the afternoon had taught, pressed "Upload files", filled the chooser in with `Tools\choose_file.ps1`, waited four minutes, saved, loaded the form again and read it back.
+- **Result:** the draft page has the zip built at 17:50, uploaded at 17:52, 611 MB, for Windows. Still a draft, still linking to the 13:42 video.
+- **Not verified:** the zip on the page was not downloaded back and run.
+
 ---
 
 ## Asset and tool register
