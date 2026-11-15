@@ -1541,6 +1541,15 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 - **Result:** `Saved/Release/StickToTheScript_gameplay.mp4`, 57.0 seconds, written at 13:42. Every one of its 3420 frames was measured for the menu's grey and none has it; twelve frames round the join were looked at. It shows the game as it is now.
 - **Not verified:** the video was looked at as frames, not watched, and not heard. The recording itself, `Saved/Release/video/run.mp4`, still has the menu in it; it is not in the repository and is not for sharing. The eight store pictures are still the morning's. The video is not on YouTube: that is the developer's to do.
 
+### 14:41 · The new zip on the draft page, and a video that was the wrong file
+
+- **Developer said:** "ok lets upload", and then sent a YouTube link.
+- **Agent did, the link:** before putting it anywhere, asked YouTube what it was. Its title was "run" and it was 396 seconds long: the whole raw recording, the one with the Start menu and the file names in it, not the 57-second cut. Told the developer, who answered: "i made a mistake i will fix it and upload the game play file". The link went nowhere: not onto the page, not into this repository. Opened the folder with the right file selected.
+- **Agent did, the zip:** opened the draft's edit form in the developer's Chrome. The first press of "Upload files" opened nothing: the tab was in the background, and Chrome opens a file chooser only for the tab it is showing. Asked the developer to bring the tab to the front, pressed again, and `Tools\choose_file.ps1` filled the chooser in. The zip built at 13:14, 598 MB, went up in a few minutes and took the place of Saturday's under the same name. Windows was still ticked. Saved, loaded the form again and read it back.
+- **Result:** the draft page has the zip of Sun Nov 15, uploaded at 14:37, 598 MB, for Windows. The page is still a draft. It still links to Saturday's video.
+- **Went wrong:** the wrong file went to YouTube, unlisted, for some minutes. It was caught by its title before the link was used. The agent had said in its message that the raw recording was not for sharing, and had left the two files with names that do not tell them apart at a glance in two folders next to each other.
+- **Not verified:** the zip on the page was not downloaded back and run. Whether the wrong video has been deleted from YouTube is the developer's to do and to say.
+
 ---
 
 ## Asset and tool register
