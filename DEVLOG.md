@@ -1532,6 +1532,15 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
 
 ![A thug with a broken arm and then without his limbs, and the hero losing a forearm and both shins](Docs/devlog/98-wounds-on-the-cast.jpg)
 
+### 13:44 · The video recorded again, and a menu that got into it
+
+- **Developer said:** "Record now", to the agent's question whether to record the gameplay video again, the PC being left alone for about seven minutes.
+- **Agent did:** ran `Tools\record_run.ps1 -Seconds 400` from 13:29 to 13:36: the packaged game played itself through the three scenes to the end card, six takes, one of them lost, no errors in its log. Cut it with `Tools/cut_video.mjs` and looked at the sheet of frames the cutter leaves.
+- **Went wrong:** one frame on the sheet had a dark panel over the game. It was the Windows Start menu, open for a little over two seconds at the end of the first fight, with the names of recently opened files on it. The recording takes what is on the screen, so it was in the video, in the piece that shows the wrap. The agent does not know what opened it.
+- **Agent did, about that:** found the seconds by measuring a patch of the picture through the whole recording for the menu's flat grey, and by looking at frames either side: it is not there at 50.0, is there at 50.4 and at 52.2, and is gone at 52.6. Nowhere else. Gave the cutter a way to be told seconds to stay out of (`node Tools/cut_video.mjs 49.9-52.8`): a piece that runs into them stops short, or is left out. Cut again. The piece with the wrap card is gone and the video goes from the last blow of the fight to the choice of cut.
+- **Result:** `Saved/Release/StickToTheScript_gameplay.mp4`, 57.0 seconds, written at 13:42. Every one of its 3420 frames was measured for the menu's grey and none has it; twelve frames round the join were looked at. It shows the game as it is now.
+- **Not verified:** the video was looked at as frames, not watched, and not heard. The recording itself, `Saved/Release/video/run.mp4`, still has the menu in it; it is not in the repository and is not for sharing. The eight store pictures are still the morning's. The video is not on YouTube: that is the developer's to do.
+
 ---
 
 ## Asset and tool register

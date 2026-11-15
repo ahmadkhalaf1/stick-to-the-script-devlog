@@ -3,6 +3,7 @@
 // itself: the title, the best blows of each fight, the wrap, the choice of cut and some of the film.
 //
 //   node Tools/cut_video.mjs
+//   node Tools/cut_video.mjs 49.9-52.8     the same, staying out of those seconds of the recording
 //
 // It writes Saved/Release/StickToTheScript_gameplay.mp4, under a minute, and a sheet of frames to look at.
 
@@ -122,6 +123,18 @@ scenes.forEach((scene, number) => {
 });
 const picture = first('OnCard: "THAT\'S THE PICTURE"');
 if (picture) add(picture.at + 0.5, 2.5, 'the end');
+
+// Stretches of the picture to stay out of, in the recording's own seconds, for when something else on the screen got
+// in front of the game:   node Tools/cut_video.mjs 49.9-52.8
+// A piece that runs into one stops short of it, if what is left is still worth seeing, and is left out if not.
+for (const [from, to] of process.argv.slice(2).map(span => span.split('-').map(Number))) {
+  for (const clip of [...clips]) {
+    const start = clip.from - pictureStarted;
+    if (start + clip.seconds <= from || start >= to) continue;
+    if (from - start >= 1.5) clip.seconds = from - start;
+    else clips.splice(clips.indexOf(clip), 1);
+  }
+}
 
 const length = () => clips.reduce((sum, clip) => sum + clip.seconds, 0);
 // Too long: the least of the blows goes first.
