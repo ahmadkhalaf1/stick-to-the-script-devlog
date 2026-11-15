@@ -1574,6 +1574,20 @@ Entry for the 2026 Epic AI MegaJam (theme: Director's Cut). This log records, as
   - Eight store pictures had been picked from the 13:29 recording before the developer spoke. They show the old heavy lying about and were dropped.
 - **Not verified:** nobody has played with any of this, and the developer has seen Brute only in a picture. Brute, the kid and the crown were seen in the editor; in the packaged build they have been run, not seen. The heavy's and the boss's wounds were seen only at a distance. Whether an axe that never cuts is a good joke or a bad one is the developer's to say.
 
+### 17:14 · A new video, guns held like guns, and fists that stop at a body
+
+- **Developer said:** "Record now", for a new video with the new heavy in it. Then, playing the build, three messages: "holding gun animation is very bad"; "hitting enemies body is overlapping with enemies , hitting with legs , leg is getting inside the body of the enemy , it need to hit the body not going inside it"; "holding the rifle is bad".
+- **Agent did, the video and the page:** recorded the packaged game from 16:01 to 16:08 and cut 58.9 seconds from it at 16:10. Measured every one of its 3522 frames for a menu's flat grey and looked at two frames a second: nothing but the game. Took eight store pictures and a cover from the same recording, and put the new credits text, six pictures and the cover on the draft page at about 16:19.
+- **Agent did, found in that recording:** the engine writes its own warnings over the picture in a Development build, and one about shadow maps stood across the top of the roof's film. The packaged game now has those messages off.
+- **Agent did, the guns:** looked at frames of the hero with a pistol and with a rifle. The pistol was held in two fists at the chin with the elbows out, the grip of someone about to swing a bat. The rifle's butt stood out behind the shoulder. And through a kick any gun followed one fist, over its carrier's head. Now a pistol is held at arm's length in both hands; a rifle's grip is a forearm ahead of the shoulder, so the butt rests on it; a gun stays in its hold through a kick; and a gunman aiming brings his other hand up under the grip.
+- **Agent did, the strikes:** the plain figure was a line, and a strike could not go into it. A model has a chest. An opponent on his feet is now taken for an upright post, and a wrist or an ankle whose limb goes into the post is drawn back along the limb to where it went in, and the limb bends to suit.
+- **Result:** `Tools/check.ps1` passes with 8 tests. Photographed in the editor: the hero with a pistol and with a rifle, standing and in the middle of a kick, the guns where they should be; a self-played warehouse fight with no limb seen in a body. Packaged at 17:08, 892 MB; the packaged game played itself through the three scenes to the end card in three takes with no errors in its log; the zip is 611 MB, made at 17:14.
+- **Went wrong:**
+  - The first compile failed: the new constant `BodyRadius` had the name of one already in the file.
+  - Two tests of the holds photographed nothing: in one the game's own player threw the gun away before the picture, in the other the test's own key press threw it. The third put the gun at the hero's feet in the scene's file, let the game pick it up, and stopped it there. The file was put back each time.
+  - The new zip did not get onto the draft page. After the browser tool's own file upload had been used on a tab for the pictures, Chrome opened no file chooser for that tab any more; the fresh tab opened in its place fell out of the agent's control when the old one was closed. The developer had brought the tab to the front for nothing, twice.
+- **Not verified:** the developer has not said whether the holds and the kicks are right now. The kicks were judged from small frames of a self-played fight, in which no limb was seen in a body; nobody has counted. The video of 16:10 was recorded before these fixes and shows the old holds. The zip on the draft page is still the one of 13:14.
+
 ---
 
 ## Asset and tool register

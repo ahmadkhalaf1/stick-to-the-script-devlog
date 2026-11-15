@@ -374,6 +374,16 @@ namespace
 	const double ThrowLeanRadians = 0.42;
 	// A strike thrown from too close steps back by up to this much, so the fist does not go through the body.
 	const double StepBackDistance = 40.;
+	// The body a fist or a foot stops at, as a post round where an opponent stands: how wide it is for a fighter of
+	// the usual build, from how high above the floor to how high, and how far a fist and a foot go on past the
+	// wrist and the ankle that are their joints. A limb is never drawn back to less than this share of its reach.
+	const double ChestRadius = 13.;
+	const double BodyStartsAbove = 45.;
+	const double BodyEndsAbove = 185.;
+	const double DuckedBodyEndsAbove = 125.;
+	const double FistPastWrist = 9.;
+	const double FootPastAnkle = 14.;
+	const double ShortestDrawnBack = 0.25;
 
 	// Where an elbow or knee sits, given both ends of the limb, its two lengths and the way it bends.
 	FVector MiddleJoint(const FVector& Root, const FVector& End, double UpperLength, double LowerLength, const FVector& BendDirection)
@@ -1578,10 +1588,9 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		}
 	}
 
-	// Not during a strike: a carried prop then follows the fists, which is what makes a swing of it.
-	if (CarryAlpha > 0.f && State != EFighterState::Busy)
+	// How whatever is carried is held. A crate is carried overhead. A weapon is held ready in front of the chest.
+	const auto PoseCarry = [this, &Joints]()
 	{
-		// A crate is carried overhead. A weapon is held ready in front of the chest.
 		const EPropHold Hold = Carried.IsValid() ? Carried->GetHold() : EPropHold::Overhead;
 		const FVector Ahead = GetActorForwardVector();
 		if (Hold == EPropHold::LongGun || Hold == EPropHold::OneHand)
@@ -1592,10 +1601,12 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 			const FVector Outward = FVector::UpVector ^ Ahead;
 			if (Hold == EPropHold::LongGun)
 			{
-				// Shouldered: the right hand at the grip by the chest, the left forward under the barrel.
-				const FVector Grip = Held[RightShoulder] + Ahead * 16. - FVector::UpVector * 15. - Outward * 5.;
+				// Shouldered: the right hand at the grip, far enough ahead of the shoulder that the butt rests on it and
+				// does not stand out behind, and the left as far forward under the barrel as it reaches. The gun is
+				// kept by its grip (GripToMiddle in ThrownProp.cpp), a forearm's length ahead of its butt.
+				const FVector Grip = Held[RightShoulder] + Ahead * 30. - FVector::UpVector * 7. - Outward * 4.;
 				ReachWithArm(Held, Reach, 1, Grip, Outward * 0.7 - FVector::UpVector);
-				ReachWithArm(Held, Reach, 0, Grip + Ahead * 36. + FVector::UpVector * 2., -Outward * 0.3 - FVector::UpVector);
+				ReachWithArm(Held, Reach, 0, Grip + Ahead * 30. - FVector::UpVector, -Outward * 0.3 - FVector::UpVector);
 			}
 			else
 			{
@@ -1609,8 +1620,9 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		}
 		else if (Hold == EPropHold::Pistol)
 		{
-			// In both hands, out in front and a little under the eye, with the elbows bent.
-			PoseArms(Joints, Ahead, CarryAlpha, 38., 2.5, -12.);
+			// In both hands at arm's length, a little under the eye, the elbows only just bent. Held closer, as it
+			// first was, the elbows stood out to the sides and it was the grip of someone about to swing a bat.
+			PoseArms(Joints, Ahead, CarryAlpha, 47., 2.5, -6.);
 		}
 		else if (Hold == EPropHold::Swung)
 		{
@@ -1620,6 +1632,11 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		{
 			PoseArms(Joints, Ahead, CarryAlpha, 6., 15., 32.);
 		}
+	};
+	// Not during a strike: a carried prop then follows the fists, which is what makes a swing of it.
+	if (CarryAlpha > 0.f && State != EFighterState::Busy)
+	{
+		PoseCarry();
 	}
 
 	if (ThrowSecondsLeft > 0.f && State != EFighterState::Busy)
@@ -1645,6 +1662,13 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		PoseTechnique(Joints, GetActorForwardVector(), StrikeMove, Phase, PosedSide);
 	}
 
+	// A gun stays in its hold through a kick. Left to follow one fist, as other props do, it waved about over its
+	// carrier's head while his legs did the work.
+	if (CarryAlpha > 0.f && State == EFighterState::Busy && Carried.IsValid() && Carried->IsGun())
+	{
+		PoseCarry();
+	}
+
 	if (bAiming)
 	{
 		const double Upper = FVector::Dist(Joints[RightShoulder], Joints[RightElbow]);
@@ -1652,6 +1676,12 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		const FVector Towards = (AimPoint - Joints[RightShoulder]).GetSafeNormal();
 		Joints[RightHand] = Joints[RightShoulder] + Towards * ((Upper + Lower) * 0.96);
 		Joints[RightElbow] = MiddleJoint(Joints[RightShoulder], Joints[RightHand], Upper, Lower, -FVector::UpVector);
+		// The other hand comes up under the grip, as far as it reaches: a pistol held out in one fist was a toy.
+		const double LeftUpper = FVector::Dist(Joints[LeftShoulder], Joints[LeftElbow]);
+		const double LeftLower = FVector::Dist(Joints[LeftElbow], Joints[LeftHand]);
+		const FVector Support = Joints[RightHand] - Towards * 5. - FVector::UpVector * 3.;
+		Joints[LeftHand] = Joints[LeftShoulder] + (Support - Joints[LeftShoulder]).GetClampedToMaxSize((LeftUpper + LeftLower) * 0.99);
+		Joints[LeftElbow] = MiddleJoint(Joints[LeftShoulder], Joints[LeftHand], LeftUpper, LeftLower, -FVector::UpVector);
 	}
 
 	if (RecoilProgress < 1.f)
@@ -1664,6 +1694,8 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		}
 	}
 
+	KeepOutOfBodies(Joints);
+
 	if (bWithBrokenArms)
 	{
 		for (int32 Side = 0; Side < 2; ++Side)
@@ -1675,6 +1707,61 @@ TArray<FVector> AStickFighter::BuildJoints(bool bWithBrokenArms) const
 		}
 	}
 	return Joints;
+}
+
+void AStickFighter::KeepOutOfBodies(TArray<FVector>& Joints) const
+{
+	// The plain figure was a line and a strike could not go into it. A model has a chest, and a kick that reached
+	// the line had gone a shin's length into the body. So an opponent on his feet is taken for an upright post, and
+	// a wrist or an ankle that is inside it is drawn back along its limb to where the limb went in.
+	const int32 Ends[4][3] = { { LeftShoulder, LeftElbow, LeftHand }, { RightShoulder, RightElbow, RightHand }, { LeftHip, LeftKnee, LeftFoot }, { RightHip, RightKnee, RightFoot } };
+	for (TActorIterator<AStickFighter> It(GetWorld()); It; ++It)
+	{
+		const AStickFighter* Other = *It;
+		if (Other == this || Other->Team == Team || Other->IsDown())
+		{
+			continue;
+		}
+		const double Scale = Other->GetActorScale3D().Z;
+		const FVector Stands = Other->GetActorLocation();
+		const double Bottom = Stands.Z + BodyStartsAbove * Scale;
+		const double Top = Stands.Z + (Other->IsDucking() ? DuckedBodyEndsAbove : BodyEndsAbove) * Scale;
+		for (int32 Limb = 0; Limb < 4; ++Limb)
+		{
+			FVector& End = Joints[Ends[Limb][2]];
+			// The fist goes on past the wrist and the foot past the ankle, so the post is that much wider for them.
+			const double Radius = (ChestRadius * Other->Thickness / UsualThickness + (Limb < 2 ? FistPastWrist : FootPastAnkle)) * Scale;
+			const FVector Root = Joints[Ends[Limb][0]];
+			FVector& Middle = Joints[Ends[Limb][1]];
+			// Where the line from the limb's root to its end goes into the post, seen from above.
+			const FVector2D Step(End - Root);
+			const FVector2D Off(Root - Stands);
+			const double A = Step.SizeSquared();
+			const double B = 2. * (Off | Step);
+			const double C = Off.SizeSquared() - FMath::Square(Radius);
+			const double Reaches = B * B - 4. * A * C;
+			// With the limb's root inside as well, the two are standing in each other and no limb can be put right.
+			if (A < 1. || C <= 0. || Reaches <= 0.)
+			{
+				continue;
+			}
+			// A limb that goes in stops there, whether its end is inside or has come out on the far side.
+			const double WentIn = (-B - FMath::Sqrt(Reaches)) / (2. * A);
+			const double WentInAt = FMath::Lerp(Root.Z, End.Z, WentIn);
+			if (WentIn <= 0. || WentIn >= 1. || WentInAt < Bottom || WentInAt > Top)
+			{
+				continue;
+			}
+			const double Upper = FVector::Dist(Root, Middle);
+			const double Lower = FVector::Dist(Middle, End);
+			// The limb keeps the way it was bent, or bends as a limb does if it was straight: a knee up and
+			// forward, an elbow down.
+			const FVector WasBent = Middle - (Root + End) * 0.5;
+			const FVector Bend = WasBent.SizeSquared() > 4. ? WasBent : Limb < 2 ? -FVector::UpVector : GetActorForwardVector() + FVector::UpVector;
+			End = FMath::Lerp(Root, End, FMath::Clamp(WentIn, ShortestDrawnBack, 1.));
+			Middle = MiddleJoint(Root, End, Upper, Lower, Bend);
+		}
+	}
 }
 
 uint8 AStickFighter::GetBrokenArms() const

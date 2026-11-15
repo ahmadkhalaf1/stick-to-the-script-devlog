@@ -235,6 +235,8 @@ private:
 	void SwingBrokenArms(float DeltaSeconds);
 	void DemoNextMove();
 	TArray<FVector> BuildJoints(bool bWithBrokenArms) const;
+	// Brings a hand or a foot that has gone into an opponent's body back to its surface, and bends the limb to suit.
+	void KeepOutOfBodies(TArray<FVector>& Joints) const;
 	void PoseStick(const TArray<FVector>& Joints, uint8 BrokenArms);
 	void AdvanceFreeMovement(float DeltaSeconds);
 	void LandFreeStrike(const FVector& StrikePoint);

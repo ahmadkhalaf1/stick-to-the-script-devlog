@@ -2,6 +2,7 @@
 
 #include "AudioMixerBlueprintLibrary.h"
 #include "Containers/Ticker.h"
+#include "Engine/Engine.h"
 #include "HAL/FileManager.h"
 #include "JsonObjectConverter.h"
 #include "Misc/AutomationTest.h"
@@ -42,6 +43,11 @@ namespace
 void UStickGameInstance::Init()
 {
 	Super::Init();
+#if !WITH_EDITOR
+	// The jam asks for a Development build, and such a build writes the engine's own warnings over the picture: one
+	// about shadow maps came up in the middle of a film on the roof. A player has no use for them.
+	GAreScreenMessagesEnabled = false;
+#endif
 	GConfig->GetInt(ProgressSection, TEXT("ScenesWrapped"), ScenesWrapped, GGameUserSettingsIni);
 	GConfig->GetInt(ProgressSection, TEXT("Banked"), Banked, GGameUserSettingsIni);
 	GConfig->GetInt(ProgressSection, TEXT("OwnedLooks"), OwnedLooks, GGameUserSettingsIni);

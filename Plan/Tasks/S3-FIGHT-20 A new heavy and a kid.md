@@ -23,13 +23,15 @@ depends:
 
 **Found on the way:** a gunman who lost his right forearm kept a pistol hanging in the air where his hand had been. The gun goes with the forearm.
 
+**Asked for while the developer played the build, the same afternoon:** guns held like guns (a pistol at arm's length in both hands, a rifle with its butt on the shoulder, and both kept there through a kick), and a fist or a foot that stops at the body it lands on. `KeepOutOfBodies` in `Fighter/StickFighter.cpp` takes an opponent on his feet for an upright post and draws a limb back to where it went in.
+
 **Done when:**
 - [x] Brute fights as the heavy in his own skin: photographed in the warehouse, whole and hurt
 - [x] The kid is kid-sized and stands up: photographed on the roof beside a thug
 - [x] The crown reads as a crown: photographed in the wardrobe
 - [x] The packaged build has all of it and plays itself to the end card: run and its log read, not seen
 - [ ] The gameplay video and the store pictures show the game as it is
-- [ ] The store page and the dev log's register name Brute and Timmy, and no longer Big Vegas
+- [x] The store page and the dev log's register name Brute and Timmy, and no longer Big Vegas
 - [ ] The developer has seen them in the game
 
 Sprint: [[Sprint 3 - Feel and lock]] · Stream: fight
